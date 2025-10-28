@@ -11,6 +11,8 @@ interface Financiador {
   tasa_mensual: number;
   dias_cobranza_teorico: number;
   dias_cobranza_real: number;
+  id_acuerdo?: number | null;
+  acuerdo_nombre?: string | null;
 }
 
 export default function GestionPrestadores() {
@@ -20,6 +22,7 @@ export default function GestionPrestadores() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFinanciador, setEditingFinanciador] = useState<Financiador | null>(null);
   const [loading, setLoading] = useState(false);
+  const [acuerdos, setAcuerdos] = useState<{ id_acuerdo: number; nombre: string }[]>([]);
 
   const formatFinanciadorName = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -35,6 +38,18 @@ export default function GestionPrestadores() {
 
   useEffect(() => {
     cargarFinanciadores();
+  }, []);
+
+  useEffect(() => {
+    // prefetch acuerdos so modal can show them quickly
+    (async () => {
+      try {
+        const data = await api.get('/admin/prestadores/acuerdos');
+        setAcuerdos(data.data);
+      } catch (err) {
+        // not critical
+      }
+    })();
   }, []);
 
   const cargarFinanciadores = async () => {
@@ -58,7 +73,8 @@ export default function GestionPrestadores() {
         activo: nuevoEstado,
         tasa_mensual: financiador.tasa_mensual || 0,
         dias_cobranza_teorico: financiador.dias_cobranza_teorico || 0,
-        dias_cobranza_real: financiador.dias_cobranza_real || 0
+        dias_cobranza_real: financiador.dias_cobranza_real || 0,
+        id_acuerdo: financiador.id_acuerdo ?? null
       });
       
       notifications.show({
@@ -96,7 +112,8 @@ export default function GestionPrestadores() {
         activo: editingFinanciador.activo,
         tasa_mensual: editingFinanciador.tasa_mensual || 0,
         dias_cobranza_teorico: editingFinanciador.dias_cobranza_teorico || 0,
-        dias_cobranza_real: editingFinanciador.dias_cobranza_real || 0
+        dias_cobranza_real: editingFinanciador.dias_cobranza_real || 0,
+        id_acuerdo: editingFinanciador.id_acuerdo ?? null
       });
       
       notifications.show({
@@ -148,8 +165,9 @@ export default function GestionPrestadores() {
               <th>Financiador</th>
               <th style={{ width: '180px'}}>Estado</th>
               <th style={{ width: '120px' }}>Tasa Mensual</th>
-              <th style={{ width: '140px' }}>Días Teórico</th>
+                <th style={{ width: '140px' }}>Días Teórico</th>
               <th style={{ width: '120px' }}>Días Real</th>
+                <th style={{ width: '240px' }}>Acuerdo</th>
               <th style={{ width: '100px' }}>Acciones</th>
             </tr>
           </thead>
@@ -176,6 +194,7 @@ export default function GestionPrestadores() {
                 <td>{(financiador.tasa_mensual || 0)}%</td>
                 <td>{(financiador.dias_cobranza_teorico || 0)} días</td>
                 <td>{(financiador.dias_cobranza_real || 0)} días</td>
+                <td>{financiador.acuerdo_nombre || 'SIN CONVENIO'}</td>
                 <td>
                   <ActionIcon variant="light" onClick={() => handleEdit(financiador)}>
                     <PencilSquareIcon width={16} height={16} />
@@ -232,6 +251,16 @@ export default function GestionPrestadores() {
                 dias_cobranza_real: parseInt(e.target.value) || 0
               })}
               min={0}
+            />
+            <Select
+              label="Acuerdo"
+              placeholder="Seleccione un acuerdo (opcional)"
+              data={acuerdos.map(a => ({ value: String(a.id_acuerdo), label: a.nombre }))}
+              value={editingFinanciador.id_acuerdo ? String(editingFinanciador.id_acuerdo) : null}
+              onChange={(val) => setEditingFinanciador({
+                ...editingFinanciador,
+                id_acuerdo: val ? parseInt(val) : null
+              })}
             />
             <Group style={{ justifyContent: 'flex-end' }}>
               <Button variant="outline" onClick={() => setModalOpen(false)}>

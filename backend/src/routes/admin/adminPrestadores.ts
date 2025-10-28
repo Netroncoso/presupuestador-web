@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
-import { getAllPrestadores, updatePrestador } from '../../controllers/admin/adminPrestadoresController';
+import { getAllPrestadores, updatePrestador, getAcuerdos } from '../../controllers/admin/adminPrestadoresController';
 
 const router = Router();
 
@@ -9,6 +9,7 @@ router.use(authenticateToken);
 router.use(requireAdmin);
 
 router.get('/', getAllPrestadores);
+router.get('/acuerdos', getAcuerdos);
 router.put('/:id', updatePrestador);
 
 export default router;

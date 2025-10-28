@@ -111,6 +111,11 @@ export async function getPrestadores() {
   return res.data;
 }
 
+export async function getFinanciadorAcuerdos() {
+  const res = await api.get('/admin/prestadores/acuerdos');
+  return res.data;
+}
+
 export async function getPrestacionesPorPrestador(id: string) {
   const res = await api.get(`/prestaciones/prestador/${id}`);
   return res.data;
