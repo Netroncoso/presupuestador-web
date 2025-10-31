@@ -206,7 +206,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         </Text>
       )}
       
-  <Stack spacing="md" maw={500} mx="auto">
+  <Stack spacing="md" maw={500} mx="auto" mb-100>
         <TextInput
           label="Nombre y Apellido"
           value={nombre}

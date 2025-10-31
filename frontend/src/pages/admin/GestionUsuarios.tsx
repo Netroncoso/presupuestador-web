@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { UserPlusIcon} from '@heroicons/react/24/solid';
 import { Table, Button, TextInput, Select, Modal, Group, Text, ActionIcon, Badge, Switch } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 
@@ -115,8 +116,8 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     <>
       <Modal opened={opened} onClose={onClose} title="Gestión de Usuarios" size="lg">
         <Group style={{ marginBottom: 16 }}>
-          <Button leftIcon={<PlusIcon width={16} height={16} />} onClick={() => setCreateModal(true)}>
-            Nuevo Usuario
+          <Button leftIcon={<UserPlusIcon width={18} height={18} />} onClick={() => setCreateModal(true)}>
+          Nuevo Usuario
           </Button>
         </Group>
 

@@ -302,8 +302,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }
 
   return (
-    <Stack spacing="md">
-      <Paper p="md" withBorder>
+    <Stack spacing="lg">
+      <Paper p="md" withBorder shadow="sm">
         <Title order={4} mb="md">Selección de Financiador</Title>
         <Stack spacing="sm">
           <Select
@@ -322,7 +322,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
               disabled={!financiadorSeleccionado || financiadorConfirmado}
               color={financiadorConfirmado ? 'green' : 'blue'}
             >
-              {financiadorConfirmado ? 'Financiador Confirmado' : 'Confirmar Financiador'}
+              {financiadorConfirmado ? 'Financiador Confirmado' : 'Confirmar'}
             </Button>
             {financiadorConfirmado && (
               <Button 
@@ -331,15 +331,15 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                 color="orange"
                 size="sm"
               >
-                Modificar Financiador
+                Modificar
               </Button>
             )}
           </Group>
           {financiadorConfirmado && financiadorInfo && (
             <Group spacing="md" mt="sm">
-              <Badge variant="light" color="blue">Tasa Mensual: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
-              <Badge variant="light" color="orange">Días Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}</Badge>
-              <Badge variant="light" color="green">Días Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}</Badge>
+              <Badge variant="dot" color="blue">Tasa Mensual: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
+              <Badge variant="dot" color="orange">Días Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}</Badge>
+              <Badge variant="dot" color="green">Días Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}</Badge>
             </Group>
           )}
         </Stack>

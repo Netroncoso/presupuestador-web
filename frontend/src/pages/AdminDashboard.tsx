@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
-import { Cog8ToothIcon } from '@heroicons/react/24/solid';
+import { ArrowRightStartOnRectangleIcon,UserCircleIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon} from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import GestionInsumos from './admin/GestionInsumos';
 import GestionPrestadores from './admin/GestionPrestadores';
@@ -16,20 +17,21 @@ export default function AdminDashboard() {
   return (
     <Container size="xl" p="md">
       <Group style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title order={2} c="red">Panel de Administración</Title>
-        <Group>
-          <Text size="sm">Admin: {user?.username}</Text>
+        <Title fw={500} order={2} c="red">Panel de Administración</Title>
+        <Group spacing="xs">
+          <UserCircleIcon className="w-5 h-5 mr-0"/>
+          <Text size="sm" tt="capitalize">{user?.username}</Text>
           {user?.username === 'admin' && (
             <ActionIcon 
               variant="transparent"
-              size="sm" 
+              size="md" 
               onClick={() => setUsuariosModalOpen(true)}
-              title="Gestión de Usuarios"
-            >
-              <Cog8ToothIcon  />
+              title="Gestión de Usuarios">
+              <UserPlusIcon className="w-5 h-5 m-0"/>
             </ActionIcon>
           )}
-          <Button variant="outline" size="sm" onClick={logout}>Cerrar Sesión</Button>
+          <Button ml="md" variant="outline" color="red" size="xs" onClick={logout}>
+            <ArrowRightStartOnRectangleIcon className="w-5 h-5 mr-1"/>Salir</Button>
         </Group>
       </Group>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, ScrollArea, Checkbox, Center } from '@mantine/core'
-import { TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilSquareIcon,MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
 
@@ -141,17 +141,11 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
 
   return (
     <Stack spacing="md">
-      <TextInput
-        label="Filtrar insumos"
-        value={filtro}
-        onChange={(e) => setFiltro(e.target.value)}
-        placeholder="Escriba para buscar..."
-      />
-      
       <Grid>
         <Grid.Col span={6}>
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Insumos Disponibles</Title>
+            <TextInput label="Buscar Insumo" value={filtro} onChange={(e) => setFiltro(e.target.value)} rightSection={<MagnifyingGlassIcon className="w-4 h-4" />} placeholder="Escriba para buscar..." />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <Table striped highlightOnHover fontSize="sm" style={{ tableLayout: 'fixed' }}>
                 <thead style={{ backgroundColor: '#f8f9fa' }}>
@@ -161,7 +155,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                   </tr>
                 </thead>
               </Table>
-              <ScrollArea h={350} scrollbarSize={8} scrollHideDelay={0}>
+              <ScrollArea h={350} scrollbarSize={8} scrollHideDelay={0} type='always'>
                 <Table striped highlightOnHover fontSize="sm" style={{ tableLayout: 'fixed' }}>
                 <tbody>
                   {insumosFiltrados.map((insumo, index) => (
