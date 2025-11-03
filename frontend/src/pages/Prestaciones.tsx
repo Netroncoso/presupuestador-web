@@ -38,7 +38,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string | null>(null)
   const [financiadorConfirmado, setFinanciadorConfirmado] = useState(false)
-  const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number}>({})
+  const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
   const [cantidad, setCantidad] = useState('1')
   const [valorAsignado, setValorAsignado] = useState('')
@@ -340,6 +340,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
               <Badge variant="dot" color="blue">Tasa Mensual: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
               <Badge variant="dot" color="orange">Días Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}</Badge>
               <Badge variant="dot" color="green">Días Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}</Badge>
+            <Badge color="teal">{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo Asignado'}</Badge>
             </Group>
           )}
         </Stack>

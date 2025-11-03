@@ -1,6 +1,16 @@
 import { Alert, Text, Group } from '@mantine/core';
-import { ShieldExclamationIcon, DocumentTextIcon, CheckBadgeIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { ShieldExclamationIcon, DocumentTextIcon, CheckBadgeIcon, ExclamationTriangleIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
 import React from 'react';
+
+// Interface para la información del financiador
+interface FinanciadorInfo {
+  tasa_mensual?: number;
+  dias_cobranza_teorico?: number;
+  dias_cobranza_real?: number;
+  acuerdo_nombre?: string | null;
+  Financiador?: string;
+  idobra_social?: string;
+}
 
 interface AlertaProps {
   presupuestoId: number | null;
@@ -9,6 +19,7 @@ interface AlertaProps {
   totalPrestaciones: number;
   rentabilidad: number;
   financiadorId: string | null;
+  financiadorInfo?: FinanciadorInfo;
 }
 
 /**
@@ -24,10 +35,14 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode => {
     totalInsumos, 
     totalPrestaciones, 
     rentabilidad,
-    financiadorId
+    financiadorId,
+    financiadorInfo
   } = props;
   
   const alertas: React.ReactNode[] = [];
+
+  // Calcular total a facturar
+  const totalFacturar = (totalInsumos + totalPrestaciones) * 1.7;
 
   // --- LÓGICA DE ALERTA 1: Faltan datos básicos para cotizar (Máxima Prioridad) ---
   if (!presupuestoId) {
@@ -38,107 +53,243 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode => {
         title="¡Presupuesto No Creado!" 
         color="blue"
         radius="md"
-        className="mb-3" // Añadimos un pequeño margen entre alertas
+        className="mb-3"
       >
         <Text size="sm">
           Crea un nuevo presupuesto o carga uno existente en la pestaña "Datos Paciente" para continuar cargando insumos y prestaciones.
         </Text>
       </Alert>
     );
-    // Si no hay presupuesto, no tiene sentido mostrar las demás alertas.
-    // Podrías retornar aquí si quieres que solo se muestre esta alerta.
     return <>{alertas}</>; 
   }
 
-  // --- LÓGICA DE ALERTA 2: Rentabilidad Negativa (Alta Prioridad) ---
-if (rentabilidad > 0 && rentabilidad < 30) {
-  alertas.push(
-    <Alert 
-      key="rentabilidad-baja"
-      icon={<ShieldExclamationIcon className="w-5 h-5" />} 
-      title="¡ALERTA DE PÉRDIDA!" 
-      color="red"
-      radius="md"
-      className="mb-3"
-    >
-      <Text size="sm">
-        La rentabilidad actual es del **{rentabilidad.toFixed(2)}%**. El **Costo Total** supera al **Total a Facturar**. Ajusta los valores o revisa los precios.
-      </Text>
-    </Alert>
-  );
-} else if (rentabilidad >= 30 && rentabilidad < 70) {
-  alertas.push(
-    <Alert 
-      key="rentabilidad-media"
-      icon={<ExclamationTriangleIcon className="w-5 h-5" />} 
-      title="OPORTUNIDAD DE MEJORA" 
-      color="yellow"
-      radius="md"
-      className="mb-3"
-    >
-      <Text size="sm">
-        La rentabilidad actual es del **{rentabilidad.toFixed(2)}%**. Puedes mejorar los valores para aumentar tu margen de ganancia.
-      </Text>
-    </Alert>
-  );
-} else if (rentabilidad >= 70) {
-  alertas.push(
-    <Alert 
-      key="rentabilidad-alta"
-      icon={<CheckCircleIcon className="w-5 h-5" />} 
-      title="¡EXCELENTE RENTABILIDAD!" 
-      color="green"
-      radius="md"
-      className="mb-3"
-    >
-      <Text size="sm">
-        La rentabilidad actual es del **{rentabilidad.toFixed(2)}%**. ¡Sigue manteniendo estos excelentes resultados!
-      </Text>
-    </Alert>
-  );
-}
-  
-  // --- LÓGICA DE ALERTA 3: Cotización completa pero sin financiador (Prioridad Media) ---
-  if (totalInsumos > 0 && totalPrestaciones > 0 && !financiadorId) {
+  // --- LÓGICA DE ALERTA 2: Alertas por RANGO DE RENTABILIDAD ---
+  if (rentabilidad < 0) {
     alertas.push(
       <Alert 
-        key="falta-financiador"
-        icon={<ShieldExclamationIcon className="w-5 h-5" />} 
-        title="Advertencia: Falta Financiador" 
+        key="rentabilidad-desaprobada"
+        icon={<ExclamationCircleIcon className="w-5 h-5" />} 
+        title="DESAPROBADO" 
+        color="red"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Este presupuesto no es viable. Revisa costos y valores asignados.
+        </Text>
+      </Alert>
+    );
+  } else if (rentabilidad >= 0 && rentabilidad < 35) {
+    alertas.push(
+      <Alert 
+        key="rentabilidad-mejorar"
+        icon={<ExclamationTriangleIcon className="w-5 h-5" />} 
+        title="MEJORAR VALORES, PEDIR AUTORIZACIÓN" 
+        color="orange"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Se requiere autorización para proceder con esta rentabilidad.
+        </Text>
+      </Alert>
+    );
+  } else if (rentabilidad >= 35 && rentabilidad < 40) {
+    alertas.push(
+      <Alert 
+        key="rentabilidad-autorizado-mejora"
+        icon={<CheckCircleIcon className="w-5 h-5" />} 
+        title="AUTORIZADO, EN BÚSQUEDA DE MEJORA" 
         color="yellow"
         radius="md"
         className="mb-3"
       >
         <Text size="sm">
-          El presupuesto contiene ítems, pero el **Financiador no está asignado**. Confirma el Financiador antes de guardar.
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Presupuesto autorizado. Considera optimizar valores.
         </Text>
       </Alert>
     );
-  }
-
-  // --- LÓGICA DE ALERTA 4: Todo correcto (Confirmación, solo se muestra si NO hay alertas negativas) ---
-  if (alertas.length === 0 && presupuestoId && (totalInsumos > 0 || totalPrestaciones > 0)) {
+  } else if (rentabilidad >= 40 && rentabilidad < 50) {
     alertas.push(
       <Alert 
-        key="listo-para-guardar"
+        key="rentabilidad-autorizado"
+        icon={<CheckCircleIcon className="w-5 h-5" />} 
+        title="AUTORIZADO" 
+        color="blue"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Presupuesto dentro de parámetros aceptables.
+        </Text>
+      </Alert>
+    );
+  } else if (rentabilidad >= 50 && rentabilidad < 60) {
+    alertas.push(
+      <Alert 
+        key="rentabilidad-autorizado-felicitaciones"
         icon={<CheckBadgeIcon className="w-5 h-5" />} 
-        title="Cotización Lista para Guardar" 
+        title="AUTORIZADO FELICITACIONES" 
         color="green"
         radius="md"
         className="mb-3"
       >
         <Text size="sm">
-          Presupuesto para **{clienteNombre}** con rentabilidad positiva. Recuerda presionar **"Guardar"** para actualizar los totales.
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Excelente rentabilidad alcanzada.
+        </Text>
+      </Alert>
+    );
+  } else if (rentabilidad >= 60 && rentabilidad < 70) {
+    alertas.push(
+      <Alert 
+        key="rentabilidad-super-rentable"
+        icon={<CheckBadgeIcon className="w-5 h-5" />} 
+        title="AUTORIZADO, PACIENTE SUPER RENTABLE!! FELICITACIONES" 
+        color="teal"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - Resultado excepcional. ¡Felicitaciones!
+        </Text>
+      </Alert>
+    );
+  } else if (rentabilidad >= 70) {
+    alertas.push(
+      <Alert 
+        key="rentabilidad-excepcional"
+        icon={<CheckBadgeIcon className="w-5 h-5" />} 
+        title="RENTABILIDAD EXCEPCIONAL" 
+        color="violet"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong> - ¡Resultado extraordinario! Caso de estudio.
         </Text>
       </Alert>
     );
   }
 
-  // Si no se aplica ninguna alerta específica, devuelve null
+  // --- LÓGICA DE ALERTA 3: Alertas por MONTO A FACTURAR ---
+  if (totalFacturar >= 1000000 && totalFacturar < 5000000) {
+    alertas.push(
+      <Alert 
+        key="monto-alto"
+        icon={<ShieldExclamationIcon className="w-5 h-5" />} 
+        title="MONTO ELEVADO - DAR AVISO" 
+        color="orange"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Monto a facturar: ${totalFacturar.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> - 
+          Se requiere revisión y aviso a las áreas correspondientes.
+        </Text>
+      </Alert>
+    );
+  } else if (totalFacturar >= 5000000) {
+    alertas.push(
+      <Alert 
+        key="monto-muy-alto"
+        icon={<ShieldExclamationIcon className="w-5 h-5" />} 
+        title="MONTO CRÍTICO - SOLICITAR GESTIÓN" 
+        color="red"
+        radius="md"
+        className="mb-3"
+      >
+        <Text size="sm">
+          <strong>Monto a facturar: ${totalFacturar.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> - 
+          Se requiere gestión especial desde las áreas superiores.
+        </Text>
+      </Alert>
+    );
+  }
+
+
+  // --- LÓGICA DE ALERTA 5: Alertas específicas del financiador ---
+  if (financiadorInfo && financiadorId) {
+    // Alerta para acuerdos que requieren atención especial
+    if (financiadorInfo.acuerdo_nombre === "Sin convenio Firmado, Autoriza Valores Gerencia Comercial") {
+      alertas.push(
+        <Alert 
+          key="acuerdo-gerencia"
+          icon={<ExclamationTriangleIcon className="w-5 h-5" />} 
+          title="Atención: Acuerdo Especial" 
+          color="orange"
+          radius="md"
+          className="mb-3"
+        >
+          <Text size="sm">
+            Este financiador <strong>requiere autorización de Gerencia Comercial</strong>. 
+            Asegúrate de tener la aprobación correspondiente antes de proceder.
+          </Text>
+        </Alert>
+      );
+    }
+
+    // Alerta para días de cobranza muy altos
+    if (financiadorInfo.dias_cobranza_real && financiadorInfo.dias_cobranza_real > 40) {
+      alertas.push(
+        <Alert 
+          key="cobranza-lenta"
+          icon={<ShieldExclamationIcon className="w-5 h-5" />} 
+          title="Cobranza Lenta" 
+          color="yellow"
+          radius="md"
+          className="mb-3"
+        >
+          <Text size="sm">
+            Este financiador tiene <strong>{financiadorInfo.dias_cobranza_real} días de cobranza real</strong>. 
+            Considera este plazo en tu flujo de caja.
+          </Text>
+        </Alert>
+      );
+    }
+
+    // Alerta para tasa mensual muy alta
+    if (financiadorInfo.tasa_mensual && financiadorInfo.tasa_mensual > 0.08) {
+      alertas.push(
+        <Alert 
+          key="tasa-alta"
+          icon={<ExclamationTriangleIcon className="w-5 h-5" />} 
+          title="Tasa Mensual Elevada" 
+          color="orange"
+          radius="md"
+          className="mb-3"
+        >
+          <Text size="sm">
+            Tasa mensual del <strong>{(financiadorInfo.tasa_mensual * 100).toFixed(2)}%</strong>. 
+            Verifica que los precios cubran este costo adicional.
+          </Text>
+        </Alert>
+      );
+    }
+
+    // Alerta positiva para convenios firmados
+    if (financiadorInfo.acuerdo_nombre === "Con convenio firmado") {
+      alertas.push(
+        <Alert 
+          key="convenio-firmado"
+          icon={<CheckCircleIcon className="w-5 h-5" />} 
+          title="Convenio Activo" 
+          color="green"
+          radius="md"
+          className="mb-3"
+        >
+          <Text size="sm">
+            <strong>Convenio firmado activo</strong>. Puedes proceder con la cotización según los términos establecidos.
+          </Text>
+        </Alert>
+      );
+    }
+  }
+
+  // Eliminamos la alerta "Todo correcto" ya que ahora tenemos alertas específicas para cada estado
+
   if (alertas.length === 0) {
     return null;
   }
   
-  // Devuelve todas las alertas como un fragmento
   return <>{alertas}</>;
 };

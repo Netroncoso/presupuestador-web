@@ -19,6 +19,16 @@ import {
 // RUTA CORREGIDA: Asume que el hook está en src/hooks/
 import { useAlertaCotizador } from '../hooks/useAlertaCotizador';
 
+// Interface para la información del financiador
+interface FinanciadorInfo {
+  tasa_mensual?: number;
+  dias_cobranza_teorico?: number;
+  dias_cobranza_real?: number;
+  acuerdo_nombre?: string | null;
+  Financiador?: string;
+  idobra_social?: string;
+}
+
 export default function UserDashboard() {
   const { user, logout } = useAuth();
   const [presupuestoId, setPresupuestoId] = useState<number | null>(null);
@@ -27,19 +37,36 @@ export default function UserDashboard() {
   const [totalInsumos, setTotalInsumos] = useState(0);
   const [totalPrestaciones, setTotalPrestaciones] = useState(0);
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<any[]>([]);
-  const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<
-    any[]
-  >([]);
+  const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<any[]>([]);
   const [guardandoTotales, setGuardandoTotales] = useState(false);
   const [financiadorId, setFinanciadorId] = useState<string | null>(null);
+  const [financiadorInfo, setFinanciadorInfo] = useState<FinanciadorInfo>({}); // Nuevo estado
 
   // Calcular totales
   const costoTotal = totalInsumos + totalPrestaciones;
-  const totalFacturar = (totalInsumos + totalPrestaciones) * 1.7 ; // Aquí puedes modificar la lógica si hay otros cálculos
-  const rentabilidad =
-    costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
+  const totalFacturar = (totalInsumos + totalPrestaciones) * 1.7;
+  const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
 
-  // 2. Llamar al hook con los datos del estado
+  // Effect para cargar la información del financiador cuando cambia financiadorId
+  useEffect(() => {
+    const cargarInfoFinanciador = async () => {
+      if (financiadorId) {
+        try {
+          const response = await api.get(`/prestaciones/prestador/${financiadorId}/info`);
+          setFinanciadorInfo(response.data || {});
+        } catch (error) {
+          console.error('Error cargando información del financiador:', error);
+          setFinanciadorInfo({});
+        }
+      } else {
+        setFinanciadorInfo({});
+      }
+    };
+
+    cargarInfoFinanciador();
+  }, [financiadorId]);
+
+  // 2. Llamar al hook con los datos del estado (incluyendo financiadorInfo)
   const AlertaComponente = useAlertaCotizador({
     presupuestoId,
     clienteNombre,
@@ -47,10 +74,10 @@ export default function UserDashboard() {
     totalPrestaciones,
     rentabilidad,
     financiadorId,
+    financiadorInfo, // ← Agregado
   });
 
   const guardarTotales = async () => {
-    // Agregar validación para que no guarde si no hay presupuesto
     if (!presupuestoId) {
       notifications.show({
         title: "Advertencia",
@@ -108,7 +135,7 @@ export default function UserDashboard() {
         </Title>
         <Group spacing="0">
           <UserCircleIcon className="w-5 h-5 mr-0"/>
-          <Text  fw={500} size="sm" tt="capitalize">
+          <Text  fw={500} size="sm" tt="capitalize">
             {user?.username}
           </Text>
           <Button ml="xl" variant="outline" color="red" size="xs" onClick={logout}>
@@ -119,12 +146,12 @@ export default function UserDashboard() {
       </Group>
 
       {/* PRIMERA TARJETA: Totales y Botón Guardar */}
-      <Paper  shadow="sm" p="md" radius="md" withBorder >
+      <Paper  shadow="sm" p="md" radius="md" withBorder >
         <Group style={{ justifyContent: "space-between", marginBottom: 16 }}>
           {presupuestoId && (
             <Group spacing="0">
               <DocumentTextIcon className="w-5 h-5"/>
-              <Text fw={500} tt="capitalize">Paciente:  {clienteNombre}</Text>
+              <Text fw={500} tt="capitalize">Paciente:  {clienteNombre}</Text>
             </Group>
           )}
           {presupuestoId && (
@@ -158,10 +185,10 @@ export default function UserDashboard() {
       </Paper>
       
       {/* SEGUNDA TARJETA: Contenedor para las Alertas Modulares */}
-      <Paper  shadow="sm" p="md" radius="md" withBorder mt="md">
+      <Paper  shadow="sm" p="md" radius="md" withBorder mt="md">
         {/* 3. Inyectamos el componente de alerta aquí */}
         {AlertaComponente}
-      </Paper>
+      </Paper>
 
       <Tabs defaultValue="datos" color="green" mt="md">
         <Tabs.List>
@@ -208,6 +235,7 @@ export default function UserDashboard() {
               setInsumosSeleccionados([]);
               setPrestacionesSeleccionadas([]);
               setFinanciadorId(null);
+              setFinanciadorInfo({}); // Limpiar también financiadorInfo
             }}
           />
         </Tabs.Panel>
