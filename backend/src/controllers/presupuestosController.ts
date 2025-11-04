@@ -168,3 +168,77 @@ export const actualizarPrestador = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error al actualizar prestador', details: err instanceof Error ? err.message : 'Unknown error' });
   }
 };
+
+export const guardarVersion = async (req: Request, res: Response) => {
+  try {
+    const idOriginal = parseInt(req.params.id);
+    console.log('Guardando versión del presupuesto:', idOriginal);
+    
+    if (isNaN(idOriginal) || idOriginal <= 0) {
+      return res.status(400).json({ error: 'ID de presupuesto inválido' });
+    }
+
+    const [presupuestoOriginal]: any = await pool.query(
+      'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
+      [idOriginal]
+    );
+
+    if (presupuestoOriginal.length === 0) {
+      return res.status(404).json({ error: 'Presupuesto no encontrado' });
+    }
+
+    const original = presupuestoOriginal[0];
+    const { total_insumos, total_prestaciones, costo_total, total_facturar, rentabilidad } = req.body;
+    console.log('Datos recibidos:', { total_insumos, total_prestaciones, costo_total, total_facturar, rentabilidad });
+    console.log('Datos originales:', { nombre: original.Nombre_Apellido, dni: original.DNI, sucursal: original.Sucursal });
+
+    const [resultPresupuesto]: any = await pool.query(
+      'INSERT INTO presupuestos (Nombre_Apellido, DNI, Sucursal, dificil_acceso, idobra_social, total_insumos, total_prestaciones, costo_total, total_facturar, rentabilidad) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      [
+        original.Nombre_Apellido,
+        original.DNI,
+        original.Sucursal,
+        original.dificil_acceso || 'no',
+        original.idobra_social || null,
+        total_insumos || 0,
+        total_prestaciones || 0,
+        costo_total || 0,
+        total_facturar || 0,
+        rentabilidad || 0
+      ]
+    );
+
+    const nuevoId = resultPresupuesto.insertId;
+
+    const [insumos]: any = await pool.query(
+      'SELECT * FROM presupuesto_insumos WHERE idPresupuestos = ?',
+      [idOriginal]
+    );
+
+    for (const insumo of insumos) {
+      await pool.query(
+        'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, cantidad) VALUES (?,?,?,?)',
+        [nuevoId, insumo.producto, insumo.costo, insumo.cantidad]
+      );
+    }
+
+    const [prestaciones]: any = await pool.query(
+      'SELECT * FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+      [idOriginal]
+    );
+
+    for (const prestacion of prestaciones) {
+      await pool.query(
+        'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado) VALUES (?,?,?,?,?)',
+        [nuevoId, prestacion.id_servicio, prestacion.prestacion, prestacion.cantidad, prestacion.valor_asignado]
+      );
+    }
+
+    console.log('Nueva versión creada con ID:', nuevoId);
+    res.status(201).json({ id: nuevoId });
+  } catch (err: any) {
+    console.error('Error guardando versión:', err);
+    console.error('Stack trace:', err.stack);
+    res.status(500).json({ error: 'Error al guardar versión del presupuesto', details: err.message });
+  }
+};

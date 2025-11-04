@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, ScrollArea, Badge } from '@mantine/core'
+import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, ScrollArea, Badge, Text } from '@mantine/core'
 import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { getPrestadores, getPrestacionesPorPrestador } from '../api/api'
@@ -19,6 +19,7 @@ interface PrestacionDisponible {
   total_mes: number
   condicion: string
   cant_total: number
+  valor_sugerido: number
 }
 
 interface Financiador {
@@ -32,9 +33,10 @@ interface Props {
   onTotalChange: (total: number) => void
   presupuestoId: number | null
   financiadorId?: string | null
+  onFinanciadorChange?: (financiadorId: string | null, financiadorInfo: any) => void
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId }: Props) {
+export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange }: Props) {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string | null>(null)
   const [financiadorConfirmado, setFinanciadorConfirmado] = useState(false)
@@ -46,7 +48,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [loading, setLoading] = useState(false)
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
   const [nuevaCantidad, setNuevaCantidad] = useState(1)
-  const [nuevoValor, setNuevoValor] = useState(0)
+  const [nuevoValor, setNuevoValor] = useState('')
+  const [editValoresDisponibles, setEditValoresDisponibles] = useState<{value: string, label: string}[]>([])
 
   const total = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
@@ -132,13 +135,28 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     }
   }
 
-  const handleFinanciadorChange = (value: string | null) => {
+  const handleFinanciadorChange = async (value: string | null) => {
     setFinanciadorSeleccionado(value)
     setFinanciadorConfirmado(false)
     setPrestacionesDisponibles([])
     setPrestacionSeleccionada(null)
     setCantidad('1')
     setValorAsignado('')
+    
+    if (value && onFinanciadorChange) {
+      try {
+        const infoRes = await api.get(`/prestaciones/prestador/${value}/info`)
+        setFinanciadorInfo(infoRes.data)
+        onFinanciadorChange(value, infoRes.data)
+      } catch (error) {
+        console.error('Error loading financiador info:', error)
+        setFinanciadorInfo({})
+        onFinanciadorChange(value, {})
+      }
+    } else if (onFinanciadorChange) {
+      setFinanciadorInfo({})
+      onFinanciadorChange(null, {})
+    }
   }
 
   const confirmarFinanciador = async () => {
@@ -183,13 +201,26 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     })
   }
 
+  const valoresDisponibles = useMemo(() => {
+    if (!prestacionSeleccionadaData?.valor_sugerido) return []
+    const vs = Number(prestacionSeleccionadaData.valor_sugerido)
+    return [
+      { value: String(vs * 0.8), label: `$${(vs * 0.8).toFixed(2)}` },
+      { value: String(vs * 0.9), label: `$${(vs * 0.9).toFixed(2)}` },
+      { value: String(vs), label: `$${vs.toFixed(2)} (Sugerido)` },
+      { value: String(vs * 1.1), label: `$${(vs * 1.1).toFixed(2)}` },
+      { value: String(vs * 1.2), label: `$${(vs * 1.2).toFixed(2)}` },
+      { value: String(vs * 1.5), label: `$${(vs * 1.5).toFixed(2)}` }
+    ]
+  }, [prestacionSeleccionadaData])
+
   const handlePrestacionChange = (value: string | null) => {
     setPrestacionSeleccionada(value)
     if (value) {
       const prestacionData = prestacionesDisponibles.find(p => p.id_servicio === value)
       if (prestacionData) {
         setCantidad(String(prestacionData.cant_total || 1))
-        setValorAsignado(String(Number(prestacionData.costo || 0).toFixed(2)))
+        setValorAsignado(String(prestacionData.valor_sugerido || 0))
       }
     } else {
       setCantidad('1')
@@ -278,10 +309,11 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }, [prestacionesSeleccionadas, setPrestacionesSeleccionadas, presupuestoId])
 
   const actualizarPrestacion = (index: number) => {
-    if (nuevaCantidad <= 0 || nuevoValor <= 0) return
+    const valorNum = parseFloat(nuevoValor)
+    if (nuevaCantidad <= 0 || valorNum <= 0) return
     
     const nuevas = [...prestacionesSeleccionadas]
-    nuevas[index] = { ...nuevas[index], cantidad: nuevaCantidad, valor_asignado: nuevoValor }
+    nuevas[index] = { ...nuevas[index], cantidad: nuevaCantidad, valor_asignado: valorNum }
     setPrestacionesSeleccionadas(nuevas)
     
     if (presupuestoId) {
@@ -289,7 +321,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         id_servicio: nuevas[index].id_servicio,
         prestacion: nuevas[index].prestacion,
         cantidad: nuevaCantidad,
-        valor_asignado: nuevoValor
+        valor_asignado: valorNum
       }).catch((err: any) => console.error('Error updating prestacion:', err))
     }
     
@@ -409,33 +441,25 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     size="sm"
                     disabled={!prestacionSeleccionada}
                   />
-                  <Grid>
-                    <Grid.Col span={6}>
-                      <TextInput
-                        label="Cantidad"
-                        value={cantidad}
-                        onChange={(e) => setCantidad(e.target.value)}
-                        type="number"
-                        min="1"
-                        size="sm"
-                        disabled={!prestacionSeleccionada}
-                        description={prestacionSeleccionadaData ? `Rec: ${prestacionSeleccionadaData.cant_total || 1}` : 'Seleccione prestación'}
-                      />
-                    </Grid.Col>
-                    <Grid.Col span={6}>
-                      <TextInput
-                        label="Valor"
-                        value={valorAsignado}
-                        onChange={(e) => setValorAsignado(e.target.value)}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        size="sm"
-                        disabled={!prestacionSeleccionada}
-                        description={prestacionSeleccionadaData ? `Rec: $${Number(prestacionSeleccionadaData.costo || 0).toFixed(2)}` : 'Seleccione prestación'}
-                      />
-                    </Grid.Col>
-                  </Grid>
+                  <TextInput
+                    label="Cantidad"
+                    value={cantidad}
+                    onChange={(e) => setCantidad(e.target.value)}
+                    type="number"
+                    min="1"
+                    size="sm"
+                    disabled={!prestacionSeleccionada}
+                    description={prestacionSeleccionadaData ? `Total Mensual ${prestacionSeleccionadaData.cant_total || 1}` : 'Seleccione prestación'}
+                  />
+                  <Select
+                    label="Valor"
+                    placeholder="Seleccione un valor"
+                    data={valoresDisponibles}
+                    value={valorAsignado}
+                    onChange={(val) => setValorAsignado(val || '')}
+                    disabled={!prestacionSeleccionada}
+                    searchable
+                  />
                   <Group>
                     <Button size="sm" onClick={agregarPrestacion} disabled={!prestacionSeleccionada}>Agregar</Button>
                     <Button size="sm" variant="outline" color="gray" disabled={!prestacionSeleccionada} onClick={() => {
@@ -485,16 +509,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           {editandoIndex === i ? (
-                            <Group spacing="xs" position="center">
-                              <NumberInput
-                                value={nuevoValor}
-                                onChange={(value) => setNuevoValor(Number(value) || 0)}
-                                min={0}
-                                step={0.01}
-                                w={100}
-                                size="xs"
-                              />
-                            </Group>
+                            <Select
+                              data={editValoresDisponibles}
+                              value={nuevoValor}
+                              onChange={(val) => setNuevoValor(val || '')}
+                              size="xs"
+                              w={150}
+                              searchable
+                            />
                           ) : (
                             `$${Number(p.valor_asignado).toFixed(2)}`
                           )}
@@ -517,7 +539,19 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                                 onClick={() => {
                                   setEditandoIndex(i)
                                   setNuevaCantidad(p.cantidad)
-                                  setNuevoValor(p.valor_asignado)
+                                  setNuevoValor(String(p.valor_asignado))
+                                  const prestacionData = prestacionesDisponibles.find(pd => pd.id_servicio === p.id_servicio)
+                                  if (prestacionData) {
+                                    const vs = Number(prestacionData.valor_sugerido)
+                                    setEditValoresDisponibles([
+                                      { value: String(vs * 0.8), label: `$${(vs * 0.8).toFixed(2)}` },
+                                      { value: String(vs * 0.9), label: `$${(vs * 0.9).toFixed(2)}` },
+                                      { value: String(vs), label: `$${vs.toFixed(2)} (Sugerido)` },
+                                      { value: String(vs * 1.1), label: `$${(vs * 1.1).toFixed(2)}` },
+                                      { value: String(vs * 1.2), label: `$${(vs * 1.2).toFixed(2)}` },
+                                      { value: String(vs * 1.5), label: `$${(vs * 1.5).toFixed(2)}` }
+                                    ])
+                                  }
                                 }}
                               >
                                 <PencilSquareIcon width={16} height={16} />

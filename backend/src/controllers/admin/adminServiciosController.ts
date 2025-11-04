@@ -27,7 +27,8 @@ export const getServiciosPorPrestador = async (req: Request, res: Response) => {
         ps.total_mes,
         ps.condicion,
         ps.activo,
-        ps.cant_total
+        ps.cant_total,
+        ps.valor_sugerido
       FROM servicios s
       LEFT JOIN prestador_servicio ps ON s.id_servicio = ps.id_servicio AND ps.idobra_social = ?
       ORDER BY s.nombre`,
@@ -43,7 +44,7 @@ export const getServiciosPorPrestador = async (req: Request, res: Response) => {
 export const createOrUpdateServicioPrestador = async (req: Request, res: Response) => {
   try {
     const { prestadorId, servicioId } = req.params;
-    const { costo, total_mes, condicion, activo, cant_total } = req.body;
+    const { costo, total_mes, condicion, activo, cant_total, valor_sugerido } = req.body;
 
     // Check if relation exists
     const [existing] = await pool.query<RowDataPacket[]>(
@@ -54,14 +55,14 @@ export const createOrUpdateServicioPrestador = async (req: Request, res: Respons
     if (existing.length > 0) {
       // Update existing
       await pool.query<ResultSetHeader>(
-        'UPDATE prestador_servicio SET costo = ?, total_mes = ?, condicion = ?, activo = ?, cant_total = ? WHERE id_prestador_servicio = ?',
-        [costo, total_mes, condicion, activo, cant_total, existing[0].id_prestador_servicio]
+        'UPDATE prestador_servicio SET costo = ?, total_mes = ?, condicion = ?, activo = ?, cant_total = ?, valor_sugerido = ? WHERE id_prestador_servicio = ?',
+        [costo, total_mes, condicion, activo, cant_total, valor_sugerido, existing[0].id_prestador_servicio]
       );
     } else {
       // Create new
       await pool.query<ResultSetHeader>(
-        'INSERT INTO prestador_servicio (idobra_social, id_servicio, costo, total_mes, condicion, activo, cant_total) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [prestadorId, servicioId, costo, total_mes, condicion, activo, cant_total]
+        'INSERT INTO prestador_servicio (idobra_social, id_servicio, costo, total_mes, condicion, activo, cant_total, valor_sugerido) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [prestadorId, servicioId, costo, total_mes, condicion, activo, cant_total, valor_sugerido]
       );
     }
 

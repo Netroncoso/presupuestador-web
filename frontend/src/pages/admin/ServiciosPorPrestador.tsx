@@ -18,6 +18,7 @@ interface ServicioPrestador {
   condicion: string | null;
   activo: number | null;
   cant_total: number | null;
+  valor_sugerido: number | null;
 }
 
 export default function ServiciosPorPrestador() {
@@ -81,7 +82,8 @@ export default function ServiciosPorPrestador() {
         total_mes: formatNumber(servicio.total_mes),
         condicion: servicio.condicion || '',
         activo: nuevoEstado,
-        cant_total: formatNumber(servicio.cant_total)
+        cant_total: formatNumber(servicio.cant_total),
+        valor_sugerido: formatNumber(servicio.valor_sugerido)
       });
       
       notifications.show({
@@ -106,7 +108,8 @@ export default function ServiciosPorPrestador() {
       costo: formatNumber(servicio.costo),
       total_mes: formatNumber(servicio.total_mes),
       condicion: servicio.condicion || '',
-      cant_total: formatNumber(servicio.cant_total)
+      cant_total: formatNumber(servicio.cant_total),
+      valor_sugerido: formatNumber(servicio.valor_sugerido)
     });
     setModalOpen(true);
   };
@@ -121,7 +124,8 @@ export default function ServiciosPorPrestador() {
         total_mes: formatNumber(editingServicio.total_mes),
         condicion: editingServicio.condicion || '',
         activo: editingServicio.activo || 0,
-        cant_total: formatNumber(editingServicio.cant_total)
+        cant_total: formatNumber(editingServicio.cant_total),
+        valor_sugerido: formatNumber(editingServicio.valor_sugerido)
       });
       
       notifications.show({
@@ -167,6 +171,7 @@ export default function ServiciosPorPrestador() {
                 <th>Servicio</th>
                 <th style={{ width: '150px' }}>Estado</th>
                 <th style={{ width: '100px' }}>Costo</th>
+                <th style={{ width: '120px' }}>Valor Sugerido</th>
                 <th style={{ width: '100px' }}>Total/Mes</th>
                 <th style={{ width: '120px' }}>Condición</th>
                 <th style={{ width: '100px' }}>Cant. Total</th>
@@ -194,6 +199,7 @@ export default function ServiciosPorPrestador() {
                     </Group>
                   </td>
                   <td>${formatNumber(servicio.costo).toFixed(2)}</td>
+                  <td>${formatNumber(servicio.valor_sugerido).toFixed(2)}</td>
                   <td>{formatNumber(servicio.total_mes)}</td>
                   <td>{servicio.condicion || '-'}</td>
                   <td>{formatNumber(servicio.cant_total)}</td>
@@ -231,6 +237,17 @@ export default function ServiciosPorPrestador() {
               onChange={(e) => setEditingServicio({
                 ...editingServicio,
                 costo: parseFloat(e.target.value) || 0
+              })}
+              min={0}
+              step={0.01}
+            />
+            <TextInput
+              label="Valor Sugerido"
+              type="number"
+              value={formatNumber(editingServicio.valor_sugerido).toString()}
+              onChange={(e) => setEditingServicio({
+                ...editingServicio,
+                valor_sugerido: parseFloat(e.target.value) || 0
               })}
               min={0}
               step={0.01}

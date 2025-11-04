@@ -89,22 +89,26 @@ export default function UserDashboard() {
 
     setGuardandoTotales(true);
     try {
-      await api.put(`/presupuestos/${presupuestoId}/totales`, {
+      const response = await api.post(`/presupuestos/${presupuestoId}/guardar-version`, {
         total_insumos: totalInsumos,
         total_prestaciones: totalPrestaciones,
         costo_total: costoTotal,
         total_facturar: totalFacturar,
         rentabilidad: rentabilidad,
       });
+      
+      const nuevoId = response.data.id;
+      setPresupuestoId(nuevoId);
+      
       notifications.show({
-        title: "Totales Guardados",
-        message: "Los totales se guardaron correctamente",
+        title: "Presupuesto Guardado",
+        message: `Nueva versión creada con ID: ${nuevoId}`,
         color: "green",
       });
     } catch (error) {
       notifications.show({
         title: "Error",
-        message: "Error al guardar totales",
+        message: "Error al guardar presupuesto",
         color: "red",
       });
     } finally {
@@ -257,6 +261,10 @@ export default function UserDashboard() {
             onTotalChange={setTotalPrestaciones}
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
+            onFinanciadorChange={(id, info) => {
+              setFinanciadorId(id)
+              setFinanciadorInfo(info)
+            }}
           />
         </Tabs.Panel>
       </Tabs>

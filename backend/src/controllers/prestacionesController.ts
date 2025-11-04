@@ -16,7 +16,7 @@ export const getPrestacionesPorPrestador = async (req: Request, res: Response) =
   try {
     const id = req.params.id;
     const [rows] = await pool.query(
-      `SELECT ps.id_servicio, s.nombre, ps.costo, ps.total_mes, ps.condicion, ps.cant_total
+      `SELECT ps.id_servicio, s.nombre, ps.costo, ps.total_mes, ps.condicion, ps.cant_total, ps.valor_sugerido
        FROM prestador_servicio AS ps
        JOIN servicios AS s ON ps.id_servicio = s.id_servicio
        WHERE ps.idobra_social = ? AND ps.activo = 1`, [id]

@@ -79,7 +79,7 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode => {
         </Text>
       </Alert>
     );
-  } else if (rentabilidad >= 0 && rentabilidad < 35) {
+  } else if (rentabilidad >= 1 && rentabilidad < 35) {
     alertas.push(
       <Alert 
         key="rentabilidad-mejorar"
@@ -259,7 +259,7 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode => {
           className="mb-3"
         >
           <Text size="sm">
-            Tasa mensual del <strong>{(financiadorInfo.tasa_mensual * 100).toFixed(2)}%</strong>. 
+            Tasa mensual del <strong>{(financiadorInfo.tasa_mensual)}%</strong>. 
             Verifica que los precios cubran este costo adicional.
           </Text>
         </Alert>
