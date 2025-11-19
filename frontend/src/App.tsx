@@ -1,10 +1,12 @@
-import React from 'react';
-import { MantineProvider } from '@mantine/core';
+import React, { Suspense } from 'react';
+import { MantineProvider, Loader, Center } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
-import UserDashboard from './pages/UserDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import './styles/global.css';
+
+const UserDashboard = React.lazy(() => import('./pages/UserDashboard'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -17,16 +19,16 @@ function AppContent() {
     return <Login />;
   }
 
-  if (user.rol === 'admin') {
-    return <AdminDashboard />;
-  }
-
-  return <UserDashboard />;
+  return (
+    <Suspense fallback={<Center h="100vh"><Loader size="lg" /></Center>}>
+      {user.rol === 'admin' ? <AdminDashboard /> : <UserDashboard />}
+    </Suspense>
+  );
 }
 
 export default function App() {
   return (
-    <MantineProvider withGlobalStyles withNormalizeCSS>
+    <MantineProvider>
       <Notifications />
       <AuthProvider>
         <AppContent />

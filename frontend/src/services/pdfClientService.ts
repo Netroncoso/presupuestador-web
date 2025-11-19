@@ -1,0 +1,123 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+interface PresupuestoData {
+  cliente: string;
+  dni: string;
+  sucursal: string;
+  presupuestoId: number;
+  insumos: Array<{ producto: string; cantidad: number; costo: number }>;
+  prestaciones: Array<{ prestacion: string; cantidad: number; valor_asignado: number }>;
+  totales: {
+    totalInsumos: number;
+    totalPrestaciones: number;
+    costoTotal: number;
+    totalFacturar: number;
+    rentabilidad: number;
+  };
+}
+
+export const pdfClientService = {
+  generarYDescargar(data: PresupuestoData) {
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    // HEADER
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRESUPUESTO', 105, yPos, { align: 'center' });
+    yPos += 15;
+
+    // DATOS DEL CLIENTE
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Cliente: ${data.cliente}`, 20, yPos);
+    yPos += 7;
+    doc.text(`DNI: ${data.dni}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Sucursal: ${data.sucursal}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-AR')}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Presupuesto #${data.presupuestoId}`, 20, yPos);
+    yPos += 15;
+
+    // INSUMOS
+    if (data.insumos.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INSUMOS', 20, yPos);
+      yPos += 7;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Producto', 'Cantidad', 'Precio Unit.', 'Total']],
+        body: data.insumos.map(i => [
+          i.producto,
+          i.cantidad.toString(),
+          `$${Number(i.costo).toFixed(2)}`,
+          `$${(Number(i.costo) * i.cantidad).toFixed(2)}`
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // PRESTACIONES
+    if (data.prestaciones.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PRESTACIONES', 20, yPos);
+      yPos += 7;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Servicio', 'Cantidad', 'Precio Unit.', 'Total']],
+        body: data.prestaciones.map(p => [
+          p.prestacion,
+          p.cantidad.toString(),
+          `$${Number(p.valor_asignado).toFixed(2)}`,
+          `$${(Number(p.valor_asignado) * p.cantidad).toFixed(2)}`
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // TOTALES
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTALES', 20, yPos);
+    yPos += 7;
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Insumos: $${data.totales.totalInsumos.toFixed(2)}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Total Prestaciones: $${data.totales.totalPrestaciones.toFixed(2)}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Costo Total: $${data.totales.costoTotal.toFixed(2)}`, 20, yPos);
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total a Facturar: $${data.totales.totalFacturar.toFixed(2)}`, 20, yPos);
+    yPos += 7;
+    doc.text(`Rentabilidad: ${data.totales.rentabilidad.toFixed(2)}%`, 20, yPos);
+
+    // FOOTER
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(
+      `Generado el ${new Date().toLocaleString('es-AR')}`,
+      105,
+      285,
+      { align: 'center' }
+    );
+
+    // Descargar
+    doc.save(`presupuesto-${data.presupuestoId}.pdf`);
+  },
+};

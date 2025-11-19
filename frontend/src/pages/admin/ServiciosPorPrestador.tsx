@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput } from '@mantine/core';
+import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput, Tooltip } from '@mantine/core';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -13,18 +13,18 @@ interface ServicioPrestador {
   id_servicio: string;
   nombre: string;
   id_prestador_servicio: number | null;
-  costo: number | null;
-  total_mes: number | null;
-  condicion: string | null;
+  valor_facturar: number | null;
   activo: number | null;
   cant_total: number | null;
   valor_sugerido: number | null;
+  tipo_unidad?: string;
 }
 
 export default function ServiciosPorPrestador() {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string>('');
   const [servicios, setServicios] = useState<ServicioPrestador[]>([]);
+  const [filtroServicio, setFiltroServicio] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<ServicioPrestador | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,9 +78,7 @@ export default function ServiciosPorPrestador() {
     
     try {
       await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${servicio.id_servicio}`, {
-        costo: formatNumber(servicio.costo),
-        total_mes: formatNumber(servicio.total_mes),
-        condicion: servicio.condicion || '',
+        valor_facturar: formatNumber(servicio.valor_facturar),
         activo: nuevoEstado,
         cant_total: formatNumber(servicio.cant_total),
         valor_sugerido: formatNumber(servicio.valor_sugerido)
@@ -105,9 +103,7 @@ export default function ServiciosPorPrestador() {
   const handleEdit = (servicio: ServicioPrestador) => {
     setEditingServicio({
       ...servicio,
-      costo: formatNumber(servicio.costo),
-      total_mes: formatNumber(servicio.total_mes),
-      condicion: servicio.condicion || '',
+      valor_facturar: formatNumber(servicio.valor_facturar),
       cant_total: formatNumber(servicio.cant_total),
       valor_sugerido: formatNumber(servicio.valor_sugerido)
     });
@@ -120,9 +116,7 @@ export default function ServiciosPorPrestador() {
     setLoading(true);
     try {
       await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
-        costo: formatNumber(editingServicio.costo),
-        total_mes: formatNumber(editingServicio.total_mes),
-        condicion: editingServicio.condicion || '',
+        valor_facturar: formatNumber(editingServicio.valor_facturar),
         activo: editingServicio.activo || 0,
         cant_total: formatNumber(editingServicio.cant_total),
         valor_sugerido: formatNumber(editingServicio.valor_sugerido)
@@ -149,14 +143,14 @@ export default function ServiciosPorPrestador() {
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <Select
         label="Seleccionar Financiador"
         placeholder="Seleccione un financiador activo"
         value={financiadorSeleccionado}
         onChange={(value) => setFinanciadorSeleccionado(value || '')}
         data={financiadores.map(p => ({
-          value: p.idobra_social,
+          value: String(p.idobra_social),
           label: formatName(p.Financiador)
         }))}
         searchable
@@ -165,25 +159,41 @@ export default function ServiciosPorPrestador() {
 
       {financiadorSeleccionado && (
         <Paper p="md" withBorder>
-          <Table striped highlightOnHover>
-            <thead>
-              <tr>
-                <th>Servicio</th>
-                <th style={{ width: '150px' }}>Estado</th>
-                <th style={{ width: '100px' }}>Costo</th>
-                <th style={{ width: '120px' }}>Valor Sugerido</th>
-                <th style={{ width: '100px' }}>Total/Mes</th>
-                <th style={{ width: '120px' }}>Condición</th>
-                <th style={{ width: '100px' }}>Cant. Total</th>
-                <th style={{ width: '100px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {servicios.map((servicio) => (
-                <tr key={servicio.id_servicio}>
-                  <td>{formatName(servicio.nombre)}</td>
-                  <td>
-                    <Group spacing="sm" align="center">
+          <TextInput
+            placeholder="Filtrar por servicio..."
+            value={filtroServicio}
+            onChange={(e) => setFiltroServicio(e.currentTarget.value)}
+            mb="md"
+          />
+          <Table striped="odd" highlightOnHover layout="fixed" stickyHeader>
+            <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+              <Table.Tr>
+                <Table.Th>Servicio</Table.Th>
+                <Table.Th style={{ width: '80px' }}>Tipo</Table.Th>
+                <Table.Th style={{ width: '140px' }}>Estado</Table.Th>
+                <Table.Th style={{ width: '140px' }}>
+                  <Tooltip label="Valor a facturar por unidad de servicio">
+                    <span>Valor a Facturar</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th style={{ width: '130px' }}>Valor Sugerido</Table.Th>
+                <Table.Th style={{ width: '110px' }}>
+                  <Tooltip label="Cantidad inicial sugerida y límite para alertas">
+                    <span>Cant. Sugerida</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th style={{ width: '90px' }}>Acciones</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {servicios
+                .filter(s => s.nombre.toLowerCase().includes(filtroServicio.toLowerCase()))
+                .map((servicio) => (
+                <Table.Tr key={servicio.id_servicio}>
+                  <Table.Td>{formatName(servicio.nombre)}</Table.Td>
+                  <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || 'horas'}</Table.Td>
+                  <Table.Td>
+                    <Group gap="sm" align="center">
                       <Switch
                         checked={servicio.activo === 1}
                         onChange={() => toggleActivo(servicio)}
@@ -191,26 +201,24 @@ export default function ServiciosPorPrestador() {
                       />
                       <Badge 
                         color={servicio.activo === 1 ? 'green' : 'gray'} 
-                        variant="light"
+                        variant="dot"
                         size="sm"
                       >
                         {servicio.activo === 1 ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </Group>
-                  </td>
-                  <td>${formatNumber(servicio.costo).toFixed(2)}</td>
-                  <td>${formatNumber(servicio.valor_sugerido).toFixed(2)}</td>
-                  <td>{formatNumber(servicio.total_mes)}</td>
-                  <td>{servicio.condicion || '-'}</td>
-                  <td>{formatNumber(servicio.cant_total)}</td>
-                  <td>
-                    <ActionIcon variant="light" onClick={() => handleEdit(servicio)}>
-                      <PencilSquareIcon width={16} height={16} />
+                  </Table.Td>
+                  <Table.Td>${formatNumber(servicio.valor_facturar).toFixed(2)}</Table.Td>
+                  <Table.Td>${formatNumber(servicio.valor_sugerido).toFixed(2)}</Table.Td>
+                  <Table.Td>{formatNumber(servicio.cant_total)}</Table.Td>
+                  <Table.Td>
+                    <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
+                      <PencilSquareIcon width={20} height={20} />
                     </ActionIcon>
-                  </td>
-                </tr>
+                  </Table.Td>
+                </Table.Tr>
               ))}
-            </tbody>
+            </Table.Tbody>
           </Table>
           
           {servicios.length === 0 && (
@@ -229,14 +237,14 @@ export default function ServiciosPorPrestador() {
         size="md"
       >
         {editingServicio && (
-          <Stack spacing="md">
+          <Stack gap="md">
             <TextInput
-              label="Costo"
+              label="Valor a Facturar"
               type="number"
-              value={formatNumber(editingServicio.costo).toString()}
+              value={formatNumber(editingServicio.valor_facturar).toString()}
               onChange={(e) => setEditingServicio({
                 ...editingServicio,
-                costo: parseFloat(e.target.value) || 0
+                valor_facturar: parseFloat(e.target.value) || 0
               })}
               min={0}
               step={0.01}
@@ -253,25 +261,7 @@ export default function ServiciosPorPrestador() {
               step={0.01}
             />
             <TextInput
-              label="Total/Mes"
-              type="number"
-              value={formatNumber(editingServicio.total_mes).toString()}
-              onChange={(e) => setEditingServicio({
-                ...editingServicio,
-                total_mes: parseInt(e.target.value) || 0
-              })}
-              min={0}
-            />
-            <TextInput
-              label="Condición"
-              value={editingServicio.condicion || ''}
-              onChange={(e) => setEditingServicio({
-                ...editingServicio,
-                condicion: e.target.value
-              })}
-            />
-            <TextInput
-              label="Cantidad Total"
+              label="Cantidad Sugerida"
               type="number"
               value={formatNumber(editingServicio.cant_total).toString()}
               onChange={(e) => setEditingServicio({

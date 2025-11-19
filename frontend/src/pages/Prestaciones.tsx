@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, ScrollArea, Badge, Text } from '@mantine/core'
+import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip } from '@mantine/core'
 import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { getPrestadores, getPrestacionesPorPrestador } from '../api/api'
@@ -10,16 +10,18 @@ interface Prestacion {
   prestacion: string
   cantidad: number
   valor_asignado: number
+  valor_facturar: number
+  tipo_unidad?: string
+  cant_total?: number
 }
 
 interface PrestacionDisponible {
   id_servicio: string
   nombre: string
-  costo: number
-  total_mes: number
-  condicion: string
+  valor_facturar: number
   cant_total: number
   valor_sugerido: number
+  tipo_unidad?: string
 }
 
 interface Financiador {
@@ -30,7 +32,7 @@ interface Financiador {
 interface Props {
   prestacionesSeleccionadas: Prestacion[]
   setPrestacionesSeleccionadas: (prestaciones: Prestacion[]) => void
-  onTotalChange: (total: number) => void
+  onTotalChange: (totalCosto: number, totalFacturar: number) => void
   presupuestoId: number | null
   financiadorId?: string | null
   onFinanciadorChange?: (financiadorId: string | null, financiadorInfo: any) => void
@@ -48,11 +50,15 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [loading, setLoading] = useState(false)
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
   const [nuevaCantidad, setNuevaCantidad] = useState(1)
-  const [nuevoValor, setNuevoValor] = useState('')
-  const [editValoresDisponibles, setEditValoresDisponibles] = useState<{value: string, label: string}[]>([])
+  const [nuevoValor, setNuevoValor] = useState(0)
 
-  const total = useMemo(() => 
+  const totalCosto = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
+    [prestacionesSeleccionadas]
+  )
+
+  const totalFacturar = useMemo(() => 
+    prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_facturar)), 0),
     [prestacionesSeleccionadas]
   )
 
@@ -63,39 +69,31 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   const financiadoresOptions = useMemo(() => 
     financiadores.map(p => ({
-      value: p.idobra_social,
+      value: String(p.idobra_social),
       label: p.Financiador
     })),
     [financiadores]
   )
 
   useEffect(() => {
-    onTotalChange(total)
-  }, [total, onTotalChange])
+    onTotalChange(totalCosto, totalFacturar)
+  }, [totalCosto, totalFacturar, onTotalChange])
 
   useEffect(() => {
     cargarFinanciadores()
   }, [])
 
   useEffect(() => {
-    if (presupuestoId) {
-      api.get(`/presupuestos/${presupuestoId}/prestaciones`).then(res => {
-        setPrestacionesSeleccionadas(res.data)
-      }).catch((err: any) => console.error('Error loading prestaciones:', err))
+    console.log('Prestaciones useEffect:', { presupuestoId, financiadorId, prestacionesSeleccionadas: prestacionesSeleccionadas.length });
+    if (presupuestoId && financiadorId) {
+      setFinanciadorSeleccionado(financiadorId)
+      setFinanciadorConfirmado(true)
+      cargarPrestacionesPorFinanciador(financiadorId)
       
-      // Si hay financiadorId, configurar el financiador
-      if (financiadorId) {
-        setFinanciadorSeleccionado(financiadorId)
-        setFinanciadorConfirmado(true)
-        cargarPrestacionesPorFinanciador(financiadorId)
-        
-        // Cargar info del financiador
-        api.get(`/prestaciones/prestador/${financiadorId}/info`).then(infoRes => {
-          setFinanciadorInfo(infoRes.data)
-        }).catch((err: any) => console.error('Error loading financiador info:', err))
-      }
-    } else {
-      // Reset state when presupuestoId is null (new budget)
+      api.get(`/prestaciones/prestador/${financiadorId}/info`).then(infoRes => {
+        setFinanciadorInfo(infoRes.data)
+      }).catch((err: any) => console.error('Error loading financiador info:', err))
+    } else if (!presupuestoId) {
       setFinanciadorSeleccionado(null)
       setFinanciadorConfirmado(false)
       setPrestacionesDisponibles([])
@@ -104,7 +102,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       setValorAsignado('')
       setFinanciadorInfo({})
     }
-  }, [presupuestoId, financiadorId, setPrestacionesSeleccionadas])
+  }, [presupuestoId, financiadorId])
 
   const cargarFinanciadores = async () => {
     try {
@@ -257,7 +255,10 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       id_servicio: prestacionSeleccionada,
       prestacion: prestacionData.nombre,
       cantidad: cantidadNum,
-      valor_asignado: valorNum
+      valor_asignado: valorNum,
+      valor_facturar: Number(prestacionData.valor_facturar),
+      tipo_unidad: prestacionData.tipo_unidad || 'horas',
+      cant_total: prestacionData.cant_total
     }
 
     const existeIndex = prestacionesSeleccionadas.findIndex(p => p.id_servicio === prestacionSeleccionada)
@@ -275,7 +276,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         id_servicio: prestacionSeleccionada,
         prestacion: prestacionData.nombre,
         cantidad: cantidadNum,
-        valor_asignado: valorNum
+        valor_asignado: valorNum,
+        valor_facturar: Number(prestacionData.valor_facturar)
       }).catch((err: any) => console.error('Error saving prestacion:', err))
     }
 
@@ -309,11 +311,10 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }, [prestacionesSeleccionadas, setPrestacionesSeleccionadas, presupuestoId])
 
   const actualizarPrestacion = (index: number) => {
-    const valorNum = parseFloat(nuevoValor)
-    if (nuevaCantidad <= 0 || valorNum <= 0) return
+    if (nuevaCantidad <= 0 || nuevoValor <= 0) return
     
     const nuevas = [...prestacionesSeleccionadas]
-    nuevas[index] = { ...nuevas[index], cantidad: nuevaCantidad, valor_asignado: valorNum }
+    nuevas[index] = { ...nuevas[index], cantidad: nuevaCantidad, valor_asignado: nuevoValor }
     setPrestacionesSeleccionadas(nuevas)
     
     if (presupuestoId) {
@@ -321,7 +322,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         id_servicio: nuevas[index].id_servicio,
         prestacion: nuevas[index].prestacion,
         cantidad: nuevaCantidad,
-        valor_asignado: valorNum
+        valor_asignado: nuevoValor,
+        valor_facturar: nuevas[index].valor_facturar
       }).catch((err: any) => console.error('Error updating prestacion:', err))
     }
     
@@ -334,22 +336,21 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }
 
   return (
-    <Stack spacing="lg">
-      <Paper p="md" withBorder shadow="sm">
+    <Stack gap="lg" mb={25}>
+      <Paper p="md" withBorder shadow="sm" >
         <Title order={4} mb="md">Selección de Financiador</Title>
-        <Stack spacing="sm">
+        <Flex direction={'column'}>
+          <Group  grow align="baseline" mb={20} > 
           <Select
-            label="Financiador"
             placeholder="Seleccione un financiador"
             data={financiadoresOptions}
             value={financiadorSeleccionado}
             onChange={handleFinanciadorChange}
             searchable
-            clearable
             disabled={financiadorConfirmado}
+            checkIconPosition="right"
           />
-          <Group>
-            <Button 
+            <Button bottom={0}
               onClick={confirmarFinanciador} 
               disabled={!financiadorSeleccionado || financiadorConfirmado}
               color={financiadorConfirmado ? 'green' : 'blue'}
@@ -357,7 +358,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
               {financiadorConfirmado ? 'Financiador Confirmado' : 'Confirmar'}
             </Button>
             {financiadorConfirmado && (
-              <Button 
+              <Button  
                 onClick={modificarFinanciador}
                 variant="outline"
                 color="orange"
@@ -368,39 +369,46 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             )}
           </Group>
           {financiadorConfirmado && financiadorInfo && (
-            <Group spacing="md" mt="sm">
+            <Group grow mt="md">
               <Badge variant="dot" color="blue">Tasa Mensual: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
               <Badge variant="dot" color="orange">Días Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}</Badge>
               <Badge variant="dot" color="green">Días Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}</Badge>
-            <Badge color="teal">{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo Asignado'}</Badge>
+            <Badge variant="dot" color="teal">{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo Asignado'}</Badge>
             </Group>
           )}
-        </Stack>
+        </Flex>
       </Paper>
 
       {financiadorConfirmado && prestacionesDisponibles.length > 0 && (
-        <Stack spacing="md">
+        <Stack gap="md">
           <Grid>
 
             <Grid.Col span={6}>
               <Paper p="md" withBorder>
                 <Title order={4} mb="md">Prestaciones Disponibles</Title>
-                <ScrollArea h={400} scrollbarSize={8} scrollHideDelay={0}>
-                  <Table striped highlightOnHover fontSize="sm">
-                    <thead style={{ textAlign: 'center',position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
-                      <tr>
-                        <th style={{ backgroundColor: '#f8f9fa',textAlign: 'left' }}>Prestación</th>
-                        <th style={{ backgroundColor: '#f8f9fa',textAlign: 'left' }}>Costo</th>
-                        <th style={{ backgroundColor: '#f8f9fa',textAlign: 'left' }}>Total/Mes</th>
-                        <th style={{ backgroundColor: '#f8f9fa',textAlign: 'left' }}>Condición</th>
-                        <th style={{ backgroundColor: '#f8f9fa',textAlign: 'left' }}>Cant.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <Table.ScrollContainer mt="xs" minWidth={500} h={400}>
+                  <Table striped="odd" highlightOnHover stickyHeader>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Prestación</Table.Th>
+                        <Table.Th style={{ width: '80px' }}>Tipo</Table.Th>
+                        <Table.Th>
+                          <Tooltip label="Valor a facturar por unidad de servicio">
+                            <span>Valor a Facturar</span>
+                          </Tooltip>
+                        </Table.Th>
+                        <Table.Th>
+                          <Tooltip label="Cantidad sugerida inicial para el presupuesto">
+                            <span>Cant. Sugerida</span>
+                          </Tooltip>
+                        </Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
                       {prestacionesDisponibles.map((p) => (
-                        <tr key={p.id_servicio}>
-                          <td>
-                            <Group spacing="xs">
+                        <Table.Tr key={p.id_servicio}>
+                          <Table.Td>
+                            <Group gap="xs">
                               <Checkbox
                                 size="sm"
                                 checked={prestacionSeleccionada === p.id_servicio}
@@ -416,23 +424,22 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                               />
                               <span>{p.nombre.charAt(0).toUpperCase() + p.nombre.slice(1).toLowerCase()}</span>
                             </Group>
-                          </td>
-                          <td>${Number(p.costo || 0).toFixed(2)}</td>
-                          <td>{Number(p.total_mes || 0).toFixed(0)}</td>
-                          <td>{p.condicion || 'N/A'}</td>
-                          <td>{p.cant_total || 0}</td>
-                        </tr> 
+                          </Table.Td>
+                          <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || 'horas'}</Table.Td>
+                          <Table.Td>${Number(p.valor_facturar || 0).toFixed(2)}</Table.Td>
+                          <Table.Td>{p.cant_total || 0}</Table.Td>
+                        </Table.Tr> 
                       ))}
-                    </tbody>
+                    </Table.Tbody>
                   </Table>
-                </ScrollArea>
+                </Table.ScrollContainer>
               </Paper>
             </Grid.Col>
             
             <Grid.Col span={6}>
               <Paper p="md" withBorder style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: prestacionSeleccionada ? 1 : 0.6 }}>
                 <Title order={4} mb="md">Agregar al Presupuesto</Title>
-                <Stack spacing="sm">
+                <Stack gap="sm">
                   <TextInput
                     label="Prestación"
                     value={prestacionSeleccionadaData?.nombre || ''}
@@ -475,56 +482,83 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Prestaciones Seleccionadas</Title>
-            <ScrollArea h={300} scrollbarSize={8} scrollHideDelay={0}>
-              <Table striped highlightOnHover>
-                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
-                  <tr>
-                    <th style={{ backgroundColor: '#f8f9fa' }}>Prestación</th>
-                    <th style={{ textAlign: 'center', backgroundColor: '#f8f9fa' }}>Cantidad</th>
-                    <th style={{ textAlign: 'center', backgroundColor: '#f8f9fa' }}>Valor</th>
-                    <th style={{ textAlign: 'center', backgroundColor: '#f8f9fa' }}>Subtotal</th>
-                    <th style={{ textAlign: 'center', backgroundColor: '#f8f9fa' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table striped="odd" highlightOnHover stickyHeader >
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{textAlign: 'left' }}>Prestación</Table.Th>
+                    <Table.Th>Cantidad</Table.Th>
+                    <Table.Th>
+                      <Tooltip label="Valor asignado negociado con el prestador">
+                        <span>Costo Unit.</span>
+                      </Tooltip>
+                    </Table.Th>
+                    <Table.Th>
+                      <Tooltip label="Valor unitario a facturar al financiador">
+                        <span>Precio a Facturar</span>
+                      </Tooltip>
+                    </Table.Th>
+                    <Table.Th>
+                      <Tooltip label="Valor asignado × cantidad">
+                        <span>Subtotal Costo</span>
+                      </Tooltip>
+                    </Table.Th>
+                    <Table.Th>
+                      <Tooltip label="Precio a facturar × cantidad">
+                        <span>Subtotal Facturar</span>
+                      </Tooltip>
+                    </Table.Th>
+                    <Table.Th>Acciones</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
                   {prestacionesSeleccionadas.map((p, i) => {
-                    const subtotal = Number(p.cantidad) * Number(p.valor_asignado)
+                    const costoUnitario = Number(p.valor_asignado);
+                    const precioFacturar = Number(p.valor_facturar);
+                    const subtotalCosto = costoUnitario * p.cantidad;
+                    const subtotalFacturar = precioFacturar * p.cantidad;
+                    
                     return (
-                      <tr key={`${p.id_servicio}-${i}`}>
-                        <td>{p.prestacion}</td>
-                        <td style={{ textAlign: 'center' }}>
+                      <Table.Tr key={`${p.id_servicio}-${i}`}>
+                        <Table.Td>{p.prestacion}</Table.Td>
+                        <Table.Td>
                           {editandoIndex === i ? (
-                            <Group spacing="xs" position="center">
+                            <Group gap="xs" justify="Left">
                               <NumberInput
                                 value={nuevaCantidad}
                                 onChange={(value) => setNuevaCantidad(Number(value) || 1)}
                                 min={1}
                                 w={80}
                                 size="xs"
+                                hideControls
                               />
                             </Group>
                           ) : (
                             p.cantidad
                           )}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
+                        </Table.Td>
+                        <Table.Td>
                           {editandoIndex === i ? (
-                            <Select
-                              data={editValoresDisponibles}
+                            <NumberInput
                               value={nuevoValor}
-                              onChange={(val) => setNuevoValor(val || '')}
+                              onChange={(value) => setNuevoValor(Number(value) || 0)}
+                              min={0}
+                              step={0.01}
+                              decimalScale={2}
+                              w={100}
                               size="xs"
-                              w={150}
-                              searchable
+                              hideControls
+                              prefix="$"
                             />
                           ) : (
-                            `$${Number(p.valor_asignado).toFixed(2)}`
+                            `$${costoUnitario.toFixed(2)}`
                           )}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>${subtotal.toFixed(2)}</td>
-                        <td style={{ textAlign: 'center' }}>
+                        </Table.Td>
+                        <Table.Td>${precioFacturar.toFixed(2)}</Table.Td>
+                        <Table.Td>${subtotalCosto.toFixed(2)}</Table.Td>
+                        <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
+                        <Table.Td>
                           {editandoIndex === i ? (
-                            <Group spacing="xs" position="center">
+                            <Group gap="xs" justify="left">
                               <Button size="xs" onClick={() => actualizarPrestacion(i)}>
                                 OK
                               </Button>
@@ -533,45 +567,32 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                               </Button>
                             </Group>
                           ) : (
-                            <Group spacing="xs" position="center">
+                            <Group gap="xs" justify="left">
                               <ActionIcon
-                                variant="light"
+                                variant="transparent"
                                 onClick={() => {
                                   setEditandoIndex(i)
                                   setNuevaCantidad(p.cantidad)
-                                  setNuevoValor(String(p.valor_asignado))
-                                  const prestacionData = prestacionesDisponibles.find(pd => pd.id_servicio === p.id_servicio)
-                                  if (prestacionData) {
-                                    const vs = Number(prestacionData.valor_sugerido)
-                                    setEditValoresDisponibles([
-                                      { value: String(vs * 0.8), label: `$${(vs * 0.8).toFixed(2)}` },
-                                      { value: String(vs * 0.9), label: `$${(vs * 0.9).toFixed(2)}` },
-                                      { value: String(vs), label: `$${vs.toFixed(2)} (Sugerido)` },
-                                      { value: String(vs * 1.1), label: `$${(vs * 1.1).toFixed(2)}` },
-                                      { value: String(vs * 1.2), label: `$${(vs * 1.2).toFixed(2)}` },
-                                      { value: String(vs * 1.5), label: `$${(vs * 1.5).toFixed(2)}` }
-                                    ])
-                                  }
+                                  setNuevoValor(Number(p.valor_asignado))
                                 }}
                               >
-                                <PencilSquareIcon width={16} height={16} />
+                                <PencilSquareIcon  width={20} height={20} />
                               </ActionIcon>
                               <ActionIcon
-                                variant="light"
+                                variant="transparent"
                                 color="red"
                                 onClick={() => eliminarPrestacion(i)}
                               >
-                                <TrashIcon width={16} height={16} />
+                                <TrashIcon  width={20} height={20} />
                               </ActionIcon>
                             </Group>
                           )}
-                        </td>
-                      </tr>
+                        </Table.Td>
+                      </Table.Tr>
                     )
                   })}
-                </tbody>
+                </Table.Tbody>
               </Table>
-            </ScrollArea>
             {prestacionesSeleccionadas.length === 0 && (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
                 No hay prestaciones seleccionadas

@@ -1,64 +1,53 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
+import { asyncHandler, AppError } from '../middleware/errorHandler';
 
-export const guardarInsumoPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
-    const { producto, costo, cantidad } = req.body;
+export const guardarInsumoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { producto, costo, precio_facturar, cantidad } = req.body;
 
-    if (isNaN(presupuestoId) || !producto || !costo || !cantidad) {
-      return res.status(400).json({ error: 'Datos inválidos' });
-    }
-
-    await pool.query(
-      'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, cantidad) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE costo = VALUES(costo), cantidad = VALUES(cantidad)',
-      [presupuestoId, producto, costo, cantidad]
-    );
-
-    res.json({ ok: true });
-  } catch (err: any) {
-    console.error('Error saving insumo:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al guardar insumo', details: err instanceof Error ? err.message : 'Unknown error' });
+  if (isNaN(presupuestoId) || !producto || !costo || !cantidad) {
+    throw new AppError(400, 'Datos inválidos');
   }
-};
 
-export const eliminarInsumoPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
-    const { producto } = req.body;
+  // Si no se proporciona precio_facturar, usar costo como fallback (compatibilidad)
+  const precioFinal = precio_facturar || costo;
 
-    if (isNaN(presupuestoId) || !producto) {
-      return res.status(400).json({ error: 'Datos inválidos' });
-    }
+  await pool.query(
+    'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE costo = VALUES(costo), precio_facturar = VALUES(precio_facturar), cantidad = VALUES(cantidad)',
+    [presupuestoId, producto, costo, precioFinal, cantidad]
+  );
 
-    await pool.query(
-      'DELETE FROM presupuesto_insumos WHERE idPresupuestos = ? AND producto = ?',
-      [presupuestoId, producto]
-    );
+  res.json({ ok: true });
+});
 
-    res.json({ ok: true });
-  } catch (err: any) {
-    console.error('Error deleting insumo:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al eliminar insumo', details: err instanceof Error ? err.message : 'Unknown error' });
+export const eliminarInsumoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { producto } = req.body;
+
+  if (isNaN(presupuestoId) || !producto) {
+    throw new AppError(400, 'Datos inválidos');
   }
-};
 
-export const obtenerInsumosPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
+  await pool.query(
+    'DELETE FROM presupuesto_insumos WHERE idPresupuestos = ? AND producto = ?',
+    [presupuestoId, producto]
+  );
 
-    if (isNaN(presupuestoId)) {
-      return res.status(400).json({ error: 'ID inválido' });
-    }
+  res.json({ ok: true });
+});
 
-    const [rows] = await pool.query(
-      'SELECT producto, costo, cantidad FROM presupuesto_insumos WHERE idPresupuestos = ?',
-      [presupuestoId]
-    );
+export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
 
-    res.json(rows);
-  } catch (err: any) {
-    console.error('Error fetching insumos:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al obtener insumos', details: err instanceof Error ? err.message : 'Unknown error' });
+  if (isNaN(presupuestoId)) {
+    throw new AppError(400, 'ID inválido');
   }
-};
+
+  const [rows] = await pool.query(
+    'SELECT producto, costo, precio_facturar, cantidad FROM presupuesto_insumos WHERE idPresupuestos = ?',
+    [presupuestoId]
+  );
+
+  res.json(rows);
+});

@@ -1,27 +1,23 @@
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { pool } from '../../db';
+import { asyncHandler, AppError } from '../../middleware/errorHandler';
 
-export const getAllInsumos = async (req: Request, res: Response) => {
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT idInsumos, producto, costo FROM insumos ORDER BY producto'
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Error fetching insumos:', err);
-    res.status(500).json({ error: 'Error al obtener insumos' });
+export const getAllInsumos = asyncHandler(async (req: Request, res: Response) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT idInsumos, producto, costo FROM insumos ORDER BY producto'
+  );
+  res.json(rows);
+});
+
+export const createInsumo = asyncHandler(async (req: Request, res: Response) => {
+  const { producto, costo } = req.body;
+
+  if (!producto || costo === undefined) {
+    throw new AppError(400, 'Producto y costo son requeridos');
   }
-};
 
-export const createInsumo = async (req: Request, res: Response) => {
   try {
-    const { producto, costo } = req.body;
-
-    if (!producto || costo === undefined) {
-      return res.status(400).json({ error: 'Producto y costo son requeridos' });
-    }
-
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO insumos (producto, costo) VALUES (?, ?)',
       [producto, costo]
@@ -35,57 +31,50 @@ export const createInsumo = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'El producto ya existe' });
+      throw new AppError(409, 'El producto ya existe');
     }
-    console.error('Error creating insumo:', err);
-    res.status(500).json({ error: 'Error al crear insumo' });
+    throw err;
   }
-};
+});
 
-export const updateInsumo = async (req: Request, res: Response) => {
+export const updateInsumo = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { producto, costo } = req.body;
+
+  if (!producto || costo === undefined) {
+    throw new AppError(400, 'Producto y costo son requeridos');
+  }
+
   try {
-    const { id } = req.params;
-    const { producto, costo } = req.body;
-
-    if (!producto || costo === undefined) {
-      return res.status(400).json({ error: 'Producto y costo son requeridos' });
-    }
-
     const [result] = await pool.query<ResultSetHeader>(
       'UPDATE insumos SET producto = ?, costo = ? WHERE idInsumos = ?',
       [producto, costo, id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Insumo no encontrado' });
+      throw new AppError(404, 'Insumo no encontrado');
     }
 
     res.json({ message: 'Insumo actualizado correctamente' });
   } catch (err: any) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'El producto ya existe' });
+      throw new AppError(409, 'El producto ya existe');
     }
-    console.error('Error updating insumo:', err);
-    res.status(500).json({ error: 'Error al actualizar insumo' });
+    throw err;
   }
-};
+});
 
-export const deleteInsumo = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+export const deleteInsumo = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
 
-    const [result] = await pool.query<ResultSetHeader>(
-      'DELETE FROM insumos WHERE idInsumos = ?',
-      [id]
-    );
+  const [result] = await pool.query<ResultSetHeader>(
+    'DELETE FROM insumos WHERE idInsumos = ?',
+    [id]
+  );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Insumo no encontrado' });
-    }
-
-    res.json({ message: 'Insumo eliminado correctamente' });
-  } catch (err) {
-    console.error('Error deleting insumo:', err);
-    res.status(500).json({ error: 'Error al eliminar insumo' });
+  if (result.affectedRows === 0) {
+    throw new AppError(404, 'Insumo no encontrado');
   }
-};
+
+  res.json({ message: 'Insumo eliminado correctamente' });
+});

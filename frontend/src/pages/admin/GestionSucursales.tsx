@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, TextInput, Table, Group, Stack, Modal, ActionIcon, Button } from '@mantine/core';
+import { TextInput, Table, Group, Stack, Modal, ActionIcon, Button, Tooltip } from '@mantine/core';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import AdminTable from '../../components/AdminTable';
 
 interface Sucursal {
   ID: number;
@@ -87,45 +88,41 @@ export default function GestionSucursales() {
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <TextInput
         placeholder="Buscar sucursales..."
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
       />
 
-      <Paper p="md" withBorder>
-        <Table striped highlightOnHover>
-          <thead>
-            <tr>
-              <th>Sucursal</th>
-              <th style={{ width: '180px' }}>% Difícil Acceso</th>
-              <th style={{ width: '150px' }}>% Insumos</th>
-              <th style={{ width: '100px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sucursalesFiltradas.map((sucursal) => (
-              <tr key={sucursal.ID}>
-                <td>{formatName(sucursal.Sucursales_mh)}</td>
-                <td>{formatNumber(sucursal.suc_porcentaje_dificil_acceso)}%</td>
-                <td>{formatNumber(sucursal.suc_porcentaje_insumos)}%</td>
-                <td>
-                  <ActionIcon variant="light" onClick={() => handleEdit(sucursal)}>
-                    <PencilSquareIcon width={16} height={16} />
-                  </ActionIcon>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        
-        {sucursalesFiltradas.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No se encontraron sucursales
-          </div>
-        )}
-      </Paper>
+      <AdminTable isEmpty={sucursalesFiltradas.length === 0} emptyMessage="No se encontraron sucursales">
+        <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+          <Table.Tr>
+            <Table.Th>Sucursal</Table.Th>
+            <Table.Th style={{ width: '180px' }}>% Difícil Acceso</Table.Th>
+            <Table.Th style={{ width: '150px' }}>
+              <Tooltip label="Incluye logística y ganancia" position="top">
+                <span>% Margen Insumos</span>
+              </Tooltip>
+            </Table.Th>
+            <Table.Th style={{ width: '100px' }}>Acciones</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {sucursalesFiltradas.map((sucursal) => (
+            <Table.Tr key={sucursal.ID}>
+              <Table.Td>{formatName(sucursal.Sucursales_mh)}</Table.Td>
+              <Table.Td>{formatNumber(sucursal.suc_porcentaje_dificil_acceso)}%</Table.Td>
+              <Table.Td>{formatNumber(sucursal.suc_porcentaje_insumos)}%</Table.Td>
+              <Table.Td>
+                <ActionIcon variant="transparent" onClick={() => handleEdit(sucursal)}>
+                  <PencilSquareIcon width={20} height={20} />
+                </ActionIcon>
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </AdminTable>
 
       {/* Modal Editar */}
       <Modal
@@ -135,7 +132,7 @@ export default function GestionSucursales() {
         size="md"
       >
         {editingSucursal && (
-          <Stack spacing="md">
+          <Stack gap="md">
             <TextInput
               label="Porcentaje Difícil Acceso (%)"
               type="number"
@@ -148,7 +145,8 @@ export default function GestionSucursales() {
               step={0.1}
             />
             <TextInput
-              label="Porcentaje Insumos (%)"
+              label="Margen Total Insumos (%)"
+              description="Incluye logística y ganancia. Se aplica sobre el costo base de cada insumo."
               type="number"
               value={formatNumber(editingSucursal.suc_porcentaje_insumos).toString()}
               onChange={(e) => setEditingSucursal({

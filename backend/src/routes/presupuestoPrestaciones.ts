@@ -3,6 +3,7 @@ import { guardarPrestacionPresupuesto, eliminarPrestacionPresupuesto, obtenerPre
 
 const router = Router();
 
+router.get('/:id', obtenerPrestacionesPresupuesto);
 router.post('/:id/prestaciones', guardarPrestacionPresupuesto);
 router.delete('/:id/prestaciones', eliminarPrestacionPresupuesto);
 router.get('/:id/prestaciones', obtenerPrestacionesPresupuesto);

@@ -1,8 +1,16 @@
 const getBackendUrl = () => {
+  const url = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+  
+  // Validate URL to prevent SSRF
+  const allowedHosts = ['localhost', '127.0.0.1', '192.168.1.197'];
   try {
-    return (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
-  } catch (error) {
-    console.warn('Failed to access environment variables, using default backend URL');
+    const parsed = new URL(url);
+    if (!allowedHosts.includes(parsed.hostname)) {
+      console.error('Invalid backend URL, using default');
+      return 'http://localhost:4000';
+    }
+    return url;
+  } catch {
     return 'http://localhost:4000';
   }
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, TextInput, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, Select } from '@mantine/core';
+import { TextInput, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, Select } from '@mantine/core';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import AdminTable from '../../components/AdminTable';
 
 interface Financiador {
   idobra_social: string;
@@ -137,7 +138,7 @@ export default function GestionPrestadores() {
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <Group>
         <TextInput
           placeholder="Buscar financiadores..."
@@ -158,59 +159,51 @@ export default function GestionPrestadores() {
         />
       </Group>
 
-      <Paper p="md" withBorder>
-        <Table striped highlightOnHover>
-          <thead>
-            <tr>
-              <th>Financiador</th>
-              <th style={{ width: '180px'}}>Estado</th>
-              <th style={{ width: '120px' }}>Tasa Mensual</th>
-                <th style={{ width: '140px' }}>Días Teórico</th>
-              <th style={{ width: '120px' }}>Días Real</th>
-                <th style={{ width: '240px' }}>Acuerdo</th>
-              <th style={{ width: '100px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {financiadoresFiltrados.map((financiador) => (
-              <tr key={financiador.idobra_social}>
-                <td>{formatFinanciadorName(financiador.Financiador)}</td>
-                <td>
-                  <Group spacing="sm" align="center">
-                    <Switch
-                      checked={financiador.activo === 1}
-                      onChange={() => toggleActivo(financiador)}
-                      size="sm"
-                    />
-                    <Badge 
-                      color={financiador.activo === 1 ? 'green' : 'red'} 
-                      variant="dot"
-                      size="md"
-                    >
-                      {financiador.activo === 1 ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                  </Group>
-                </td>
-                <td>{(financiador.tasa_mensual || 0)}%</td>
-                <td>{(financiador.dias_cobranza_teorico || 0)} días</td>
-                <td>{(financiador.dias_cobranza_real || 0)} días</td>
-                <td>{financiador.acuerdo_nombre || 'SIN CONVENIO'}</td>
-                <td>
-                  <ActionIcon variant="light" onClick={() => handleEdit(financiador)}>
-                    <PencilSquareIcon width={16} height={16} />
-                  </ActionIcon>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        
-        {financiadoresFiltrados.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No se encontraron financiadores
-          </div>
-        )}
-      </Paper>
+      <AdminTable isEmpty={financiadoresFiltrados.length === 0} emptyMessage="No se encontraron financiadores">
+        <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+          <Table.Tr>
+            <Table.Th>Financiador</Table.Th>
+            <Table.Th style={{ width: '180px'}}>Estado</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Tasa Mensual</Table.Th>
+            <Table.Th style={{ width: '140px' }}>Días Teórico</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Días Real</Table.Th>
+            <Table.Th style={{ width: '240px' }}>Acuerdo</Table.Th>
+            <Table.Th style={{ width: '100px' }}>Acciones</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {financiadoresFiltrados.map((financiador) => (
+            <Table.Tr key={financiador.idobra_social}>
+              <Table.Td>{formatFinanciadorName(financiador.Financiador)}</Table.Td>
+              <Table.Td>
+                <Group gap="sm" align="center">
+                  <Switch
+                    checked={financiador.activo === 1}
+                    onChange={() => toggleActivo(financiador)}
+                    size="sm"
+                  />
+                  <Badge 
+                    color={financiador.activo === 1 ? 'green' : 'red'} 
+                    variant="dot"
+                    size="md"
+                  >
+                    {financiador.activo === 1 ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </Group>
+              </Table.Td>
+              <Table.Td>{(financiador.tasa_mensual || 0)}%</Table.Td>
+              <Table.Td>{(financiador.dias_cobranza_teorico || 0)} días</Table.Td>
+              <Table.Td>{(financiador.dias_cobranza_real || 0)} días</Table.Td>
+              <Table.Td>{financiador.acuerdo_nombre || 'SIN CONVENIO'}</Table.Td>
+              <Table.Td>
+                <ActionIcon variant="transparent" onClick={() => handleEdit(financiador)}>
+                  <PencilSquareIcon width={20} height={20} />
+                </ActionIcon>
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </AdminTable>
 
       {/* Modal Editar */}
       <Modal
@@ -220,7 +213,7 @@ export default function GestionPrestadores() {
         size="md"
       >
         {editingFinanciador && (
-          <Stack spacing="md">
+          <Stack gap="md">
             <TextInput
               label="Tasa Mensual (%)"
               type="number"

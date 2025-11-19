@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from "react";
-import {Tabs,Container,Title, Group,Text,Badge,Button, Paper,} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import {Tabs,Container,Title, Group,Text,Button, Paper, Flex,SimpleGrid,Collapse,ActionIcon,Card,Modal,Textarea,Badge} from "@mantine/core";
+import { notifications } from '@mantine/notifications';
 import { useAuth } from "../contexts/AuthContext";
+import { useNotificationCount } from '../hooks/useNotificationCount';
 import DatosPresupuesto from "./DatosPresupuesto";
+import Notificaciones from "./Notificaciones";
+import Auditoria from "./Auditoria";
+import { NotificationIndicator } from '../components/NotificationIndicator';
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
-import { api } from "../api/api";
+import ListaPresupuestos from "./ListaPresupuestos";
 import {
   DocumentArrowDownIcon,
   IdentificationIcon,
@@ -14,238 +18,375 @@ import {
   UserCircleIcon,
   ArrowRightStartOnRectangleIcon,
   DocumentTextIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ArchiveBoxArrowDownIcon,
+  ClockIcon,
+  BellIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
-
-// RUTA CORREGIDA: Asume que el hook está en src/hooks/
+import { ShieldExclamationIcon } from "@heroicons/react/24/solid";
 import { useAlertaCotizador } from '../hooks/useAlertaCotizador';
+import { usePresupuesto } from '../hooks/usePresupuesto';
+import { useTotales } from '../hooks/useTotales';
+import { useFinanciador } from '../hooks/useFinanciador';
+import { pdfClientService } from '../services/pdfClientService';
+import { api } from '../api/api';
 
-// Interface para la información del financiador
-interface FinanciadorInfo {
-  tasa_mensual?: number;
-  dias_cobranza_teorico?: number;
-  dias_cobranza_real?: number;
-  acuerdo_nombre?: string | null;
-  Financiador?: string;
-  idobra_social?: string;
-}
+const ICON_SIZE = { width: 20, height: 20 };
+const TAB_HOVER_STYLE = { '&:hover': { backgroundColor: '#dff1db' } };
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+  }).format(value);
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
-  const [presupuestoId, setPresupuestoId] = useState<number | null>(null);
-  const [clienteNombre, setClienteNombre] = useState("");
-  const [porcentajeInsumos, setPorcentajeInsumos] = useState(0);
-  const [totalInsumos, setTotalInsumos] = useState(0);
-  const [totalPrestaciones, setTotalPrestaciones] = useState(0);
+  const { count: notificationCount, isConnected } = useNotificationCount();
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<any[]>([]);
   const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<any[]>([]);
-  const [guardandoTotales, setGuardandoTotales] = useState(false);
-  const [financiadorId, setFinanciadorId] = useState<string | null>(null);
-  const [financiadorInfo, setFinanciadorInfo] = useState<FinanciadorInfo>({}); // Nuevo estado
+  const [alertasAbiertas, setAlertasAbiertas] = useState(true);
+  const [activeTab, setActiveTab] = useState<string | null>('datos');
+  const [esCargaHistorial, setEsCargaHistorial] = useState(false);
+  const [datosHistorial, setDatosHistorial] = useState<{ nombre: string; dni: string; sucursal: string } | undefined>();
+  const [recargarHistorial, setRecargarHistorial] = useState(0);
+  const [filtroAuditoriaPresupuesto, setFiltroAuditoriaPresupuesto] = useState<number | null>(null);
+  const [modalAuditoriaAbierto, setModalAuditoriaAbierto] = useState(false);
+  const [mensajeAuditoria, setMensajeAuditoria] = useState('');
+  const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Calcular totales
-  const costoTotal = totalInsumos + totalPrestaciones;
-  const totalFacturar = (totalInsumos + totalPrestaciones) * 1.7;
-  const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
+  const {
+    presupuestoId,
+    clienteNombre,
+    porcentajeInsumos,
+    financiadorId,
+    financiadorInfo,
+    guardandoTotales,
+    setFinanciadorId,
+    setFinanciadorInfo,
+    crearPresupuesto,
+    resetPresupuesto,
+    guardarVersion,
+    cargarPresupuesto,
+  } = usePresupuesto();
 
-  // Effect para cargar la información del financiador cuando cambia financiadorId
-  useEffect(() => {
-    const cargarInfoFinanciador = async () => {
-      if (financiadorId) {
-        try {
-          const response = await api.get(`/prestaciones/prestador/${financiadorId}/info`);
-          setFinanciadorInfo(response.data || {});
-        } catch (error) {
-          console.error('Error cargando información del financiador:', error);
-          setFinanciadorInfo({});
-        }
-      } else {
-        setFinanciadorInfo({});
-      }
-    };
+  const {
+    totalInsumos,
+    totalPrestaciones,
+    costoTotal,
+    totalFacturar,
+    rentabilidad,
+    rentabilidadConPlazo,
+    setTotalInsumos,
+    setTotalesPrestaciones,
+    resetTotales,
+  } = useTotales(financiadorInfo, prestacionesSeleccionadas, porcentajeInsumos);
 
-    cargarInfoFinanciador();
-  }, [financiadorId]);
+  useFinanciador(financiadorId, setFinanciadorInfo);
 
-  // 2. Llamar al hook con los datos del estado (incluyendo financiadorInfo)
-  const AlertaComponente = useAlertaCotizador({
+  const rentabilidadFinal = useMemo(() => 
+    financiadorInfo?.dias_cobranza_real ? rentabilidadConPlazo : rentabilidad,
+    [financiadorInfo, rentabilidadConPlazo, rentabilidad]
+  );
+
+  const alertas = useAlertaCotizador({
     presupuestoId,
     clienteNombre,
     totalInsumos,
     totalPrestaciones,
-    rentabilidad,
+    totalFacturar,
+    rentabilidad: rentabilidadFinal,
     financiadorId,
-    financiadorInfo, // ← Agregado
+    financiadorInfo,
+    prestacionesSeleccionadas,
   });
 
-  const guardarTotales = async () => {
-    if (!presupuestoId) {
-      notifications.show({
-        title: "Advertencia",
-        message: "Debe crear o seleccionar un presupuesto primero.",
-        color: "yellow",
-      });
-      return;
-    }
+  const handleGuardarTotales = useCallback(async () => {
+    const rentabilidadConPlazoFinal = financiadorInfo?.dias_cobranza_real ? rentabilidadConPlazo : undefined;
+    await guardarVersion(totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal, rentabilidadConPlazoFinal);
+    setRecargarHistorial(prev => prev + 1);
+  }, [financiadorInfo, rentabilidadConPlazo, guardarVersion, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal]);
 
-    setGuardandoTotales(true);
-    try {
-      const response = await api.post(`/presupuestos/${presupuestoId}/guardar-version`, {
-        total_insumos: totalInsumos,
-        total_prestaciones: totalPrestaciones,
-        costo_total: costoTotal,
-        total_facturar: totalFacturar,
-        rentabilidad: rentabilidad,
-      });
-      
-      const nuevoId = response.data.id;
-      setPresupuestoId(nuevoId);
-      
-      notifications.show({
-        title: "Presupuesto Guardado",
-        message: `Nueva versión creada con ID: ${nuevoId}`,
-        color: "green",
-      });
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: "Error al guardar presupuesto",
-        color: "red",
-      });
-    } finally {
-      setGuardandoTotales(false);
-    }
-  };
+  const handleNuevoPresupuesto = useCallback(() => {
+    resetPresupuesto();
+    resetTotales();
+    setInsumosSeleccionados([]);
+    setPrestacionesSeleccionadas([]);
+    setEsCargaHistorial(false);
+    setDatosHistorial(undefined);
+  }, [resetPresupuesto, resetTotales]);
 
-  useEffect(() => {
-    (window as any).__syncPrestacionesHandler = (
-      prestaciones: any[],
-      total: number
-    ) => {
-      setPrestacionesSeleccionadas(prestaciones);
-      setTotalPrestaciones(total);
-    };
-    return () => {
-      try {
-        delete (window as any).__syncPrestacionesHandler;
-      } catch (e) {}
-    };
+  const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLectura: boolean = true) => {
+    setDatosHistorial({
+      nombre: presupuesto.Nombre_Apellido,
+      dni: presupuesto.DNI,
+      sucursal: presupuesto.Sucursal
+    });
+    await cargarPresupuesto(
+      presupuesto.idPresupuestos,
+      presupuesto.Nombre_Apellido,
+      presupuesto.Sucursal,
+      presupuesto.idobra_social,
+      setInsumosSeleccionados,
+      setPrestacionesSeleccionadas,
+      setEsCargaHistorial,
+      soloLectura
+    );
+    setActiveTab('datos');
+  }, [cargarPresupuesto]);
+
+  const handleFinanciadorChange = useCallback((id: string | null, info: any) => {
+    setFinanciadorId(id);
+    setFinanciadorInfo(info);
+  }, [setFinanciadorId, setFinanciadorInfo]);
+
+  const handleDescargarPDF = useCallback(() => {
+    if (!presupuestoId || !datosHistorial) return;
+
+    pdfClientService.generarYDescargar({
+      cliente: datosHistorial.nombre,
+      dni: datosHistorial.dni,
+      sucursal: datosHistorial.sucursal,
+      presupuestoId,
+      insumos: insumosSeleccionados,
+      prestaciones: prestacionesSeleccionadas,
+      totales: {
+        totalInsumos,
+        totalPrestaciones,
+        costoTotal,
+        totalFacturar,
+        rentabilidad: rentabilidadFinal,
+      },
+    });
+  }, [presupuestoId, datosHistorial, insumosSeleccionados, prestacionesSeleccionadas, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal]);
+
+  const abrirModalAuditoria = useCallback(() => {
+    if (!presupuestoId) return;
+    setModalAuditoriaAbierto(true);
+  }, [presupuestoId]);
+
+  const cerrarModalAuditoria = useCallback(() => {
+    setModalAuditoriaAbierto(false);
+    setMensajeAuditoria('');
   }, []);
 
+  const handlePedirAuditoria = useCallback(async () => {
+    if (!presupuestoId) return;
+    
+    const mensaje = textareaRef.current?.value || '';
+    
+    setEnviandoAuditoria(true);
+    try {
+      await api.put(`/auditoria/pedir/${presupuestoId}`, {
+        mensaje: mensaje.trim() || null
+      });
+      
+      notifications.show({
+        title: 'Auditoría Solicitada',
+        message: 'El auditor médico será notificado para revisar el presupuesto',
+        color: 'blue',
+        position: 'top-center',
+        autoClose: false,
+      });
+      cerrarModalAuditoria();
+    } catch (error) {
+      console.error('Error:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Error al solicitar auditoría',
+        color: 'red',
+        position: 'top-center',
+        autoClose: false,
+      });
+    } finally {
+      setEnviandoAuditoria(false);
+    }
+  }, [presupuestoId, cerrarModalAuditoria]);
+
   return (
-    <Container size="xl" p="md">
-      <Group style={{ justifyContent: "space-between", marginBottom: 20 }}>
-        <Title order={2} c="blue">
-          Cotizador General
-        </Title>
-        <Group spacing="0">
-          <UserCircleIcon className="w-5 h-5 mr-0"/>
-          <Text  fw={500} size="sm" tt="capitalize">
-            {user?.username}
-          </Text>
-          <Button ml="xl" variant="outline" color="red" size="xs" onClick={logout}>
-            <ArrowRightStartOnRectangleIcon className="w-5 h-5 mr-1"/>
-            Salir 
+    <Container fluid p="xl">
+      <Group justify="space-between" mb={20}>
+        <Title fw={500} order={2} c="blue">Cotizador General</Title>
+        <Group gap="xs">
+          <UserCircleIcon style={ICON_SIZE} />
+          <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
+          <div 
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: isConnected ? '#40c057' : '#fa5252'
+            }}
+            title={isConnected ? 'Notificaciones en tiempo real' : 'Desconectado'}
+          />
+          <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={ICON_SIZE}/>}>
+            Salir
           </Button>
         </Group>
       </Group>
 
-      {/* PRIMERA TARJETA: Totales y Botón Guardar */}
-      <Paper  shadow="sm" p="md" radius="md" withBorder >
-        <Group style={{ justifyContent: "space-between", marginBottom: 16 }}>
+      <Paper p="md" radius="md" withBorder shadow="xs" style={{ backgroundColor: '#c5e4b6' }}>
+        <Group justify="space-between" px="xs" pt="xs">
           {presupuestoId && (
-            <Group spacing="0">
-              <DocumentTextIcon className="w-5 h-5"/>
-              <Text fw={500} tt="capitalize">Paciente:  {clienteNombre}</Text>
+            <Group gap="xs">
+              <DocumentTextIcon style={ICON_SIZE} />
+              <Text fw={500} tt="capitalize">Paciente: {clienteNombre}</Text>
             </Group>
           )}
           {presupuestoId && (
-            <Button onClick={guardarTotales} loading={guardandoTotales} size="xs" color="green" 
-            rightIcon={<DocumentArrowDownIcon className="w-5 h-5 m-0"/>}>
-              Guardar
-            </Button>
+            <Group gap="xs">
+              <Button onClick={handleGuardarTotales} loading={guardandoTotales} size="xs" color="green" leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}>
+                Guardar
+              </Button>
+              <Button 
+                onClick={abrirModalAuditoria} 
+                size="xs" 
+                variant="outline" 
+                color="orange"
+                leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
+                disabled={!presupuestoId}
+              >
+                Pedir Auditoría
+              </Button>
+              <Button 
+                onClick={handleDescargarPDF} 
+                size="xs" 
+                variant="outline" 
+                color="Green"
+                leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
+              >
+                Descargar PDF
+              </Button>
+            </Group>
           )}
         </Group>
         
-        <Group spacing="xl" style={{ justifyContent: "center" }}>
-          <Badge variant="dot">Insumos: ${totalInsumos.toFixed(2)}</Badge>
-          <Badge variant="dot">
-            Prestaciones: ${totalPrestaciones.toFixed(2)}
-          </Badge>
-          <Badge variant="dot" color="blue">
-            Costo Total: ${costoTotal.toFixed(2)}
-          </Badge>
-          <Badge variant="dot" color="orange">
-            Total a Facturar: ${totalFacturar.toFixed(2)}
-          </Badge>
-          <Badge
-            variant="outline"
-            color={rentabilidad >= 0 ? "green" : "red"}
-            size="xl"
-          >
-            Rentabilidad: {rentabilidad.toFixed(2)}%
-          </Badge>
+
+        <Group grow p="xs">
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Insumos:</Text>
+                <Text fw={500}>{formatCurrency(totalInsumos)}</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text fw={500}>Prestaciones:</Text>
+                <Text fw={500}>{formatCurrency(totalPrestaciones)}</Text>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Costo Total:</Text>
+                <Text fw={500} c="blue">{formatCurrency(costoTotal)}</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text fw={500}>Total a Facturar:</Text>
+                <Text fw={500} c="orange">{formatCurrency(totalFacturar)}</Text>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={600}>Rentabilidad:</Text>
+                <Text fw={600} c={rentabilidad >= 0 ? "green" : "red"}>
+                  {rentabilidad.toFixed(2)}%
+                </Text>
+              </Flex>
+              {financiadorInfo?.dias_cobranza_real && (
+                <Flex justify="space-between">
+                  <Text fw={600}>Con Plazo:</Text>
+                  <Text fw={600} c={rentabilidadConPlazo >= 0 ? "teal" : "red"}>
+                    {rentabilidadConPlazo.toFixed(2)}%
+                  </Text>
+                </Flex>
+              )}
+            </Flex>
+          </Card>
         </Group>
-
-      </Paper>
-      
-      {/* SEGUNDA TARJETA: Contenedor para las Alertas Modulares */}
-      <Paper  shadow="sm" p="md" radius="md" withBorder mt="md">
-        {/* 3. Inyectamos el componente de alerta aquí */}
-        {AlertaComponente}
       </Paper>
 
-      <Tabs defaultValue="datos" color="green" mt="md">
-        <Tabs.List>
-          <Tabs.Tab value="datos">
-            <Group spacing="xs">
-              <IdentificationIcon className="w-5 h-5" />
+      {alertas.length > 0 && (
+        <Paper shadow="xs" p="md" radius="md" withBorder mt="xs" onClick={() => setAlertasAbiertas(!alertasAbiertas)} style={{ cursor: 'pointer' }}>
+          <Group justify="space-between" mb={alertasAbiertas ? 12 : 0}>
+            <Group gap="xs">
+              <ShieldExclamationIcon color="red" style={ICON_SIZE} />
+              <Text fw={400} size="md" color="red">Alertas Disponibles</Text>
+            </Group>
+            <ActionIcon variant="subtle">
+              {alertasAbiertas ? <ChevronUpIcon style={{ width: 18, height: 18 }} /> : <ChevronDownIcon style={{ width: 18, height: 18 }} />}
+            </ActionIcon>
+          </Group>
+          <Collapse in={alertasAbiertas}>
+            <SimpleGrid cols={2}>
+              {alertas}
+            </SimpleGrid>
+          </Collapse>
+        </Paper>
+      )}  
+
+      <Tabs value={activeTab} onChange={setActiveTab} color="green" mt="lg" radius="md">
+        <Tabs.List grow>
+          <Tabs.Tab value="datos" style={TAB_HOVER_STYLE}>
+            <Group gap="xs">
+              <IdentificationIcon style={ICON_SIZE} />
               Datos Paciente
             </Group>
           </Tabs.Tab>
-          <Tabs.Tab value="insumos" disabled={!presupuestoId}>
-            <Group spacing="xs">
-              <BeakerIcon className="w-5 h-5" />
+          <Tabs.Tab value="insumos" style={TAB_HOVER_STYLE} disabled={!presupuestoId}>
+            <Group gap="xs">
+              <BeakerIcon style={ICON_SIZE} />
               Insumos
             </Group>
           </Tabs.Tab>
-          <Tabs.Tab value="prestaciones" disabled={!presupuestoId}>
-            <Group spacing="xs">
-              <BriefcaseIcon className="w-5 h-5" />
+          <Tabs.Tab value="prestaciones" style={TAB_HOVER_STYLE} disabled={!presupuestoId}>
+            <Group gap="xs">
+              <BriefcaseIcon style={ICON_SIZE} />
               Prestaciones
             </Group>
           </Tabs.Tab>
+          <Tabs.Tab value="historial" style={TAB_HOVER_STYLE}>
+            <Group gap="xs">
+              <ClockIcon style={ICON_SIZE} />
+              Historial
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="notificaciones" style={TAB_HOVER_STYLE}>
+            <Group gap="xs">
+              <BellIcon style={ICON_SIZE} />
+              Notificaciones
+              <NotificationIndicator count={notificationCount} />
+            </Group>
+          </Tabs.Tab>
+          {user?.rol === 'auditor_medico' && (
+            <Tabs.Tab value="auditoria" style={TAB_HOVER_STYLE}>
+              <Group gap="xs">
+                <ShieldCheckIcon style={ICON_SIZE} />
+                Auditoría
+              </Group>
+            </Tabs.Tab>
+          )}
         </Tabs.List>
 
         <Tabs.Panel value="datos" pt="md">
           <DatosPresupuesto
-            onPresupuestoCreado={(
-              id,
-              nombre,
-              sucursal,
-              porcentaje,
-              financiadorIdParam
-            ) => {
-              setPresupuestoId(id);
-              setClienteNombre(nombre);
-              setPorcentajeInsumos(porcentaje);
-              setFinanciadorId(financiadorIdParam || null);
-            }}
-            onNuevoPresupuesto={() => {
-              setPresupuestoId(null);
-              setClienteNombre("");
-              setPorcentajeInsumos(0);
-              setTotalInsumos(0);
-              setTotalPrestaciones(0);
-              setInsumosSeleccionados([]);
-              setPrestacionesSeleccionadas([]);
-              setFinanciadorId(null);
-              setFinanciadorInfo({}); // Limpiar también financiadorInfo
-            }}
+            onPresupuestoCreado={crearPresupuesto}
+            onNuevoPresupuesto={handleNuevoPresupuesto}
+            esCargaHistorial={esCargaHistorial}
+            setEsCargaHistorial={setEsCargaHistorial}
+            datosHistorial={datosHistorial}
           />
         </Tabs.Panel>
 
         <Tabs.Panel value="insumos" pt="md">
-          <Insumos
+          <Insumos 
             insumosSeleccionados={insumosSeleccionados}
             setInsumosSeleccionados={setInsumosSeleccionados}
             onTotalChange={setTotalInsumos}
@@ -258,16 +399,74 @@ export default function UserDashboard() {
           <Prestaciones
             prestacionesSeleccionadas={prestacionesSeleccionadas}
             setPrestacionesSeleccionadas={setPrestacionesSeleccionadas}
-            onTotalChange={setTotalPrestaciones}
+            onTotalChange={setTotalesPrestaciones}
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
-            onFinanciadorChange={(id, info) => {
-              setFinanciadorId(id)
-              setFinanciadorInfo(info)
-            }}
+            onFinanciadorChange={handleFinanciadorChange}
           />
         </Tabs.Panel>
+
+        <Tabs.Panel value="historial" pt="md">
+          <ListaPresupuestos onEditarPresupuesto={handleEditarPresupuesto} recargarTrigger={recargarHistorial} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="notificaciones" pt="md">
+          <Notificaciones onIrAuditoria={(presupuestoId) => {
+            setFiltroAuditoriaPresupuesto(presupuestoId);
+            setActiveTab('auditoria');
+          }} />
+        </Tabs.Panel>
+
+        {user?.rol === 'auditor_medico' && (
+          <Tabs.Panel value="auditoria" pt="md">
+            <Auditoria 
+              onCargarPresupuesto={handleEditarPresupuesto} 
+              filtroPresupuesto={filtroAuditoriaPresupuesto}
+              onLimpiarFiltro={() => setFiltroAuditoriaPresupuesto(null)}
+            />
+          </Tabs.Panel>
+        )}
       </Tabs>
+
+      <Modal 
+        opened={modalAuditoriaAbierto} 
+        onClose={cerrarModalAuditoria} 
+        title="Solicitar Auditoría"
+        size="md"
+      >
+        <Text size="sm" mb="md">
+          <strong>Presupuesto:</strong> #{presupuestoId} - {clienteNombre}
+        </Text>
+        
+        <Textarea
+          ref={textareaRef}
+          label="Mensaje para el auditor (opcional)"
+          placeholder="Explica por qué necesitas esta auditoría o cualquier información relevante..."
+          rows={3}
+          mb="md"
+        />
+
+        <Group justify="flex-end" gap="md">
+          <Button 
+            variant="outline" 
+            color="gray"
+            size="xs"
+            onClick={cerrarModalAuditoria}
+            disabled={enviandoAuditoria}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            color="orange" 
+            size="xs"
+            onClick={handlePedirAuditoria}
+            loading={enviandoAuditoria}
+            leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
+          >
+            Solicitar Auditoría
+          </Button>
+        </Group>
+      </Modal>
     </Container>
   );
 }

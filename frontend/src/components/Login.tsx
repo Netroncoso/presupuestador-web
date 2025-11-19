@@ -1,21 +1,42 @@
 import React, { useState } from 'react';
-import { Paper, TextInput, PasswordInput, Button, Title, Stack, Alert } from '@mantine/core';
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import {
+  Paper,
+  TextInput,
+  PasswordInput,
+  Button,
+  Stack,
+  Text,
+  Alert,
+  Group,
+  PaperProps
+} from '@mantine/core';
+import { useForm } from '@mantine/form';
+import ExclamationCircleIcon from '@heroicons/react/24/outline/ExclamationCircleIcon';
+import EyeIcon from '@heroicons/react/24/outline/EyeIcon';
+import EyeSlashIcon from '@heroicons/react/24/outline/EyeSlashIcon';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login(props: PaperProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm({
+    initialValues: {
+      username: '',
+      password: '',
+    },
+    validate: {
+      username: (val) => (val.length === 0 ? 'Usuario requerido' : null),
+      password: (val) => (val.length === 0 ? 'Contraseña requerida' : null),
+    },
+  });
+
+  const handleSubmit = async (values: typeof form.values) => {
     setError('');
     setLoading(true);
 
-    const success = await login(username, password);
+    const success = await login(values.username, values.password);
     
     if (!success) {
       setError('Credenciales inválidas');
@@ -32,13 +53,16 @@ export default function Login() {
       minHeight: '100vh',
       backgroundColor: '#f5f5f5'
     }}>
-      <Paper p="xl" withBorder style={{ width: 400 }}>
-        <Title order={2} ta="center" mb="lg">
-          Presupuestador Web
-        </Title>
+      <Paper radius="md" p="lg" withBorder w={400} {...props}>
+        <Text size="lg" fw={500} ta="center" mb="xs">
+           Presupuestador Web
+        </Text>
+        <Text size="lg" fw={500} ta="center" mb="xs">
+          MediHome
+        </Text>
         
-        <form onSubmit={handleSubmit}>
-          <Stack spacing="md">
+        <form onSubmit={form.onSubmit(handleSubmit)}>
+          <Stack align="stretch" justify="space-around" gap="md" >
             {error && (
               <Alert icon={<ExclamationCircleIcon width={16} height={16} />} color="red">
                 {error}
@@ -46,23 +70,38 @@ export default function Login() {
             )}
             
             <TextInput
-              label="Usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              
               required
+              label="Usuario"
+              placeholder="Ingresa tu usuario"
+              value={form.values.username}
+              onChange={(event) => form.setFieldValue('username', event.currentTarget.value)}
+              error={form.errors.username}
+              radius="md"
+              variant="unstyled"
             />
             
             <PasswordInput
-              label="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               required
+              label="Contraseña"
+              placeholder="Tu contraseña"
+              value={form.values.password}
+              onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
+              error={form.errors.password}
+              radius="md"
+              variant="unstyled"
+              mt="md"
+              visibilityToggleIcon={({ reveal }) => 
+                reveal ? <EyeSlashIcon width={16} height={16} /> : <EyeIcon width={16} height={16} />
+              }
             />
-            
-            <Button type="submit" loading={loading} fullWidth>
+          </Stack>
+          
+          <Group justify="center" mt="xl">
+            <Button type="submit" loading={loading} radius="xl" size="md">
               Iniciar Sesión
             </Button>
-          </Stack>
+          </Group>
         </form>
       </Paper>
     </div>

@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { UserPlusIcon} from '@heroicons/react/24/solid';
 import { Table, Button, TextInput, Select, Modal, Group, Text, ActionIcon, Badge, Switch } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { Usuario, Sucursal } from '../../types';
 
-interface Usuario {
-  id: number;
-  username: string;
-  rol: string;
+interface UsuarioLocal extends Usuario {
   activo: number;
 }
 
@@ -16,11 +14,12 @@ interface GestionUsuariosProps {
 }
 
 export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProps) {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioLocal[]>([]);
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [editModal, setEditModal] = useState(false);
   const [createModal, setCreateModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
-  const [formData, setFormData] = useState({ username: '', password: '', rol: 'user' });
+  const [selectedUser, setSelectedUser] = useState<UsuarioLocal | null>(null);
+  const [formData, setFormData] = useState({ username: '', password: '', rol: 'user', sucursal_id: '' });
 
   const fetchUsuarios = async () => {
     try {
@@ -39,8 +38,26 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     }
   };
 
+  const fetchSucursales = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:4000/api/admin/sucursales', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSucursales(data);
+      }
+    } catch (error) {
+      console.error('Error fetching sucursales:', error);
+    }
+  };
+
   useEffect(() => {
-    if (opened) fetchUsuarios();
+    if (opened) {
+      fetchUsuarios();
+      fetchSucursales();
+    }
   }, [opened]);
 
   const handleCreate = async () => {
@@ -55,7 +72,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
         body: JSON.stringify(formData)
       });
       setCreateModal(false);
-      setFormData({ username: '', password: '', rol: 'user' });
+      setFormData({ username: '', password: '', rol: 'user', sucursal_id: '' });
       fetchUsuarios();
     } catch (error) {
       console.error('Error:', error);
@@ -116,30 +133,34 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     <>
       <Modal opened={opened} onClose={onClose} title="Gestión de Usuarios" size="lg">
         <Group style={{ marginBottom: 16 }}>
-          <Button leftIcon={<UserPlusIcon width={18} height={18} />} onClick={() => setCreateModal(true)}>
+          <Button leftSection={<UserPlusIcon width={18} height={18} />} onClick={() => setCreateModal(true)}>
           Nuevo Usuario
           </Button>
         </Group>
 
-        <Table>
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table striped="odd" highlightOnHover layout="fixed" stickyHeader>
+          <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+            <Table.Tr>
+              <Table.Th>Usuario</Table.Th>
+              <Table.Th>Rol</Table.Th>
+              <Table.Th>Sucursal</Table.Th>
+              <Table.Th>Estado</Table.Th>
+              <Table.Th>Acciones</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {usuarios.map((usuario) => (
-              <tr key={usuario.id}>
-                <td>{usuario.username}</td>
-                <td>
-                  <Badge color={usuario.rol === 'admin' ? 'red' : 'blue'}>
+              <Table.Tr key={usuario.id}>
+                <Table.Td>{usuario.username}</Table.Td>
+                <Table.Td>
+                  <Badge variant="dot" color={usuario.rol === 'admin' ? 'red' : 'blue'}>
                     {usuario.rol}
                   </Badge>
-                </td>
-                <td>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm">{usuario.sucursal_nombre || 'Sin asignar'}</Text>
+                </Table.Td>
+                <Table.Td>
                   {usuario.username === 'admin' ? (
                     <text color="none">-</text>
                   ) : (
@@ -149,26 +170,33 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
                       size="sm"
                     />
                   )}
-                </td>
-                <td>
-                  <Group spacing={4}>
+                </Table.Td>
+                <Table.Td>
+                  <Group gap={4}>
                     {usuario.username !== 'admin' && (
                       <>
                         <ActionIcon
+                          variant="transparent"
                           color="blue"
                           onClick={() => {
                             setSelectedUser(usuario);
-                            setFormData({ username: usuario.username, password: '', rol: usuario.rol });
+                            setFormData({ 
+                              username: usuario.username, 
+                              password: '', 
+                              rol: usuario.rol,
+                              sucursal_id: usuario.sucursal_id?.toString() || ''
+                            });
                             setEditModal(true);
                           }}
                         >
-                          <PencilSquareIcon width={16} height={16} />
+                          <PencilSquareIcon width={20} height={20} />
                         </ActionIcon>
                         <ActionIcon
+                          variant="transparent"
                           color="red"
                           onClick={() => handleDelete(usuario.id)}
                         >
-                          <TrashIcon width={16} height={16} />
+                          <TrashIcon width={20} height={20} />
                         </ActionIcon>
                       </>
                     )}
@@ -176,10 +204,10 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
                       <Text size="xs" c="dimmed">Usuario protegido</Text>
                     )}
                   </Group>
-                </td>
-              </tr>
+                </Table.Td>
+              </Table.Tr>
             ))}
-          </tbody>
+          </Table.Tbody>
         </Table>
       </Modal>
 
@@ -205,7 +233,16 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
             { value: 'user', label: 'Usuario' },
             { value: 'admin', label: 'Administrador' }
           ]}
+          mb="sm"
+        />
+        <Select
+          label="Sucursal"
+          placeholder="Seleccionar sucursal"
+          value={formData.sucursal_id}
+          onChange={(value) => setFormData({ ...formData, sucursal_id: value || '' })}
+          data={sucursales.map(s => ({ value: s.ID.toString(), label: s.Sucursales_mh }))}
           mb="md"
+          clearable
         />
         <Group>
           <Button onClick={handleCreate}>Crear</Button>
@@ -235,7 +272,16 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
             { value: 'user', label: 'Usuario' },
             { value: 'admin', label: 'Administrador' }
           ]}
+          mb="sm"
+        />
+        <Select
+          label="Sucursal"
+          placeholder="Seleccionar sucursal"
+          value={formData.sucursal_id}
+          onChange={(value) => setFormData({ ...formData, sucursal_id: value || '' })}
+          data={sucursales.map(s => ({ value: s.ID.toString(), label: s.Sucursales_mh }))}
           mb="md"
+          clearable
         />
         <Group>
           <Button onClick={handleUpdate}>Actualizar</Button>

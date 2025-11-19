@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
-import { ArrowRightStartOnRectangleIcon,UserCircleIcon } from '@heroicons/react/24/outline';
-import { UserPlusIcon} from '@heroicons/react/24/solid';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon,BuildingStorefrontIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import GestionInsumos from './admin/GestionInsumos';
 import GestionPrestadores from './admin/GestionPrestadores';
@@ -15,33 +15,58 @@ export default function AdminDashboard() {
   const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
 
   return (
-    <Container size="xl" p="md">
+    <Container fluid  p="xl">
       <Group style={{ justifyContent: 'space-between', marginBottom: 16 }}>
         <Title fw={500} order={2} c="red">Panel de Administración</Title>
-        <Group spacing="xs">
-          <UserCircleIcon className="w-5 h-5 mr-0"/>
+        <Group gap="xs" align='baseline' justify='space-evenly'>
+          <UserCircleIcon style={{ width: 20, height: 20 }} />
           <Text size="sm" tt="capitalize">{user?.username}</Text>
           {user?.username === 'admin' && (
-            <ActionIcon 
+            <ActionIcon   
               variant="transparent"
               size="md" 
               onClick={() => setUsuariosModalOpen(true)}
               title="Gestión de Usuarios">
-              <UserPlusIcon className="w-5 h-5 m-0"/>
+              <UserPlusIcon style={{ width: 20, height: 20, color: 'gray' }} />
             </ActionIcon>
           )}
           <Button ml="md" variant="outline" color="red" size="xs" onClick={logout}>
-            <ArrowRightStartOnRectangleIcon className="w-5 h-5 mr-1"/>Salir</Button>
+            <ArrowRightStartOnRectangleIcon style={{ width: 20, height: 20, marginRight: 4 }} />Salir</Button>
         </Group>
       </Group>
 
-      <Tabs defaultValue="insumos" variant="outline">
+      <Tabs defaultValue="insumos" variant="default" color="green">
         <Tabs.List>
-          <Tabs.Tab value="insumos">Gestión de Insumos</Tabs.Tab>
-          <Tabs.Tab value="prestadores">Gestión de Financiador</Tabs.Tab>
-          <Tabs.Tab value="servicios-prestador">Servicios por Financiador</Tabs.Tab>
-          <Tabs.Tab value="servicios">Gestión de Servicios</Tabs.Tab>
-          <Tabs.Tab value="sucursales">Gestión de Sucursales</Tabs.Tab>
+          <Tabs.Tab value="insumos">
+            <Group gap="xs">
+              <BeakerIcon style={{ width: 20, height: 20 }} />
+              Gestión de Insumos
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="prestadores">
+            <Group gap="xs">
+              <BanknotesIcon style={{ width: 20, height: 20 }} />
+              Gestión de Financiador
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="servicios-prestador">
+            <Group gap="xs">
+              <BriefcaseIcon style={{ width: 20, height: 20 }} />
+              Servicios por Financiador
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="servicios">
+            <Group gap="xs">
+              <NewspaperIcon style={{ width: 20, height: 20 }} />
+              Gestión de Servicios
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="sucursales">
+            <Group gap="xs">
+              <BuildingStorefrontIcon style={{ width: 20, height: 20 }} />
+              Gestión de Sucursales
+            </Group>
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="insumos" pt="md">

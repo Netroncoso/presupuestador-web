@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, TextInput, Button, Table, Group, Stack, Modal, ActionIcon } from '@mantine/core';
+import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import AdminTable from '../../components/AdminTable';
 
 interface Servicio {
   id_servicio: string;
   nombre: string;
+  tipo_unidad?: string;
 }
 
 export default function GestionServicios() {
@@ -16,7 +18,10 @@ export default function GestionServicios() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
   const [deletingServicio, setDeletingServicio] = useState<Servicio | null>(null);
-  const [formData, setFormData] = useState({ nombre: '' });
+  const [formData, setFormData] = useState({ 
+    nombre: '', 
+    tipo_unidad: 'horas'
+  });
   const [loading, setLoading] = useState(false);
 
   const formatName = (name: string) => {
@@ -89,7 +94,10 @@ export default function GestionServicios() {
 
   const handleEdit = (servicio: Servicio) => {
     setEditingServicio(servicio);
-    setFormData({ nombre: servicio.nombre });
+    setFormData({ 
+      nombre: servicio.nombre,
+      tipo_unidad: servicio.tipo_unidad || 'horas'
+    });
     setModalOpen(true);
   };
 
@@ -125,12 +133,15 @@ export default function GestionServicios() {
 
   const openNewModal = () => {
     setEditingServicio(null);
-    setFormData({ nombre: '' });
+    setFormData({ 
+      nombre: '', 
+      tipo_unidad: 'horas'
+    });
     setModalOpen(true);
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <Group style={{ justifyContent: 'space-between' }}>
         <TextInput
           placeholder="Buscar servicios..."
@@ -138,44 +149,38 @@ export default function GestionServicios() {
           onChange={(e) => setFiltro(e.target.value)}
           style={{ flex: 1 }}
         />
-        <Button leftIcon={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
+        <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
           Nuevo Servicio
         </Button>
       </Group>
 
-      <Paper p="md" withBorder>
-        <Table striped highlightOnHover>
-          <thead>
-            <tr>
-              <th>Servicio</th>
-              <th style={{ width: '120px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {serviciosFiltrados.map((servicio) => (
-              <tr key={servicio.id_servicio}>
-                <td>{formatName(servicio.nombre)}</td>
-                <td>
-                  <Group spacing="xs">
-                    <ActionIcon variant="light" onClick={() => handleEdit(servicio)}>
-                      <PencilSquareIcon width={16} height={16} />
-                    </ActionIcon>
-                    <ActionIcon variant="light" color="red" onClick={() => openDeleteModal(servicio)}>
-                      <TrashIcon width={16} height={16} />
-                    </ActionIcon>
-                  </Group>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        
-        {serviciosFiltrados.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No se encontraron servicios
-          </div>
-        )}
-      </Paper>
+      <AdminTable isEmpty={serviciosFiltrados.length === 0} emptyMessage="No se encontraron servicios">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Servicio</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Tipo Unidad</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {serviciosFiltrados.map((servicio) => (
+            <Table.Tr key={servicio.id_servicio}>
+              <Table.Td>{formatName(servicio.nombre)}</Table.Td>
+              <Table.Td style={{ textTransform: 'capitalize' }}>{servicio.tipo_unidad || 'horas'}</Table.Td>
+              <Table.Td>
+                <Group gap="xs">
+                  <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
+                    <PencilSquareIcon width={20} height={20} />
+                  </ActionIcon>
+                  <ActionIcon variant="transparent" color="red" onClick={() => openDeleteModal(servicio)}>
+                    <TrashIcon width={20} height={20} />
+                  </ActionIcon>
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </AdminTable>
 
       {/* Modal Crear/Editar */}
       <Modal
@@ -183,13 +188,27 @@ export default function GestionServicios() {
         onClose={() => setModalOpen(false)}
         title={editingServicio ? 'Editar Servicio' : 'Nuevo Servicio'}
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <TextInput
             label="Nombre del Servicio"
             value={formData.nombre}
             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
             required
           />
+          <Select
+            label="Tipo de Unidad"
+            value={formData.tipo_unidad}
+            onChange={(value) => setFormData({ ...formData, tipo_unidad: value || 'horas' })}
+            data={[
+              { value: 'horas', label: 'Horas' },
+              { value: 'sesiones', label: 'Sesiones' },
+              { value: 'consultas', label: 'Consultas' },
+              { value: 'días', label: 'Días' },
+              { value: 'unidades', label: 'Unidades' }
+            ]}
+            required
+          />
+
           <Group style={{ justifyContent: 'flex-end' }}>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
               Cancelar
@@ -208,7 +227,7 @@ export default function GestionServicios() {
         title="Eliminar Servicio"
         size="md"
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <p>
             ¿Está seguro que desea eliminar el servicio <strong>"{formatName(deletingServicio?.nombre || '')}"</strong>?
           </p>

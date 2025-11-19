@@ -5,7 +5,7 @@ import { pool } from '../../db';
 export const getAllServicios = async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id_servicio, nombre FROM servicios ORDER BY nombre'
+      'SELECT id_servicio, nombre, tipo_unidad, max_unidades_sugerido FROM servicios ORDER BY nombre'
     );
     res.json(rows);
   } catch (err) {
@@ -16,20 +16,22 @@ export const getAllServicios = async (req: Request, res: Response) => {
 
 export const createServicio = async (req: Request, res: Response) => {
   try {
-    const { nombre } = req.body;
+    const { nombre, tipo_unidad, max_unidades_sugerido } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'Nombre es requerido' });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO servicios (nombre) VALUES (?)',
-      [nombre]
+      'INSERT INTO servicios (nombre, tipo_unidad, max_unidades_sugerido) VALUES (?, ?, ?)',
+      [nombre, tipo_unidad || 'horas', max_unidades_sugerido || null]
     );
 
     res.status(201).json({
       id: result.insertId,
       nombre,
+      tipo_unidad,
+      max_unidades_sugerido,
       message: 'Servicio creado correctamente'
     });
   } catch (err: any) {
@@ -44,15 +46,15 @@ export const createServicio = async (req: Request, res: Response) => {
 export const updateServicio = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre } = req.body;
+    const { nombre, tipo_unidad, max_unidades_sugerido } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'Nombre es requerido' });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE servicios SET nombre = ? WHERE id_servicio = ?',
-      [nombre, id]
+      'UPDATE servicios SET nombre = ?, tipo_unidad = ?, max_unidades_sugerido = ? WHERE id_servicio = ?',
+      [nombre, tipo_unidad || 'horas', max_unidades_sugerido || null, id]
     );
 
     if (result.affectedRows === 0) {

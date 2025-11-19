@@ -1,34 +1,38 @@
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise');
+require('dotenv').config();
 
 async function hashPasswords() {
+  if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+    console.error('Error: Missing database environment variables');
+    process.exit(1);
+  }
+
   const connection = await mysql.createConnection({
-    host: '127.0.0.1',
-    user: 'PRUEBAS',
-    password: 'Medihome2006',
-    database: 'mh_1'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
   });
 
   try {
-    // Hash para admin
-    const adminHash = await bcrypt.hash('admin123', 10);
+    const username = process.argv[2];
+    const password = process.argv[3];
+
+    if (!username || !password) {
+      console.error('Usage: node hash-passwords.js <username> <password>');
+      process.exit(1);
+    }
+
+    const hash = await bcrypt.hash(password, 10);
     await connection.execute(
       'UPDATE usuarios SET password = ? WHERE username = ?',
-      [adminHash, 'admin']
+      [hash, username]
     );
 
-    // Hash para prueba (no pruebas)
-    const userHash = await bcrypt.hash('user123', 10);
-    await connection.execute(
-      'UPDATE usuarios SET password = ? WHERE username = ?',
-      [userHash, 'prueba']
-    );
-
-    console.log('Contraseñas hasheadas correctamente');
-    console.log('admin: admin123');
-    console.log('prueba: user123');
+    console.log(`Password updated successfully for user: ${username}`);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error updating password:', error.message);
   } finally {
     await connection.end();
   }

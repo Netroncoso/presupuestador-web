@@ -2,125 +2,101 @@ import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcrypt';
 import { pool } from '../db';
+import { asyncHandler, AppError } from '../middleware/errorHandler';
 
-export const getUsuarios = async (req: Request, res: Response) => {
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, rol, activo FROM usuarios ORDER BY username'
-    );
-    res.json(rows);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+export const getUsuarios = asyncHandler(async (req: Request, res: Response) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT u.id, u.username, u.rol, u.activo, u.sucursal_id, s.Sucursales_mh as sucursal_nombre
+     FROM usuarios u 
+     LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID 
+     ORDER BY u.username`
+  );
+  res.json(rows);
+});
+
+export const createUsuario = asyncHandler(async (req: Request, res: Response) => {
+  const { username, password, rol, sucursal_id } = req.body;
+  
+  if (!username || !password) {
+    throw new AppError(400, 'Username y password son requeridos');
   }
-};
 
-export const createUsuario = async (req: Request, res: Response) => {
-  try {
-    const { username, password, rol } = req.body;
-    
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username y password son requeridos' });
-    }
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  await pool.query<ResultSetHeader>(
+    'INSERT INTO usuarios (username, password, rol, activo, sucursal_id) VALUES (?, ?, ?, 1, ?)',
+    [username, hashedPassword, rol || 'user', sucursal_id || null]
+  );
+  
+  res.json({ message: 'Usuario creado exitosamente' });
+});
 
+export const updateUsuario = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { username, password, rol, sucursal_id } = req.body;
+  
+  const [userCheck] = await pool.query<RowDataPacket[]>(
+    'SELECT username FROM usuarios WHERE id = ?',
+    [id]
+  );
+  
+  if (userCheck.length > 0 && userCheck[0].username === 'admin') {
+    throw new AppError(403, 'No se puede editar el usuario administrador principal');
+  }
+  
+  let query = 'UPDATE usuarios SET username = ?, rol = ?, sucursal_id = ?';
+  let params = [username, rol, sucursal_id || null];
+  
+  if (password && password.trim() !== '') {
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    await pool.query<ResultSetHeader>(
-      'INSERT INTO usuarios (username, password, rol, activo) VALUES (?, ?, ?, 1)',
-      [username, hashedPassword, rol || 'user']
-    );
-    
-    res.json({ message: 'Usuario creado exitosamente' });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    query += ', password = ?';
+    params.push(hashedPassword);
   }
-};
+  
+  query += ' WHERE id = ?';
+  params.push(id);
+  
+  await pool.query<ResultSetHeader>(query, params);
+  res.json({ message: 'Usuario actualizado exitosamente' });
+});
 
-export const updateUsuario = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { username, password, rol } = req.body;
-    
-    // Verificar si es el usuario admin root
-    const [userCheck] = await pool.query<RowDataPacket[]>(
-      'SELECT username FROM usuarios WHERE id = ?',
-      [id]
-    );
-    
-    if (userCheck.length > 0 && userCheck[0].username === 'admin') {
-      return res.status(403).json({ error: 'No se puede editar el usuario administrador principal' });
-    }
-    
-    let query = 'UPDATE usuarios SET username = ?, rol = ?';
-    let params = [username, rol];
-    
-    if (password && password.trim() !== '') {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      query += ', password = ?';
-      params.push(hashedPassword);
-    }
-    
-    query += ' WHERE id = ?';
-    params.push(id);
-    
-    await pool.query<ResultSetHeader>(query, params);
-    res.json({ message: 'Usuario actualizado exitosamente' });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+export const toggleUsuario = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { activo } = req.body;
+  
+  const [userCheck] = await pool.query<RowDataPacket[]>(
+    'SELECT username FROM usuarios WHERE id = ?',
+    [id]
+  );
+  
+  if (userCheck.length > 0 && userCheck[0].username === 'admin') {
+    throw new AppError(403, 'No se puede desactivar el usuario administrador principal');
   }
-};
+  
+  await pool.query<ResultSetHeader>(
+    'UPDATE usuarios SET activo = ? WHERE id = ?',
+    [activo, id]
+  );
+  
+  res.json({ message: 'Estado actualizado exitosamente' });
+});
 
-export const toggleUsuario = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { activo } = req.body;
-    
-    // Verificar si es el usuario admin root
-    const [userCheck] = await pool.query<RowDataPacket[]>(
-      'SELECT username FROM usuarios WHERE id = ?',
-      [id]
-    );
-    
-    if (userCheck.length > 0 && userCheck[0].username === 'admin') {
-      return res.status(403).json({ error: 'No se puede desactivar el usuario administrador principal' });
-    }
-    
-    await pool.query<ResultSetHeader>(
-      'UPDATE usuarios SET activo = ? WHERE id = ?',
-      [activo, id]
-    );
-    
-    res.json({ message: 'Estado actualizado exitosamente' });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+export const deleteUsuario = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  const [userCheck] = await pool.query<RowDataPacket[]>(
+    'SELECT username FROM usuarios WHERE id = ?',
+    [id]
+  );
+  
+  if (userCheck.length > 0 && userCheck[0].username === 'admin') {
+    throw new AppError(403, 'No se puede eliminar el usuario administrador principal');
   }
-};
-
-export const deleteUsuario = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Verificar si es el usuario admin root
-    const [userCheck] = await pool.query<RowDataPacket[]>(
-      'SELECT username FROM usuarios WHERE id = ?',
-      [id]
-    );
-    
-    if (userCheck.length > 0 && userCheck[0].username === 'admin') {
-      return res.status(403).json({ error: 'No se puede eliminar el usuario administrador principal' });
-    }
-    
-    await pool.query<ResultSetHeader>(
-      'DELETE FROM usuarios WHERE id = ?',
-      [id]
-    );
-    
-    res.json({ message: 'Usuario eliminado exitosamente' });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-};
+  
+  await pool.query<ResultSetHeader>(
+    'DELETE FROM usuarios WHERE id = ?',
+    [id]
+  );
+  
+  res.json({ message: 'Usuario eliminado exitosamente' });
+});

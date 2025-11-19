@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, TextInput, Button, Table, Checkbox, Group, Stack, Modal, NumberInput, ActionIcon, Text } from '@mantine/core';
+import { TextInput, Button, Table, Checkbox, Group, Stack, Modal, NumberInput, ActionIcon, Text } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import AdminTable from '../../components/AdminTable';
 
 interface Insumo {
   idInsumos: number;
@@ -132,7 +133,7 @@ export default function GestionInsumos() {
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <Group style={{ justifyContent: 'space-between' }}>
         <TextInput
           placeholder="Buscar insumos..."
@@ -140,53 +141,45 @@ export default function GestionInsumos() {
           onChange={(e) => setFiltro(e.target.value)}
           style={{ flex: 1 }}
         />
-        <Button leftIcon={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
+        <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
           Nuevo Insumo
         </Button>
       </Group>
 
-      <Paper p="md" withBorder>
-        <Table striped highlightOnHover>
-          <thead>
-            <tr>
-              <th style={{ width: '50px' }}>Sel.</th>
-              <th>Producto</th>
-              <th style={{ width: '120px' }}>Costo</th>
-              <th style={{ width: '120px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {insumosFiltrados.map((insumo) => (
-              <tr key={insumo.idInsumos}>
-                <td>
-                  <Checkbox
-                    checked={selectedInsumo?.idInsumos === insumo.idInsumos}
-                    onChange={(e) => setSelectedInsumo(e.target.checked ? insumo : null)}
-                  />
-                </td>
-                <td>{formatProductName(insumo.producto)}</td>
-                <td>${insumo.costo.toFixed(2)}</td>
-                <td>
-                  <Group spacing="xs">
-                    <ActionIcon variant="light" onClick={() => handleEdit(insumo)}>
-                      <PencilSquareIcon width={16} height={16} />
-                    </ActionIcon>
-                    <ActionIcon variant="light" color="red" onClick={() => openDeleteModal(insumo)}>
-                      <TrashIcon width={16} height={16} />
-                    </ActionIcon>
-                  </Group>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        
-        {insumosFiltrados.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No se encontraron insumos
-          </div>
-        )}
-      </Paper>
+      <AdminTable isEmpty={insumosFiltrados.length === 0} emptyMessage="No se encontraron insumos">
+        <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+          <Table.Tr>
+            <Table.Th style={{ width: '50px' }}>Sel.</Table.Th>
+            <Table.Th>Producto</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Costo</Table.Th>
+            <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {insumosFiltrados.map((insumo) => (
+            <Table.Tr key={insumo.idInsumos}>
+              <Table.Td>
+                <Checkbox
+                  checked={selectedInsumo?.idInsumos === insumo.idInsumos}
+                  onChange={(e) => setSelectedInsumo(e.target.checked ? insumo : null)}
+                />
+              </Table.Td>
+              <Table.Td>{formatProductName(insumo.producto)}</Table.Td>
+              <Table.Td>${insumo.costo.toFixed(2)}</Table.Td>
+              <Table.Td>
+                <Group gap="xs">
+                  <ActionIcon variant="transparent" onClick={() => handleEdit(insumo)}>
+                    <PencilSquareIcon width={20} height={20} />
+                  </ActionIcon>
+                  <ActionIcon variant="transparent" color="red" onClick={() => openDeleteModal(insumo)}>
+                    <TrashIcon width={20} height={20} />
+                  </ActionIcon>
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </AdminTable>
 
       {/* Modal Crear/Editar */}
       <Modal
@@ -194,7 +187,7 @@ export default function GestionInsumos() {
         onClose={() => setModalOpen(false)}
         title={editingInsumo ? 'Editar Insumo' : 'Nuevo Insumo'}
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <TextInput
             label="Producto"
             value={formData.producto}
@@ -207,8 +200,9 @@ export default function GestionInsumos() {
             onChange={(value) => setFormData({ ...formData, costo: Number(value) || 0 })}
             min={0}
             step={0.01}
-            precision={2}
             required
+            hideControls
+
           />
           <Group style={{ justifyContent: 'flex-end' }}>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
@@ -228,7 +222,7 @@ export default function GestionInsumos() {
         title="Eliminar Insumo"
         size="md"
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <Text>
             Está seguro que desea eliminar el insumo <br /><strong>"{formatProductName(deletingInsumo?.producto || '')}"</strong>
           </Text>

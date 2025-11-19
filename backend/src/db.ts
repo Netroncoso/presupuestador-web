@@ -1,12 +1,17 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { logger } from './utils/logger';
 dotenv.config();
 
+if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+  throw new Error('Missing required database environment variables');
+}
+
 export const pool = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  user: process.env.DB_USER || 'PRUEBAS',
-  password: process.env.DB_PASSWORD || 'Medihome2006',
-  database: process.env.DB_NAME || 'mh_1',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -15,15 +20,10 @@ export const pool = mysql.createPool({
 // Test connection on startup
 pool.getConnection()
   .then(connection => {
-    console.log('Database connected successfully');
+    logger.info('Database connected successfully');
     connection.release();
   })
   .catch(err => {
-    console.error('Database connection failed:', err instanceof Error ? err.message : 'Unknown error');
-    console.error('Connection details:', {
-      host: process.env.DB_HOST || '127.0.0.1',
-      user: process.env.DB_USER || 'PRUEBAS',
-      database: process.env.DB_NAME || 'mh_1'
-    });
+    logger.error('Database connection failed', err instanceof Error ? err.message : 'Unknown error');
     process.exit(1);
   });

@@ -1,0 +1,19 @@
+/* Estilos para autocompletado del navegador */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #000000 !important;
+    border-radius: 8px !important;
+    border: none !important;
+}
+
+/* Para inputs con fondo oscuro */
+[data-mantine-color-scheme="dark"] input:-webkit-autofill,
+[data-mantine-color-scheme="dark"] input:-webkit-autofill:hover,
+[data-mantine-color-scheme="dark"] input:-webkit-autofill:focus,
+[data-mantine-color-scheme="dark"] input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #2e2e2e inset !important;
+    -webkit-text-fill-color: #ffffff !important;
+}

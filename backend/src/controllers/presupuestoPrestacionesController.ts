@@ -1,64 +1,50 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
+import { asyncHandler, AppError } from '../middleware/errorHandler';
 
-export const guardarPrestacionPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
-    const { id_servicio, prestacion, cantidad, valor_asignado } = req.body;
+export const guardarPrestacionPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { id_servicio, prestacion, cantidad, valor_asignado, valor_facturar } = req.body;
 
-    if (isNaN(presupuestoId) || !id_servicio || !prestacion || !cantidad || !valor_asignado) {
-      return res.status(400).json({ error: 'Datos inválidos' });
-    }
-
-    await pool.query(
-      'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE prestacion = VALUES(prestacion), cantidad = VALUES(cantidad), valor_asignado = VALUES(valor_asignado)',
-      [presupuestoId, id_servicio, prestacion, cantidad, valor_asignado]
-    );
-
-    res.json({ ok: true });
-  } catch (err: any) {
-    console.error('Error saving prestacion:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al guardar prestación', details: err instanceof Error ? err.message : 'Unknown error' });
+  if (isNaN(presupuestoId) || !id_servicio || !prestacion || !cantidad || !valor_asignado || !valor_facturar) {
+    throw new AppError(400, 'Datos inválidos');
   }
-};
 
-export const eliminarPrestacionPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
-    const { id_servicio } = req.body;
+  await pool.query(
+    'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE prestacion = VALUES(prestacion), cantidad = VALUES(cantidad), valor_asignado = VALUES(valor_asignado), valor_facturar = VALUES(valor_facturar)',
+    [presupuestoId, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar]
+  );
 
-    if (isNaN(presupuestoId) || !id_servicio) {
-      return res.status(400).json({ error: 'Datos inválidos' });
-    }
+  res.json({ ok: true });
+});
 
-    await pool.query(
-      'DELETE FROM presupuesto_prestaciones WHERE idPresupuestos = ? AND id_servicio = ?',
-      [presupuestoId, id_servicio]
-    );
+export const eliminarPrestacionPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { id_servicio } = req.body;
 
-    res.json({ ok: true });
-  } catch (err: any) {
-    console.error('Error deleting prestacion:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al eliminar prestación', details: err instanceof Error ? err.message : 'Unknown error' });
+  if (isNaN(presupuestoId) || !id_servicio) {
+    throw new AppError(400, 'Datos inválidos');
   }
-};
 
-export const obtenerPrestacionesPresupuesto = async (req: Request, res: Response) => {
-  try {
-    const presupuestoId = parseInt(req.params.id);
+  await pool.query(
+    'DELETE FROM presupuesto_prestaciones WHERE idPresupuestos = ? AND id_servicio = ?',
+    [presupuestoId, id_servicio]
+  );
 
-    if (isNaN(presupuestoId)) {
-      return res.status(400).json({ error: 'ID inválido' });
-    }
+  res.json({ ok: true });
+});
 
-    const [rows] = await pool.query(
-      'SELECT id_servicio, prestacion, cantidad, valor_asignado FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
-      [presupuestoId]
-    );
+export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
 
-    res.json(rows);
-  } catch (err: any) {
-    console.error('Error fetching prestaciones:', err instanceof Error ? err.message : 'Unknown error');
-    res.status(500).json({ error: 'Error al obtener prestaciones', details: err instanceof Error ? err.message : 'Unknown error' });
+  if (isNaN(presupuestoId)) {
+    throw new AppError(400, 'ID inválido');
   }
-};
+
+  const [rows] = await pool.query(
+    'SELECT id_servicio, prestacion, cantidad, valor_asignado, valor_facturar FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+    [presupuestoId]
+  );
+
+  res.json(rows);
+});

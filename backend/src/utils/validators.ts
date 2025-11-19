@@ -7,6 +7,15 @@ export const validateDNI = (dni: string): boolean => {
   return /^\d{7,8}$/.test(dni);
 };
 
+export const validateId = (id: string | number): boolean => {
+  const numId = typeof id === 'string' ? parseInt(id) : id;
+  return !isNaN(numId) && numId > 0;
+};
+
+export const sanitizeString = (str: string, maxLength: number = 255): string => {
+  return str.replace(/[\n\r\t]/g, ' ').trim().substring(0, maxLength);
+};
+
 export const validateRequired = (value: any, fieldName: string): string | null => {
   if (!value || (typeof value === 'string' && value.trim().length === 0)) {
     return `${fieldName} es requerido`;

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, ScrollArea, Checkbox, Center } from '@mantine/core'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, Checkbox, Center, Tooltip } from '@mantine/core'
 import { TrashIcon, PencilSquareIcon,MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
@@ -33,29 +33,20 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   }, [])
 
   useEffect(() => {
-    if (presupuestoId) {
-      api.get(`/presupuestos/${presupuestoId}/insumos`).then(res => {
-        setInsumosSeleccionados(res.data)
-      }).catch((err: any) => console.error('Error loading insumos:', err))
-    }
-  }, [presupuestoId, setInsumosSeleccionados])
-
-  useEffect(() => {
     const total = insumosSeleccionados.reduce((sum, insumo) => sum + (Number(insumo.costo) * insumo.cantidad), 0)
     onTotalChange(total)
   }, [insumosSeleccionados, onTotalChange])
 
-  const insumosFiltrados = insumosDisponibles.filter(insumo =>
-    insumo.producto.toLowerCase().includes(filtro.toLowerCase())
-  ).map(insumo => ({
-    ...insumo,
-    costo: Number(insumo.costo) * (1 + porcentajeInsumos / 100)
-  }))
+  const insumosFiltrados = useMemo(() => 
+    insumosDisponibles.filter(insumo =>
+      insumo.producto.toLowerCase().includes(filtro.toLowerCase())
+    ), [insumosDisponibles, filtro]
+  )
 
-  const handleInsumoChange = (insumo: any) => {
+  const handleInsumoChange = useCallback((insumo: any) => {
     setInsumoSeleccionado(insumo)
     setCantidad(1)
-  }
+  }, [])
 
   const agregarInsumo = () => {
     if (!insumoSeleccionado || cantidad <= 0) {
@@ -140,28 +131,25 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   }
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       <Grid>
         <Grid.Col span={6}>
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Insumos Disponibles</Title>
-            <TextInput label="Buscar Insumo" value={filtro} onChange={(e) => setFiltro(e.target.value)} rightSection={<MagnifyingGlassIcon className="w-4 h-4" />} placeholder="Escriba para buscar..." />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <Table striped highlightOnHover fontSize="sm" style={{ tableLayout: 'fixed' }}>
-                <thead style={{ backgroundColor: '#f8f9fa' }}>
-                  <tr>
-                    <th style={{ width: '70%' }}>Insumo</th>
-                    <th style={{ width: '30%', textAlign: 'right' }}>Costo</th>
-                  </tr>
-                </thead>
-              </Table>
-              <ScrollArea h={350} scrollbarSize={8} scrollHideDelay={0} type='always'>
-                <Table striped highlightOnHover fontSize="sm" style={{ tableLayout: 'fixed' }}>
-                <tbody>
+            <TextInput value={filtro} onChange={(e) => setFiltro(e.target.value)} rightSection={<MagnifyingGlassIcon style={{ width: 22, height: 22, color: 'black' }} />} placeholder="Buscar Insumo..." />
+            <Table.ScrollContainer mt="xs" minWidth={500} maxHeight={300} >
+              <Table striped="odd" highlightOnHover stickyHeader>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ width: '70%', textAlign:"left"  }}>Insumo</Table.Th>
+                    <Table.Th style={{ width: '30%', textAlign: 'right' }}>Costo</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
                   {insumosFiltrados.map((insumo, index) => (
-                    <tr key={index}>
-                      <td style={{ width: '70%' }}>
-                        <Group spacing="xs">
+                    <Table.Tr key={index}>
+                      <Table.Td style={{ width: '70%' }}>
+                        <Group gap="xs" wrap="nowrap">
                           <Checkbox
                             size="xs"
                             checked={insumoSeleccionado?.producto === insumo.producto}
@@ -176,21 +164,20 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                           />
                           <span>{insumo.producto.charAt(0).toUpperCase() + insumo.producto.slice(1).toLowerCase()}</span>
                         </Group>
-                      </td>
-                      <td style={{ width: '30%', textAlign: 'right' }}>${Number(insumo.costo).toFixed(2)}</td>
-                    </tr>
+                      </Table.Td>
+                      <Table.Td style={{ width: '30%', textAlign: 'right' }}>${Number(insumo.costo).toFixed(2)}</Table.Td>
+                    </Table.Tr>
                   ))}
-                </tbody>
+                </Table.Tbody>
               </Table>
-            </ScrollArea>
-            </div>
+            </Table.ScrollContainer>
           </Paper>
         </Grid.Col>
         
         <Grid.Col span={6}>
           <Paper p="md" withBorder style={{ backgroundColor: insumoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: insumoSeleccionado ? 1 : 0.6 }}>
             <Title order={4} mb="md">Agregar al Presupuesto</Title>
-            <Stack spacing="sm">
+            <Stack gap="sm">
               <TextInput
                 label="Insumo"
                 value={insumoSeleccionado ? insumoSeleccionado.producto : ''}
@@ -206,7 +193,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                 min={1}
                 size="sm"
                 disabled={!insumoSeleccionado}
-                description={insumoSeleccionado ? `Costo final: $${Number(insumoSeleccionado.costo).toFixed(2)} (incluye ${porcentajeInsumos}% de Logistica)` : 'Seleccione insumo'}
+                description={insumoSeleccionado ? `Costo base: $${Number(insumoSeleccionado.costo).toFixed(2)}` : 'Seleccione insumo'}
+                hideControls
               />
               <Group>
                 <Button size="sm" onClick={agregarInsumo} disabled={!insumoSeleccionado}>Agregar</Button>
@@ -222,33 +210,56 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
       
       <Paper p="md" withBorder>
         <Title order={4} mb="md">Insumos Seleccionados</Title>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <Table striped highlightOnHover style={{ tableLayout: 'fixed' }}>
-            <thead style={{ backgroundColor: '#f8f9fa' }}>
-              <tr>
-                <th style={{ width: '30%' }}>Insumo</th>
-                <th style={{ width: '15%', textAlign: 'center' }}>Cantidad</th>
-                <th style={{ width: '20%', textAlign: 'center' }}>Costo Unit.</th>
-                <th style={{ width: '20%', textAlign: 'center' }}>Subtotal</th>
-                <th style={{ width: '15%', textAlign: 'center' }}>Acciones</th>
-              </tr>
-            </thead>
-          </Table>
-          <ScrollArea h={250} scrollbarSize={8} scrollHideDelay={0}>
-            <Table striped highlightOnHover style={{ tableLayout: 'fixed' }}>
-            <tbody>
-              {insumosSeleccionados.map((insumo, index) => (
-                <tr key={index}>
-                  <td style={{ width: '30%' }}>{insumo.producto}</td>
-                  <td style={{ width: '15%', textAlign: 'center' }}>
+
+          <Table striped="odd" highlightOnHover stickyHeader >
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Insumo</Table.Th>
+                <Table.Th>Cantidad</Table.Th>
+                <Table.Th>
+                  <Tooltip label="Costo base del insumo">
+                    <span>Costo Unit.</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th>
+                  <Tooltip label="Costo base + margen de sucursal (logística y ganancia)">
+                    <span>Precio a Facturar</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th>
+                  <Tooltip label="Costo base × cantidad">
+                    <span>Subtotal Costo</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th>
+                  <Tooltip label="Precio a facturar × cantidad">
+                    <span>Subtotal Facturar</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th>Acciones</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {insumosSeleccionados.map((insumo, index) => {
+                const costoBase = Number(insumo.costo);
+                const costoUnitario = costoBase;
+                const precioFacturar = costoBase * (1 + porcentajeInsumos / 100);
+                const subtotalCosto = costoUnitario * insumo.cantidad;
+                const subtotalFacturar = precioFacturar * insumo.cantidad;
+                
+                return (
+                <Table.Tr key={index}>
+                  <Table.Td>{insumo.producto}</Table.Td>
+                  <Table.Td>
                     {editandoIndex === index ? (
-                      <Group spacing="xs">
+                      <Group gap="md" align='baseline'>
                         <NumberInput
                           value={nuevaCantidad}
                           onChange={(value) => setNuevaCantidad(Number(value) || 1)}
                           min={1}
                           w={80}
-                        />
+                          hideControls
+                          />
                         <Button size="xs" onClick={() => actualizarCantidad(index)}>
                           OK
                         </Button>
@@ -256,35 +267,37 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                     ) : (
                       insumo.cantidad
                     )}
-                  </td>
-                  <td style={{ width: '20%', textAlign: 'center' }}>${Number(insumo.costo).toFixed(2)}</td>
-                  <td style={{ width: '20%', textAlign: 'center' }}>${(Number(insumo.costo) * insumo.cantidad).toFixed(2)}</td>
-                  <td style={{ width: '15%', textAlign: 'center' }}>
-                    <Group spacing="xs" position="center">
+                  </Table.Td>
+                  <Table.Td>${costoUnitario.toFixed(2)}</Table.Td>
+                  <Table.Td>${precioFacturar.toFixed(2)}</Table.Td>
+                  <Table.Td>${subtotalCosto.toFixed(2)}</Table.Td>
+                  <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" align='baseline'>
                       <ActionIcon
-                        variant="light"
+                        variant="transparent"
                         onClick={() => {
                           setEditandoIndex(index)
                           setNuevaCantidad(insumo.cantidad)
                         }}
                       >
-                        <PencilSquareIcon width={16} height={16} />
+                        <PencilSquareIcon width={20} height={20} />
                       </ActionIcon>
                       <ActionIcon
-                        variant="light"
+                        variant="transparent"
                         color="red"
                         onClick={() => eliminarInsumo(index)}
                       >
-                        <TrashIcon width={16} height={16} />
+                        <TrashIcon width={20} height={20} />
                       </ActionIcon>
                     </Group>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                  </Table.Td>
+                </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
           </Table>
-        </ScrollArea>
-        </div>
+
         {insumosSeleccionados.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
             No hay insumos seleccionados
