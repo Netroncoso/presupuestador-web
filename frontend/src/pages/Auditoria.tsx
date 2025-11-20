@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Table, Paper, Badge, Loader, Text, ActionIcon, Modal, Textarea, Group, Button, Alert } from '@mantine/core';
+import { Table, Paper, Badge, Loader, Text, ActionIcon, Alert, Group } from '@mantine/core';
+import { ModalAuditoria } from '../components/ModalAuditoria';
 import { notifications } from '@mantine/notifications';
-import { ShieldCheckIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, EyeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { api } from '../api/api';
 
 const ICON_SIZE = { width: 16, height: 16 };
@@ -34,12 +35,15 @@ const Auditoria: React.FC<AuditoriaProps> = ({ onCargarPresupuesto, filtroPresup
   const [pendientes, setPendientes] = useState<PresupuestoPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPresupuesto, setSelectedPresupuesto] = useState<PresupuestoPendiente | null>(null);
-  const [comentario, setComentario] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
 
   useEffect(() => {
     cargarPendientes();
+    
+    // Auto-refresh every 45 seconds for auditors
+    const interval = setInterval(cargarPendientes, 45000);
+    return () => clearInterval(interval);
   }, [filtroPresupuesto]);
 
   const cargarPendientes = async () => {
@@ -68,17 +72,19 @@ const Auditoria: React.FC<AuditoriaProps> = ({ onCargarPresupuesto, filtroPresup
   const cerrarModal = () => {
     setModalAbierto(false);
     setSelectedPresupuesto(null);
-    setComentario('');
   };
 
-  const cambiarEstado = async (nuevoEstado: string) => {
+  const cambiarEstado = async (mensaje: string) => {
     if (!selectedPresupuesto) return;
+    
+    const [accion, comentario] = mensaje.includes(':') ? mensaje.split(': ', 2) : ['', mensaje];
+    const nuevoEstado = accion.toLowerCase() === 'aprobado' ? 'aprobado' : 'rechazado';
     
     setProcesando(true);
     try {
       await api.put(`/auditoria/estado/${selectedPresupuesto.idPresupuestos}`, {
         estado: nuevoEstado,
-        comentario: comentario.trim() || null
+        comentario: comentario || null
       });
       
       await cargarPendientes();
@@ -134,13 +140,22 @@ const Auditoria: React.FC<AuditoriaProps> = ({ onCargarPresupuesto, filtroPresup
           Mostrando solo presupuesto #{filtroPresupuesto}
         </Alert>
       )}
-      <Text size="lg" fw={600} mb="md">
-        Auditoría Médica - {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
-      </Text>
+      <Group justify="space-between" mb="md">
+        <Text size="lg" fw={600}>
+          Auditoría Médica - {pendientes.length} pendiente{pendientes.length !== 1 ? 's' : ''}
+        </Text>
+        <ActionIcon 
+          variant="subtle" 
+          onClick={cargarPendientes}
+          title="Actualizar lista de auditoría"
+        >
+          <ArrowPathIcon style={ICON_SIZE} />
+        </ActionIcon>
+      </Group>
 
       {pendientes.length === 0 ? (
         <Text ta="center" c="dimmed" py="xl">
-          ✅ No hay presupuestos pendientes de revisión
+        No hay presupuestos pendientes de revisión
         </Text>
       ) : (
         <Table striped="odd" highlightOnHover stickyHeader>
@@ -194,20 +209,20 @@ const Auditoria: React.FC<AuditoriaProps> = ({ onCargarPresupuesto, filtroPresup
                 <Table.Td>
                   <Group gap="xs">
                     <ActionIcon 
-                      variant="light" 
-                      color="blue" 
+                      variant="transparent" 
+                      color="blue"
                       onClick={() => verDetallePresupuesto(presupuesto)}
                       title="Ver detalle del presupuesto"
                     >
-                      <EyeIcon style={ICON_SIZE} />
+                      <EyeIcon style={ICON_SIZE_LG} />
                     </ActionIcon>
                     <ActionIcon 
-                      variant="light" 
-                      color="orange" 
+                      variant="transparent" 
+                      color="orange"
                       onClick={() => auditarPresupuesto(presupuesto)}
                       title="Auditar presupuesto"
                     >
-                      <ShieldCheckIcon style={ICON_SIZE} />
+                      <ShieldCheckIcon style={ICON_SIZE_LG} />
                     </ActionIcon>
                   </Group>
                 </Table.Td>
@@ -217,52 +232,23 @@ const Auditoria: React.FC<AuditoriaProps> = ({ onCargarPresupuesto, filtroPresup
         </Table>
       )}
 
-      <Modal 
-        opened={modalAbierto} 
-        onClose={cerrarModal} 
-        title={`Auditar Presupuesto #${selectedPresupuesto?.idPresupuestos}`}
-        size="md"
-      >
-        {selectedPresupuesto && (
-          <div>
-            <Text size="sm" mb="md">
-              <strong>Paciente:</strong> {selectedPresupuesto.Nombre_Apellido} (DNI: {selectedPresupuesto.DNI})
-            </Text>
-            <Text size="sm" mb="md">
-              <strong>Costo:</strong> ${Number(selectedPresupuesto.costo_total || 0).toLocaleString()} | 
-              <strong> Rentabilidad:</strong> {Number(selectedPresupuesto.rentabilidad || 0).toFixed(1)}%
-            </Text>
-            
-            <Textarea
-              label="Comentario (opcional)"
-              placeholder="Agregar comentario sobre la decisión..."
-              value={comentario}
-              onChange={(e) => setComentario(e.currentTarget.value)}
-              rows={3}
-              mb="md"
-            />
-
-            <Group justify="center" gap="md">
-              <Button 
-                color="green" 
-                size="xs"
-                onClick={() => cambiarEstado('aprobado')}
-                loading={procesando}
-              >
-                Aprobar
-              </Button>
-              <Button 
-                color="red" 
-                size="xs"
-                onClick={() => cambiarEstado('rechazado')}
-                loading={procesando}
-              >
-                Rechazar
-              </Button>
-            </Group>
-          </div>
-        )}
-      </Modal>
+      {selectedPresupuesto && (
+        <ModalAuditoria
+          opened={modalAbierto}
+          onClose={cerrarModal}
+          tipo="auditar"
+          presupuesto={{
+            id: selectedPresupuesto.idPresupuestos,
+            nombre: selectedPresupuesto.Nombre_Apellido,
+            dni: selectedPresupuesto.DNI,
+            costoTotal: selectedPresupuesto.costo_total,
+            rentabilidad: selectedPresupuesto.rentabilidad,
+            version: selectedPresupuesto.version
+          }}
+          onConfirmar={cambiarEstado}
+          loading={procesando}
+        />
+      )}
     </Paper>
   );
 };

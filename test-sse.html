@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE Test</title>
+</head>
+<body>
+    <h1>SSE Connection Test</h1>
+    <div id="status">Disconnected</div>
+    <div id="messages"></div>
+    
+    <script>
+        // Get token from localStorage (you'll need to login first)
+        const token = localStorage.getItem('token');
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        
+        if (!token) {
+            statusDiv.textContent = 'No token found - please login first';
+            statusDiv.style.color = 'red';
+        } else {
+            statusDiv.textContent = 'Connecting...';
+            statusDiv.style.color = 'orange';
+            
+            // Test SSE connection
+            const eventSource = new EventSource(`http://localhost:4000/api/stream/updates?token=${encodeURIComponent(token)}`);
+            
+            eventSource.onopen = () => {
+                statusDiv.textContent = 'Connected';
+                statusDiv.style.color = 'green';
+                messagesDiv.innerHTML += '<p>✅ SSE Connected</p>';
+            };
+            
+            eventSource.addEventListener('notifications', (event) => {
+                messagesDiv.innerHTML += `<p>📧 Notifications: ${event.data}</p>`;
+            });
+            
+            eventSource.addEventListener('presupuestos', (event) => {
+                messagesDiv.innerHTML += `<p>📋 Presupuestos: ${event.data}</p>`;
+            });
+            
+            eventSource.onerror = (error) => {
+                statusDiv.textContent = 'Error';
+                statusDiv.style.color = 'red';
+                messagesDiv.innerHTML += '<p>❌ SSE Error</p>';
+                console.error('SSE Error:', error);
+            };
+        }
+    </script>
+</body>
+</html>

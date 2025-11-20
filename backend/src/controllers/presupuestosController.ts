@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { broadcastPresupuestoUpdate, broadcastNotificationUpdate } from './sseController';
 
 const validatePresupuestoData = (data: any): string[] => {
   const { nombre, dni, sucursal } = data;
@@ -87,7 +88,7 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
   try {
     const [result] = await pool.query<any>(
       'INSERT INTO presupuestos (Nombre_Apellido, DNI, Sucursal, dificil_acceso, usuario_id, version, es_ultima_version, estado) VALUES (?,?,?,?,?,?,?,?)',
-      [nombre.trim(), dni, sucursal, dificil_acceso || 'no', usuario_id, 1, 1, 'borrador']
+      [nombre.trim(), dni, sucursal, dificil_acceso || 'no', usuario_id, 0, 1, 'borrador']
     );
     res.status(201).json({ id: result.insertId });
   } catch (err: any) {
@@ -225,7 +226,7 @@ export const guardarVersion = asyncHandler(async (req: Request & { user?: any },
 
     // Determinar presupuesto padre y nueva versión
     const presupuestoPadre = original.presupuesto_padre || idOriginal;
-    const nuevaVersion = (original.version || 1) + 1;
+    const nuevaVersion = original.version === 0 ? 1 : (original.version || 1) + 1;
 
     // Marcar versión anterior como no-actual
     await connection.query(
@@ -295,6 +296,15 @@ export const guardarVersion = asyncHandler(async (req: Request & { user?: any },
     }
 
     await connection.commit();
+    
+    // Broadcast updates via SSE
+    if (estado === 'pendiente') {
+      broadcastPresupuestoUpdate();
+      // Notify all auditors
+      const [auditores] = await pool.query<any[]>('SELECT id FROM usuarios WHERE rol = "auditor_medico"');
+      auditores.forEach(auditor => broadcastNotificationUpdate(auditor.id));
+    }
+    
     res.status(201).json({ id: nuevoId, version: nuevaVersion, estado });
   } catch (error) {
     await connection.rollback();

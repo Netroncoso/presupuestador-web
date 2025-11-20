@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import sucursalesRoutes from './routes/sucursales';
 import presupuestosRoutes from './routes/presupuestos';
 // import presupuestosV2Routes from './routes/presupuestosV2-working';
-import notificacionesRoutes from './routes/notificaciones-simple';
+import notificacionesRoutes from './routes/notificaciones';
 import auditoriaRoutes from './routes/auditoria-simple';
 import presupuestoInsumosRoutes from './routes/presupuestoInsumos';
 import presupuestoPrestacionesRoutes from './routes/presupuestoPrestaciones';
@@ -51,7 +51,7 @@ app.use(csrfProtection);
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
 
-// SSE routes (protected)
+// SSE routes (protected, but handles auth internally)
 app.use('/api/stream', sseRoutes);
 
 // Protected routes

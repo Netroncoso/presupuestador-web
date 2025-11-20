@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Table, Paper, TextInput, Group, ActionIcon, Badge, Loader, Text } from '@mantine/core';
-import { PencilSquareIcon, MagnifyingGlassIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, MagnifyingGlassIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { api } from '../api/api';
 
 const ICON_SIZE = { width: 16, height: 16 };
@@ -88,18 +88,39 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           leftSection={<MagnifyingGlassIcon style={ICON_SIZE} />}
           value={filtroNombre}
           onChange={(e) => setFiltroNombre(e.currentTarget.value)}
+          rightSection={
+            filtroNombre ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroNombre('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
         />
         <TextInput
           placeholder="Rentabilidad mínima (%)"
           value={filtroRentabilidad}
           onChange={(e) => setFiltroRentabilidad(e.currentTarget.value)}
           type="number"
+          rightSection={
+            filtroRentabilidad ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroRentabilidad('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
         />
         <TextInput
           placeholder="Monto mínimo a facturar"
           value={filtroMonto}
           onChange={(e) => setFiltroMonto(e.currentTarget.value)}
           type="number"
+          rightSection={
+            filtroMonto ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroMonto('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
         />
       </Group>
 

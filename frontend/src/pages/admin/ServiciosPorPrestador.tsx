@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput, Tooltip } from '@mantine/core';
-import { PencilSquareIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 
@@ -161,8 +161,16 @@ export default function ServiciosPorPrestador() {
         <Paper p="md" withBorder>
           <TextInput
             placeholder="Filtrar por servicio..."
+            leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
             value={filtroServicio}
             onChange={(e) => setFiltroServicio(e.currentTarget.value)}
+            rightSection={
+              filtroServicio ? (
+                <ActionIcon variant="subtle" onClick={() => setFiltroServicio('')}>
+                  <XMarkIcon style={{ width: 16, height: 16 }} />
+                </ActionIcon>
+              ) : null
+            }
             mb="md"
           />
           <Table striped="odd" highlightOnHover layout="fixed" stickyHeader>

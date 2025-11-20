@@ -267,7 +267,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
             </Button>
           )}
           <Button onClick={guardarYContinuar} disabled={presupuestoCreado}>
-            {presupuestoCreado ? 'Presupuesto Guardado' : 'Guardar y Continuar'}
+            {presupuestoCreado ? 'Paciente Guardado' : 'Crear Presupuesto'}
           </Button>
         </Group>
       </Stack>

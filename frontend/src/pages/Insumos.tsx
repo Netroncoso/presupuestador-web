@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, Checkbox, Center, Tooltip } from '@mantine/core'
-import { TrashIcon, PencilSquareIcon,MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
 
@@ -136,7 +136,19 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
         <Grid.Col span={6}>
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Insumos Disponibles</Title>
-            <TextInput value={filtro} onChange={(e) => setFiltro(e.target.value)} rightSection={<MagnifyingGlassIcon style={{ width: 22, height: 22, color: 'black' }} />} placeholder="Buscar Insumo..." />
+            <TextInput 
+              value={filtro} 
+              onChange={(e) => setFiltro(e.target.value)} 
+              leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
+              rightSection={
+                filtro ? (
+                  <ActionIcon variant="subtle" onClick={() => setFiltro('')}>
+                    <XMarkIcon style={{ width: 16, height: 16 }} />
+                  </ActionIcon>
+                ) : null
+              }
+              placeholder="Buscar Insumo..." 
+            />
             <Table.ScrollContainer mt="xs" minWidth={500} maxHeight={300} >
               <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Paper, Badge, Loader, Text, ActionIcon, Group, Button, Modal } from '@mantine/core';
-import CheckIcon from '@heroicons/react/24/outline/CheckIcon';
-import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon';
-import EyeIcon from '@heroicons/react/24/outline/EyeIcon';
+import { Table, Paper, Badge, Loader, Text, ActionIcon, Group, Button, Modal, TextInput, Select } from '@mantine/core';
+import { CheckIcon, ShieldCheckIcon, EyeIcon, ArrowPathIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/api';
 
 const ICON_SIZE = { width: 16, height: 16 };
+const ICON_SIZE_LG = { width: 20, height: 20 };
 
 interface Notificacion {
   id: number;
@@ -32,16 +31,28 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [notificacionSeleccionada, setNotificacionSeleccionada] = useState<Notificacion | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState<string>('');
+  const [filtroPaciente, setFiltroPaciente] = useState<string>('');
+  const [filtroPresupuesto, setFiltroPresupuesto] = useState<string>('');
   
   const esAuditor = user?.rol === 'auditor_medico';
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    
+    // Auto-refresh every 60 seconds as fallback
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [filtroEstado, filtroPaciente, filtroPresupuesto]);
 
   const fetchNotifications = async () => {
     try {
-      const response = await api.get('/notificaciones?limit=20');
+      const params = new URLSearchParams({ limit: '20' });
+      if (filtroEstado) params.append('estado', filtroEstado);
+      if (filtroPaciente) params.append('paciente', filtroPaciente);
+      if (filtroPresupuesto) params.append('presupuesto_id', filtroPresupuesto);
+      
+      const response = await api.get(`/notificaciones?${params.toString()}`);
       setNotifications(response.data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -109,9 +120,20 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
   return (
     <Paper shadow="sm" p="md" radius="md" withBorder>
       <Group justify="space-between" mb="md">
-        <Text size="lg" fw={600}>
-          Notificaciones - {nuevas} nueva{nuevas !== 1 ? 's' : ''}
-        </Text>
+        <Group gap="xs">
+          <Text size="lg" fw={600}>
+            Notificaciones - {nuevas} nueva{nuevas !== 1 ? 's' : ''}
+          </Text>
+          <ActionIcon 
+            variant="transparent" 
+            color="blue" 
+            size="sm"
+            onClick={fetchNotifications}
+            title="Actualizar notificaciones"
+          >
+            <ArrowPathIcon style={{ width: 16, height: 16 }} />
+          </ActionIcon>
+        </Group>
         {nuevas > 0 && (
           <Button 
             size="xs" 
@@ -124,9 +146,51 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
         )}
       </Group>
 
+      <Group mb="md" grow>
+        <Select
+          placeholder="Filtrar por estado"
+          value={filtroEstado}
+          onChange={(value) => setFiltroEstado(value || '')}
+          data={[
+            { value: '', label: 'Todas las notificaciones' },
+            { value: 'nuevo', label: 'Solo no leídas' },
+            { value: 'leido', label: 'Solo leídas' }
+          ]}
+          clearable
+        />
+        <TextInput
+          placeholder="Buscar por paciente"
+          leftSection={<MagnifyingGlassIcon style={ICON_SIZE} color='black'/>}
+          value={filtroPaciente}
+          onChange={(e) => setFiltroPaciente(e.currentTarget.value)}
+          rightSection={
+            filtroPaciente ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroPaciente('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
+        />
+        <TextInput
+          placeholder="Filtrar por presupuesto ID"
+          value={filtroPresupuesto}
+          onChange={(e) => setFiltroPresupuesto(e.currentTarget.value)}
+          type="number"
+          rightSection={
+            filtroPresupuesto ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroPresupuesto('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
+        />
+      </Group>
+
       {notifications.length === 0 ? (
         <Text ta="center" c="dimmed" py="xl">
-          🔔 No hay notificaciones
+          {filtroEstado === 'nuevo' ? 'No hay notificaciones no leídas' : 
+           filtroEstado === 'leido' ? 'No hay notificaciones leídas' :
+           'No hay notificaciones'}
         </Text>
       ) : (
         <Table striped="odd" highlightOnHover stickyHeader>
@@ -142,9 +206,9 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {notifications.map((notif: Notificacion) => (
+            {notifications.map((notif: Notificacion, index: number) => (
               <Table.Tr 
-                key={notif.id}
+                key={`${notif.id}-${index}`}
                 style={{ 
                   backgroundColor: notif.estado === 'nuevo' ? '#f0f9ff' : undefined,
                   fontWeight: notif.estado === 'nuevo' ? 500 : 400
@@ -191,31 +255,32 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                 <Table.Td>
                   <Group gap="xs">
                     <ActionIcon 
-                      variant="light" 
-                      color="gray" 
+                      variant="transparent"
+                      color="blue" 
                       onClick={() => abrirModal(notif)}
                       title="Ver detalle"
                     >
-                      <EyeIcon style={ICON_SIZE} />
+                      <EyeIcon style={ICON_SIZE_LG} />
                     </ActionIcon>
                     {notif.estado === 'nuevo' && (
                       <ActionIcon 
-                        variant="light" 
-                        color="blue" 
+                        variant="transparent"
+                        color="green" 
                         onClick={() => markAsRead(notif.id)}
                         title="Marcar como leída"
                       >
-                        <CheckIcon style={ICON_SIZE} />
+                        <CheckIcon style={ICON_SIZE_LG} />
                       </ActionIcon>
                     )}
                     {notif.tipo === 'pendiente' && onIrAuditoria && (
                       <ActionIcon 
-                        variant="light" 
+                        variant="transparent" 
                         color="orange" 
                         onClick={() => onIrAuditoria(notif.presupuesto_id)}
                         title="Ir a auditoría"
+                        
                       >
-                        <ShieldCheckIcon style={ICON_SIZE} />
+                        <ShieldCheckIcon style={ICON_SIZE_LG} />
                       </ActionIcon>
                     )}
                   </Group>

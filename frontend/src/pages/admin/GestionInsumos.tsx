@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, Button, Table, Checkbox, Group, Stack, Modal, NumberInput, ActionIcon, Text } from '@mantine/core';
-import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
@@ -137,8 +137,16 @@ export default function GestionInsumos() {
       <Group style={{ justifyContent: 'space-between' }}>
         <TextInput
           placeholder="Buscar insumos..."
+          leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
+          rightSection={
+            filtro ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltro('')}>
+                <XMarkIcon style={{ width: 16, height: 16 }} />
+              </ActionIcon>
+            ) : null
+          }
           style={{ flex: 1 }}
         />
         <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>

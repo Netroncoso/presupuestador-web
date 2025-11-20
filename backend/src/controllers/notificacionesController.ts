@@ -10,18 +10,43 @@ export const obtenerNotificaciones = asyncHandler(async (req: Request & { user?:
   const limit = parseInt(req.query.limit as string) || 10;
   const offset = (page - 1) * limit;
   
+  // Filtros
+  const estado = req.query.estado as string; // 'nuevo', 'leido'
+  const paciente = req.query.paciente as string;
+  const presupuesto_id = req.query.presupuesto_id as string;
+  
+  let whereClause = 'WHERE n.usuario_id = ?';
+  const params: any[] = [usuario_id];
+  
+  if (estado) {
+    whereClause += ' AND n.estado = ?';
+    params.push(estado);
+  }
+  
+  if (paciente) {
+    whereClause += ' AND p.Nombre_Apellido LIKE ?';
+    params.push(`%${paciente}%`);
+  }
+  
+  if (presupuesto_id) {
+    whereClause += ' AND n.presupuesto_id = ?';
+    params.push(parseInt(presupuesto_id));
+  }
+  
+  params.push(limit, offset);
+  
   const [notificaciones] = await pool.query<any[]>(`
     SELECT 
       n.id, n.tipo, n.mensaje, n.estado, n.creado_en,
       n.presupuesto_id, n.version_presupuesto,
-      p.Nombre_Apellido as paciente, p.DNI as dni_paciente
+      COALESCE(p.Nombre_Apellido, 'Paciente no encontrado') as paciente, 
+      COALESCE(p.DNI, 'N/A') as dni_paciente
     FROM notificaciones n
-    JOIN presupuestos p ON n.presupuesto_id = p.idPresupuestos 
-      AND n.version_presupuesto = p.version
-    WHERE n.usuario_id = ?
+    LEFT JOIN presupuestos p ON n.presupuesto_id = p.idPresupuestos
+    ${whereClause}
     ORDER BY n.creado_en DESC
     LIMIT ? OFFSET ?
-  `, [usuario_id, limit, offset]);
+  `, params);
   
   res.json(notificaciones);
 });

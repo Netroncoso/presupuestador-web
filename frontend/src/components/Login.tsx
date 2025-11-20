@@ -53,7 +53,7 @@ export default function Login(props: PaperProps) {
       minHeight: '100vh',
       backgroundColor: '#f5f5f5'
     }}>
-      <Paper radius="md" p="lg" withBorder w={400} {...props}>
+      <Paper radius="md" p="lg" withBorder w={400} {...props} shadow='xs'>
         <Text size="lg" fw={500} ta="center" mb="xs">
            Presupuestador Web
         </Text>
@@ -92,7 +92,7 @@ export default function Login(props: PaperProps) {
               variant="unstyled"
               mt="md"
               visibilityToggleIcon={({ reveal }) => 
-                reveal ? <EyeSlashIcon width={16} height={16} /> : <EyeIcon width={16} height={16} />
+                reveal ? <EyeSlashIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />
               }
             />
           </Stack>

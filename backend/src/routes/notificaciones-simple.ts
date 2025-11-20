@@ -61,6 +61,10 @@ router.put('/:id/leer', auth, async (req: any, res) => {
       [id, usuario_id]
     );
     
+    // Broadcast actualización a todas las conexiones del usuario
+    const { broadcastNotificationUpdate } = require('../controllers/sseController');
+    await broadcastNotificationUpdate(usuario_id);
+    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Error marcando notificación' });
@@ -76,6 +80,10 @@ router.put('/leer-todas', auth, async (req: any, res) => {
       'UPDATE notificaciones SET estado = "leido" WHERE usuario_id = ? AND estado = "nuevo"',
       [usuario_id]
     );
+    
+    // Broadcast actualización a todas las conexiones del usuario
+    const { broadcastNotificationUpdate } = require('../controllers/sseController');
+    await broadcastNotificationUpdate(usuario_id);
     
     res.json({ success: true });
   } catch (error) {

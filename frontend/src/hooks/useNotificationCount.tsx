@@ -2,7 +2,7 @@ import { useRealtimeUpdates } from './useRealtimeUpdates';
 import { api } from '../api/api';
 
 export const useNotificationCount = () => {
-  const { notifications, isConnected } = useRealtimeUpdates();
+  const { notifications, notificationsList, isConnected, refreshData } = useRealtimeUpdates();
 
   // Fallback manual refresh function
   const refreshCount = async () => {
@@ -16,8 +16,10 @@ export const useNotificationCount = () => {
   };
 
   return { 
-    count: notifications, 
+    count: notifications,
+    list: notificationsList,
     refreshCount,
+    refreshData,
     isConnected 
   };
 };

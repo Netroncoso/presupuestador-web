@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, Table, Group, Stack, Modal, ActionIcon, Button, Tooltip } from '@mantine/core';
-import { PencilSquareIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
@@ -91,8 +91,16 @@ export default function GestionSucursales() {
     <Stack gap="md">
       <TextInput
         placeholder="Buscar sucursales..."
+        leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
         value={filtro}
         onChange={(e) => setFiltro(e.target.value)}
+        rightSection={
+          filtro ? (
+            <ActionIcon variant="subtle" onClick={() => setFiltro('')}>
+              <XMarkIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+          ) : null
+        }
       />
 
       <AdminTable isEmpty={sucursalesFiltradas.length === 0} emptyMessage="No se encontraron sucursales">

@@ -7,6 +7,8 @@ import DatosPresupuesto from "./DatosPresupuesto";
 import Notificaciones from "./Notificaciones";
 import Auditoria from "./Auditoria";
 import { NotificationIndicator } from '../components/NotificationIndicator';
+import { ModalAuditoria } from '../components/ModalAuditoria';
+import { ConnectionStatus } from '../components/ConnectionStatus';
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
 import ListaPresupuestos from "./ListaPresupuestos";
@@ -44,7 +46,7 @@ const formatCurrency = (value: number) =>
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
-  const { count: notificationCount, isConnected } = useNotificationCount();
+  const { count: notificationCount, isConnected, refreshData } = useNotificationCount();
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<any[]>([]);
   const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<any[]>([]);
   const [alertasAbiertas, setAlertasAbiertas] = useState(true);
@@ -54,9 +56,7 @@ export default function UserDashboard() {
   const [recargarHistorial, setRecargarHistorial] = useState(0);
   const [filtroAuditoriaPresupuesto, setFiltroAuditoriaPresupuesto] = useState<number | null>(null);
   const [modalAuditoriaAbierto, setModalAuditoriaAbierto] = useState(false);
-  const [mensajeAuditoria, setMensajeAuditoria] = useState('');
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     presupuestoId,
@@ -170,18 +170,15 @@ export default function UserDashboard() {
 
   const cerrarModalAuditoria = useCallback(() => {
     setModalAuditoriaAbierto(false);
-    setMensajeAuditoria('');
   }, []);
 
-  const handlePedirAuditoria = useCallback(async () => {
+  const handlePedirAuditoria = useCallback(async (mensaje: string) => {
     if (!presupuestoId) return;
-    
-    const mensaje = textareaRef.current?.value || '';
     
     setEnviandoAuditoria(true);
     try {
       await api.put(`/auditoria/pedir/${presupuestoId}`, {
-        mensaje: mensaje.trim() || null
+        mensaje: mensaje || null
       });
       
       notifications.show({
@@ -213,14 +210,8 @@ export default function UserDashboard() {
         <Group gap="xs">
           <UserCircleIcon style={ICON_SIZE} />
           <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
-          <div 
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: isConnected ? '#40c057' : '#fa5252'
-            }}
-            title={isConnected ? 'Notificaciones en tiempo real' : 'Desconectado'}
+          <ConnectionStatus 
+            isConnected={isConnected}
           />
           <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={ICON_SIZE}/>}>
             Salir
@@ -239,7 +230,7 @@ export default function UserDashboard() {
           {presupuestoId && (
             <Group gap="xs">
               <Button onClick={handleGuardarTotales} loading={guardandoTotales} size="xs" color="green" leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}>
-                Guardar
+                Guardar Versión
               </Button>
               <Button 
                 onClick={abrirModalAuditoria} 
@@ -428,45 +419,17 @@ export default function UserDashboard() {
         )}
       </Tabs>
 
-      <Modal 
-        opened={modalAuditoriaAbierto} 
-        onClose={cerrarModalAuditoria} 
-        title="Solicitar Auditoría"
-        size="md"
-      >
-        <Text size="sm" mb="md">
-          <strong>Presupuesto:</strong> #{presupuestoId} - {clienteNombre}
-        </Text>
-        
-        <Textarea
-          ref={textareaRef}
-          label="Mensaje para el auditor (opcional)"
-          placeholder="Explica por qué necesitas esta auditoría o cualquier información relevante..."
-          rows={3}
-          mb="md"
-        />
-
-        <Group justify="flex-end" gap="md">
-          <Button 
-            variant="outline" 
-            color="gray"
-            size="xs"
-            onClick={cerrarModalAuditoria}
-            disabled={enviandoAuditoria}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            color="orange" 
-            size="xs"
-            onClick={handlePedirAuditoria}
-            loading={enviandoAuditoria}
-            leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
-          >
-            Solicitar Auditoría
-          </Button>
-        </Group>
-      </Modal>
+      <ModalAuditoria
+        opened={modalAuditoriaAbierto}
+        onClose={cerrarModalAuditoria}
+        tipo="solicitar"
+        presupuesto={{
+          id: presupuestoId || 0,
+          nombre: clienteNombre
+        }}
+        onConfirmar={handlePedirAuditoria}
+        loading={enviandoAuditoria}
+      />
     </Container>
   );
 }

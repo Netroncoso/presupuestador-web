@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../db';
 import { logger } from '../utils/logger';
+import { sendSSEEvent, sendHeartbeat } from '../middleware/sseCleanup';
 import jwt from 'jsonwebtoken';
 
 interface SSEConnection {
@@ -9,32 +10,65 @@ interface SSEConnection {
   userRole: string;
 }
 
+interface AuthenticatedRequest extends Request {
+  user?: { id: number; rol: string };
+}
+
 // Store active SSE connections
 const activeConnections = new Map<number, SSEConnection[]>();
 
-export const streamUpdates = async (req: Request & { user?: any }, res: Response) => {
-  // Handle token from query parameter (EventSource doesn't support headers)
+// Constants
+const HEARTBEAT_INTERVAL = 30000;
+const NOTIFICATION_LIMIT = 20;
+
+export const streamUpdates = async (req: AuthenticatedRequest, res: Response) => {
+  const { userId, userRole } = await authenticateUser(req, res);
+  if (!userId || !userRole) return;
+
+  setupSSEHeaders(res);
+  await sendInitialData(res, userId, userRole);
+  
+  const connection = addConnection(userId, userRole, res);
+  const heartbeat = startHeartbeat(connection);
+  
+  setupCleanupHandlers(req, heartbeat, userId, res);
+  
+  // Send immediate heartbeat to confirm connection
+  setTimeout(() => {
+    if (!sendHeartbeat(res)) {
+      removeConnection(userId, res);
+    }
+  }, 1000);
+};
+
+const authenticateUser = async (req: AuthenticatedRequest, res: Response): Promise<{ userId?: number; userRole?: string }> => {
   const token = req.query.token as string || req.headers.authorization?.replace('Bearer ', '');
   
   if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+    res.status(401).json({ error: 'No token provided' });
+    return {};
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     req.user = decoded;
+    
+    const userId = req.user?.id;
+    const userRole = req.user?.rol;
+    
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return {};
+    }
+    
+    return { userId, userRole };
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
+    return {};
   }
+};
 
-  const userId = req.user?.id;
-  const userRole = req.user?.rol;
-
-  if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // Set SSE headers
+const setupSSEHeaders = (res: Response) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -42,78 +76,118 @@ export const streamUpdates = async (req: Request & { user?: any }, res: Response
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Cache-Control'
   });
+};
 
-  // Send initial data
-  await sendInitialData(res, userId, userRole);
-
-  // Store connection
+const addConnection = (userId: number, userRole: string, res: Response): SSEConnection => {
   if (!activeConnections.has(userId)) {
     activeConnections.set(userId, []);
   }
-  activeConnections.get(userId)!.push({ res, userId, userRole });
-
+  
+  const connection = { res, userId, userRole };
+  activeConnections.get(userId)!.push(connection);
+  
   logger.info(`SSE connection established for user ${userId}`);
+  return connection;
+};
 
-  // Heartbeat to keep connection alive
-  const heartbeat = setInterval(() => {
-    res.write(': heartbeat\n\n');
-  }, 30000);
+const startHeartbeat = (connection: SSEConnection) => {
+  return setInterval(() => {
+    if (!sendHeartbeat(connection.res)) {
+      removeConnection(connection.userId, connection.res);
+      logger.info(`Heartbeat failed, removing connection for user ${connection.userId}`);
+      return; // Stop the interval
+    }
+  }, HEARTBEAT_INTERVAL);
+};
 
-  // Cleanup on disconnect
-  req.on('close', () => {
+const setupCleanupHandlers = (req: AuthenticatedRequest, heartbeat: NodeJS.Timeout, userId: number, res: Response) => {
+  const cleanup = () => {
     clearInterval(heartbeat);
     removeConnection(userId, res);
+  };
+
+  req.on('close', () => {
+    cleanup();
     logger.info(`SSE connection closed for user ${userId}`);
   });
 
   req.on('error', (err) => {
-    clearInterval(heartbeat);
-    removeConnection(userId, res);
+    cleanup();
     logger.error(`SSE connection error for user ${userId}:`, err);
   });
 };
 
 const sendInitialData = async (res: Response, userId: number, userRole: string) => {
   try {
-    // Send notification count
-    const [notificationResult] = await pool.query<any[]>(
-      'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
-      [userId]
-    );
-    sendEvent(res, 'notifications', { count: notificationResult[0].count });
+    const notificationData = await getNotificationData(userId);
+    if (!sendEvent(res, 'notifications', notificationData)) {
+      removeConnection(userId, res);
+      return;
+    }
 
-    // Send pending presupuestos for auditors
     if (userRole === 'auditor_medico') {
-      const [pendientes] = await pool.query<any[]>(`
-        SELECT 
-          p.idPresupuestos, p.version, p.estado, p.Nombre_Apellido, p.DNI, 
-          p.Sucursal, p.costo_total, p.rentabilidad, p.dificil_acceso, 
-          p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
-          DATEDIFF(NOW(), p.created_at) as dias_pendiente
-        FROM presupuestos p
-        JOIN usuarios u ON p.usuario_id = u.id
-        JOIN sucursales s ON u.sucursal_id = s.ID
-        WHERE p.estado IN ('pendiente', 'en_revision')
-        ORDER BY p.created_at ASC
-      `);
-      sendEvent(res, 'presupuestos', { pendientes });
+      const presupuestosData = await getPresupuestosData();
+      if (!sendEvent(res, 'presupuestos', presupuestosData)) {
+        removeConnection(userId, res);
+        return;
+      }
     }
   } catch (error) {
     logger.error('Error sending initial SSE data:', error);
   }
 };
 
-const sendEvent = (res: Response, eventType: string, data: any) => {
-  res.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+const getNotificationData = async (userId: number) => {
+  const [countResult] = await pool.query<any[]>(
+    'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
+    [userId]
+  );
+  
+  const [notificationsList] = await pool.query<any[]>(`
+    SELECT n.id, n.tipo, n.mensaje, n.estado, n.creado_en, n.presupuesto_id, 
+           n.version_presupuesto, p.Nombre_Apellido as paciente, p.DNI as dni_paciente
+    FROM notificaciones n
+    LEFT JOIN presupuestos p ON n.presupuesto_id = p.idPresupuestos
+    WHERE n.usuario_id = ?
+    ORDER BY n.creado_en DESC
+    LIMIT ?
+  `, [userId, NOTIFICATION_LIMIT]);
+  
+  return {
+    count: countResult[0].count,
+    list: notificationsList
+  };
+};
+
+const getPresupuestosData = async () => {
+  const [pendientes] = await pool.query<any[]>(`
+    SELECT 
+      p.idPresupuestos, p.version, p.estado, p.Nombre_Apellido, p.DNI, 
+      p.Sucursal, p.costo_total, p.rentabilidad, p.dificil_acceso, 
+      p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
+      DATEDIFF(NOW(), p.created_at) as dias_pendiente
+    FROM presupuestos p
+    JOIN usuarios u ON p.usuario_id = u.id
+    JOIN sucursales s ON u.sucursal_id = s.ID
+    WHERE p.estado IN ('pendiente', 'en_revision')
+    ORDER BY p.created_at ASC
+  `);
+  
+  return { pendientes };
+};
+
+const sendEvent = (res: Response, eventType: string, data: any): boolean => {
+  return sendSSEEvent(res, eventType, data);
 };
 
 const removeConnection = (userId: number, res: Response) => {
   const connections = activeConnections.get(userId);
-  if (connections) {
-    const index = connections.findIndex(conn => conn.res === res);
-    if (index !== -1) {
-      connections.splice(index, 1);
-    }
+  if (!connections) return;
+  
+  const index = connections.findIndex(conn => conn.res === res);
+  if (index !== -1) {
+    connections.splice(index, 1);
+    
     if (connections.length === 0) {
       activeConnections.delete(userId);
     }
@@ -123,24 +197,33 @@ const removeConnection = (userId: number, res: Response) => {
 // Broadcast functions to be called from other controllers
 export const broadcastNotificationUpdate = async (userId: number) => {
   const connections = activeConnections.get(userId);
-  if (!connections) return;
+  if (!connections?.length) return;
 
   try {
-    const [result] = await pool.query<any[]>(
-      'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
-      [userId]
-    );
-
-    connections.forEach(conn => {
-      sendEvent(conn.res, 'notifications', { count: result[0].count });
-    });
+    const notificationData = await getNotificationData(userId);
+    broadcastToConnections(connections, 'notifications', notificationData, userId);
   } catch (error) {
     logger.error('Error broadcasting notification update:', error);
   }
 };
 
 export const broadcastPresupuestoUpdate = async () => {
-  // Get all auditor connections
+  const auditorConnections = getAuditorConnections();
+  if (!auditorConnections.length) return;
+
+  try {
+    const presupuestosData = await getPresupuestosData();
+    auditorConnections.forEach(conn => {
+      if (!sendEvent(conn.res, 'presupuestos', presupuestosData)) {
+        removeConnection(conn.userId, conn.res);
+      }
+    });
+  } catch (error) {
+    logger.error('Error broadcasting presupuesto update:', error);
+  }
+};
+
+const getAuditorConnections = (): SSEConnection[] => {
   const auditorConnections: SSEConnection[] = [];
   activeConnections.forEach(connections => {
     connections.forEach(conn => {
@@ -149,27 +232,13 @@ export const broadcastPresupuestoUpdate = async () => {
       }
     });
   });
+  return auditorConnections;
+};
 
-  if (auditorConnections.length === 0) return;
-
-  try {
-    const [pendientes] = await pool.query<any[]>(`
-      SELECT 
-        p.idPresupuestos, p.version, p.estado, p.Nombre_Apellido, p.DNI, 
-        p.Sucursal, p.costo_total, p.rentabilidad, p.dificil_acceso, 
-        p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
-        DATEDIFF(NOW(), p.created_at) as dias_pendiente
-      FROM presupuestos p
-      JOIN usuarios u ON p.usuario_id = u.id
-      JOIN sucursales s ON u.sucursal_id = s.ID
-      WHERE p.estado IN ('pendiente', 'en_revision')
-      ORDER BY p.created_at ASC
-    `);
-
-    auditorConnections.forEach(conn => {
-      sendEvent(conn.res, 'presupuestos', { pendientes });
-    });
-  } catch (error) {
-    logger.error('Error broadcasting presupuesto update:', error);
-  }
+const broadcastToConnections = (connections: SSEConnection[], eventType: string, data: any, userId: number) => {
+  connections.forEach(conn => {
+    if (!sendEvent(conn.res, eventType, data)) {
+      removeConnection(userId, conn.res);
+    }
+  });
 };
