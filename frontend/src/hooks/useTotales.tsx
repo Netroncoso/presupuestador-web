@@ -13,21 +13,28 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
   const [totalInsumos, setTotalInsumos] = useState(0);
   const [totalPrestaciones, setTotalPrestaciones] = useState(0);
   const [totalFacturarPrestaciones, setTotalFacturarPrestaciones] = useState(0);
+  const [totalesDesdeDB, setTotalesDesdeDB] = useState<any>(null);
 
-  const costoTotal = useMemo(() => 
-    calcularCostoTotal(totalInsumos, totalPrestaciones), 
-    [totalInsumos, totalPrestaciones]
-  );
+  const costoTotal = useMemo(() => {
+    if (totalesDesdeDB) {
+      return Number(totalesDesdeDB.costoTotal) || 0;
+    }
+    return calcularCostoTotal(totalInsumos, totalPrestaciones);
+  }, [totalInsumos, totalPrestaciones, totalesDesdeDB]);
 
-  const totalFacturar = useMemo(() => 
-    calcularTotalFacturar(totalInsumos, totalFacturarPrestaciones, porcentajeInsumos), 
-    [totalInsumos, totalFacturarPrestaciones, porcentajeInsumos]
-  );
+  const totalFacturar = useMemo(() => {
+    if (totalesDesdeDB) {
+      return Number(totalesDesdeDB.totalFacturar) || 0;
+    }
+    return calcularTotalFacturar(totalInsumos, totalFacturarPrestaciones, porcentajeInsumos);
+  }, [totalInsumos, totalFacturarPrestaciones, porcentajeInsumos, totalesDesdeDB]);
 
-  const rentabilidad = useMemo(() => 
-    calcularRentabilidad(costoTotal, totalFacturar),
-    [costoTotal, totalFacturar]
-  );
+  const rentabilidad = useMemo(() => {
+    if (totalesDesdeDB) {
+      return Number(totalesDesdeDB.rentabilidad) || 0;
+    }
+    return calcularRentabilidad(costoTotal, totalFacturar);
+  }, [costoTotal, totalFacturar, totalesDesdeDB]);
 
   const margenBasico = useMemo(() => 
     calcularMargen(costoTotal, totalFacturar),
@@ -44,15 +51,25 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     [utilidadConPlazo, totalFacturar]
   );
 
-  const rentabilidadConPlazo = useMemo(() => 
-    calcularRentabilidadConPlazo(utilidadConPlazo, costoTotal),
-    [utilidadConPlazo, costoTotal]
-  );
+  const rentabilidadConPlazo = useMemo(() => {
+    if (totalesDesdeDB) {
+      return Number(totalesDesdeDB.rentabilidadConPlazo) || 0;
+    }
+    return calcularRentabilidadConPlazo(utilidadConPlazo, costoTotal);
+  }, [utilidadConPlazo, costoTotal, totalesDesdeDB]);
 
   const resetTotales = useCallback(() => {
     setTotalInsumos(0);
     setTotalPrestaciones(0);
     setTotalFacturarPrestaciones(0);
+    setTotalesDesdeDB(null);
+  }, []);
+
+  const setTotalesDesdeBaseDatos = useCallback((totales: any) => {
+    setTotalesDesdeDB(totales);
+    // También actualizar los estados individuales para consistencia
+    setTotalInsumos(totales.totalInsumos || 0);
+    setTotalPrestaciones(totales.totalPrestaciones || 0);
   }, []);
 
   const setTotalesPrestaciones = useCallback((costo: number, facturar: number) => {
@@ -73,5 +90,6 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     setTotalInsumos,
     setTotalesPrestaciones,
     resetTotales,
+    setTotalesDesdeBaseDatos,
   };
 };

@@ -22,25 +22,29 @@ export const presupuestoService = {
     return res.data;
   },
 
-  guardarVersion: async (id: number, data: {
-    total_insumos: number;
-    total_prestaciones: number;
-    costo_total: number;
-    total_facturar: number;
-    rentabilidad: number;
-    rentabilidad_con_plazo?: number;
-  }) => {
-    const res = await api.post(`/presupuestos/${id}/guardar-version`, data);
+  finalizarPresupuesto: async (id: number, totales?: any) => {
+    const res = await api.post(`/presupuestos/${id}/finalizar`, { totales });
+    return res.data;
+  },
+
+  crearVersionParaEdicion: async (id: number) => {
+    const res = await api.post(`/presupuestos/${id}/editar`, {});
+    return res.data;
+  },
+
+  // Mantener para compatibilidad
+  guardarVersion: async (id: number) => {
+    const res = await api.post(`/presupuestos/${id}/finalizar`, {});
     return res.data;
   },
 
   obtenerInsumos: async (id: number): Promise<Insumo[]> => {
-    const res = await api.get(`/presupuesto-insumos/${id}`);
+    const res = await api.get(`/presupuestos/${id}/insumos`);
     return res.data;
   },
 
   obtenerPrestaciones: async (id: number): Promise<Prestacion[]> => {
-    const res = await api.get(`/presupuesto-prestaciones/${id}`);
+    const res = await api.get(`/presupuestos/${id}/prestaciones`);
     return res.data;
   },
 };

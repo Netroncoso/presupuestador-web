@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Modal, Text, Textarea, Group, Button, Badge, Flex } from '@mantine/core';
-import { ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon,CheckBadgeIcon } from '@heroicons/react/24/outline';
 
 const ICON_SIZE = { width: 20, height: 20 };
 
@@ -54,14 +54,14 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
         placeholder="Explica por qué necesitas esta auditoría o cualquier información relevante..."
         value={mensaje}
         onChange={(e) => setMensaje(e.currentTarget.value)}
-        rows={3}
+        rows={6}
         mb="md"
       />
 
       <Group justify="flex-end" gap="md">
         <Button 
           variant="outline" 
-          color="gray"
+          color="red"
           size="xs"
           onClick={handleClose}
           disabled={loading}
@@ -69,11 +69,11 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
           Cancelar
         </Button>
         <Button 
-          color="orange" 
+          color="green" 
           size="xs"
           onClick={() => handleConfirmar()}
           loading={loading}
-          leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
+          rightSection={<ShieldCheckIcon style={ICON_SIZE} />}
         >
           Solicitar Auditoría
         </Button>
@@ -116,26 +116,28 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
         placeholder="Agregar comentario sobre la decisión..."
         value={mensaje}
         onChange={(e) => setMensaje(e.currentTarget.value)}
-        rows={3}
+        rows={6}
         mb="md"
       />
 
-      <Group justify="center" gap="md">
-        <Button 
-          color="green" 
-          size="xs"
-          onClick={() => handleConfirmar('APROBADO')}
-          loading={loading}
-        >
-          Aprobar
-        </Button>
+      <Group justify="right" gap="md">
         <Button 
           color="red" 
           size="xs"
           onClick={() => handleConfirmar('RECHAZADO')}
           loading={loading}
+          variant='outline'
         >
           Rechazar
+        </Button>
+                <Button 
+          color="green" 
+          size="xs"
+          onClick={() => handleConfirmar('APROBADO')}
+          loading={loading}
+          rightSection={<CheckBadgeIcon style={ICON_SIZE} />}
+        >
+          Aprobar
         </Button>
       </Group>
     </>
@@ -146,7 +148,10 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       opened={opened} 
       onClose={handleClose} 
       title={tipo === 'solicitar' ? 'Solicitar Auditoría' : `Auditar Presupuesto #${presupuesto.id}`}
-      size="md"
+      size="lg"
+      overlayProps={{
+          backgroundOpacity: 0.55,
+          blur: 3,}}
     >
       {tipo === 'solicitar' ? renderSolicitar() : renderAuditar()}
     </Modal>

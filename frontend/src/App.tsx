@@ -7,6 +7,7 @@ import './styles/global.css';
 
 const UserDashboard = React.lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const AuditorDashboard = React.lazy(() => import('./pages/AuditorDashboard'));
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -19,9 +20,20 @@ function AppContent() {
     return <Login />;
   }
 
+  const getDashboard = () => {
+    switch (user.rol) {
+      case 'admin':
+        return <AdminDashboard />;
+      case 'auditor_medico':
+        return <AuditorDashboard />;
+      default:
+        return <UserDashboard />;
+    }
+  };
+
   return (
     <Suspense fallback={<Center h="100vh"><Loader size="lg" /></Center>}>
-      {user.rol === 'admin' ? <AdminDashboard /> : <UserDashboard />}
+      {getDashboard()}
     </Suspense>
   );
 }

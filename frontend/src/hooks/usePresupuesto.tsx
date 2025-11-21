@@ -40,7 +40,8 @@ export const usePresupuesto = () => {
     setInsumosSeleccionados: (insumos: any[]) => void,
     setPrestacionesSeleccionadas: (prestaciones: any[]) => void,
     setEsCargaHistorial?: (esHistorial: boolean) => void,
-    soloLectura: boolean = true
+    soloLectura: boolean = true,
+    setTotalesDesdeDB?: (totales: any) => void
   ) => {
     try {
       setPresupuestoId(id);
@@ -73,14 +74,20 @@ export const usePresupuesto = () => {
         setPorcentajeInsumos(presupuestoData.porcentaje_insumos);
       }
 
-      if (soloLectura) {
-        // Modo historial: usar valores históricos
-        setInsumosSeleccionados(insumos);
-        setPrestacionesSeleccionadas(prestaciones);
-      } else {
-        // Modo edición: cargar valores actuales y limpiar listas
-        setInsumosSeleccionados([]);
-        setPrestacionesSeleccionadas([]);
+      // Siempre cargar insumos y prestaciones existentes
+      setInsumosSeleccionados(insumos);
+      setPrestacionesSeleccionadas(prestaciones);
+      
+      // Cargar totales desde la base de datos si están disponibles
+      if (setTotalesDesdeDB && presupuestoData.total_insumos !== undefined) {
+        setTotalesDesdeDB({
+          totalInsumos: presupuestoData.total_insumos || 0,
+          totalPrestaciones: presupuestoData.total_prestaciones || 0,
+          costoTotal: presupuestoData.costo_total || 0,
+          totalFacturar: presupuestoData.total_facturar || 0,
+          rentabilidad: presupuestoData.rentabilidad || 0,
+          rentabilidadConPlazo: presupuestoData.rentabilidad_con_plazo || 0
+        });
       }
       
       if (setEsCargaHistorial) {
@@ -89,8 +96,8 @@ export const usePresupuesto = () => {
 
       notifications.show({
         title: 'Presupuesto Cargado',
-        message: `Editando presupuesto #${id}`,
-        color: 'blue',
+        message: soloLectura ? `Visualizando presupuesto #${id}` : `Editando presupuesto #${id}`,
+        color: soloLectura ? 'green' : 'blue',
       });
     } catch (error) {
       console.error('Error cargando presupuesto:', error);
@@ -102,14 +109,7 @@ export const usePresupuesto = () => {
     }
   }, []);
 
-  const guardarVersion = useCallback(async (
-    totalInsumos: number,
-    totalPrestaciones: number,
-    costoTotal: number,
-    totalFacturar: number,
-    rentabilidad: number,
-    rentabilidadConPlazo?: number
-  ) => {
+  const finalizarPresupuesto = useCallback(async (totales?: any) => {
     if (!presupuestoId) {
       notifications.show({
         title: 'Advertencia',
@@ -121,33 +121,52 @@ export const usePresupuesto = () => {
 
     setGuardandoTotales(true);
     try {
-      const response = await presupuestoService.guardarVersion(presupuestoId, {
-        total_insumos: totalInsumos,
-        total_prestaciones: totalPrestaciones,
-        costo_total: costoTotal,
-        total_facturar: totalFacturar,
-        rentabilidad: rentabilidad,
-        rentabilidad_con_plazo: rentabilidadConPlazo || undefined,
-      });
-      
-      const nuevoId = response.id;
-      setPresupuestoId(nuevoId);
+      const response = await presupuestoService.finalizarPresupuesto(presupuestoId, totales);
       
       notifications.show({
-        title: 'Presupuesto Guardado',
-        message: `Nueva versión creada con ID: ${nuevoId}`,
-        color: 'green',
+        title: 'Presupuesto Finalizado',
+        message: response.mensaje,
+        color: response.estado === 'pendiente' ? 'orange' : 'green',
       });
+      
+      return response;
     } catch (error) {
       notifications.show({
         title: 'Error',
-        message: 'Error al guardar presupuesto',
+        message: 'Error al finalizar presupuesto',
         color: 'red',
       });
+      throw error;
     } finally {
       setGuardandoTotales(false);
     }
   }, [presupuestoId]);
+
+  const crearVersionParaEdicion = useCallback(async (id: number) => {
+    try {
+      const response = await presupuestoService.crearVersionParaEdicion(id);
+      
+      setPresupuestoId(response.id);
+      
+      notifications.show({
+        title: 'Versión Creada',
+        message: `Nueva versión ${response.version} lista para edición`,
+        color: 'blue',
+      });
+      
+      return response;
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error al crear versión para edición',
+        color: 'red',
+      });
+      throw error;
+    }
+  }, []);
+
+  // Mantener para compatibilidad
+  const guardarVersion = finalizarPresupuesto;
 
   return {
     presupuestoId,
@@ -160,7 +179,9 @@ export const usePresupuesto = () => {
     setFinanciadorInfo,
     crearPresupuesto,
     resetPresupuesto,
-    guardarVersion,
+    finalizarPresupuesto,
+    crearVersionParaEdicion,
+    guardarVersion, // Mantener para compatibilidad
     cargarPresupuesto,
   };
 };

@@ -55,9 +55,10 @@ presupuesto_insumos,id,1,int,int,NULL,10,0,NO,NULL,PRI,auto_increment,,NULL,NULL
 presupuesto_insumos,idPresupuestos,2,int,int,NULL,10,0,NO,NULL,MUL,,,presupuesto_insumos_ibfk_1,presupuestos,idPresupuestos
 presupuesto_insumos,producto,3,varchar(255),varchar,255,NULL,NULL,NO,NULL,,,,NULL,NULL,NULL
 presupuesto_insumos,costo,4,"decimal(10,2)",decimal,NULL,10,2,NO,NULL,,,,NULL,NULL,NULL
-presupuesto_insumos,cantidad,5,int,int,NULL,10,0,NO,NULL,,,,NULL,NULL,NULL
-presupuesto_insumos,created_at,6,timestamp,timestamp,NULL,NULL,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-presupuesto_insumos,updated_at,7,timestamp,timestamp,NULL,NULL,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
+presupuesto_insumos,precio_facturar,5,"decimal(10,2)",decimal,NULL,10,2,NO,0.00,,,,NULL,NULL,NULL
+presupuesto_insumos,cantidad,6,int,int,NULL,10,0,NO,NULL,,,,NULL,NULL,NULL
+presupuesto_insumos,created_at,7,timestamp,timestamp,NULL,NULL,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+presupuesto_insumos,updated_at,8,timestamp,timestamp,NULL,NULL,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
 presupuesto_prestaciones,id,1,int,int,NULL,10,0,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuesto_prestaciones,idPresupuestos,2,int,int,NULL,10,0,NO,NULL,MUL,,,presupuesto_prestaciones_ibfk_1,presupuestos,idPresupuestos
 presupuesto_prestaciones,id_servicio,3,varchar(50),varchar,50,NULL,NULL,NO,NULL,,,,NULL,NULL,NULL

@@ -167,9 +167,9 @@ const getPresupuestosData = async () => {
       p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
       DATEDIFF(NOW(), p.created_at) as dias_pendiente
     FROM presupuestos p
-    JOIN usuarios u ON p.usuario_id = u.id
-    JOIN sucursales s ON u.sucursal_id = s.ID
-    WHERE p.estado IN ('pendiente', 'en_revision')
+    LEFT JOIN usuarios u ON p.usuario_id = u.id
+    LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID
+    WHERE p.estado IN ('pendiente', 'en_revision') AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
   `);
   

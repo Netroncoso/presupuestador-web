@@ -84,14 +84,20 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }, [])
 
   useEffect(() => {
-    console.log('Prestaciones useEffect:', { presupuestoId, financiadorId, prestacionesSeleccionadas: prestacionesSeleccionadas.length });
     if (presupuestoId && financiadorId) {
-      setFinanciadorSeleccionado(financiadorId)
+      // Convertir a string para que coincida con el formato del select
+      const financiadorIdStr = String(financiadorId)
+      setFinanciadorSeleccionado(financiadorIdStr)
+      // Marcar como confirmado automáticamente cuando se carga desde historial
       setFinanciadorConfirmado(true)
-      cargarPrestacionesPorFinanciador(financiadorId)
+      cargarPrestacionesPorFinanciador(financiadorIdStr)
       
-      api.get(`/prestaciones/prestador/${financiadorId}/info`).then(infoRes => {
+      api.get(`/prestaciones/prestador/${financiadorIdStr}/info`).then(infoRes => {
         setFinanciadorInfo(infoRes.data)
+        // Notificar al componente padre sobre el financiador cargado
+        if (onFinanciadorChange) {
+          onFinanciadorChange(financiadorIdStr, infoRes.data)
+        }
       }).catch((err: any) => console.error('Error loading financiador info:', err))
     } else if (!presupuestoId) {
       setFinanciadorSeleccionado(null)
@@ -102,7 +108,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       setValorAsignado('')
       setFinanciadorInfo({})
     }
-  }, [presupuestoId, financiadorId])
+  }, [presupuestoId, financiadorId, onFinanciadorChange])
 
   const cargarFinanciadores = async () => {
     try {
@@ -158,12 +164,13 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }
 
   const confirmarFinanciador = async () => {
-    if (!financiadorSeleccionado || !presupuestoId) return
+    if (!financiadorSeleccionado || !presupuestoId) return;
     
     try {
       await api.put(`/presupuestos/${presupuestoId}/prestador`, {
         idobra_social: financiadorSeleccionado
-      })
+      });
+      
       setFinanciadorConfirmado(true)
       await cargarPrestacionesPorFinanciador(financiadorSeleccionado)
       

@@ -69,7 +69,8 @@ export default function UserDashboard() {
     setFinanciadorInfo,
     crearPresupuesto,
     resetPresupuesto,
-    guardarVersion,
+    finalizarPresupuesto,
+    crearVersionParaEdicion,
     cargarPresupuesto,
   } = usePresupuesto();
 
@@ -83,6 +84,7 @@ export default function UserDashboard() {
     setTotalInsumos,
     setTotalesPrestaciones,
     resetTotales,
+    setTotalesDesdeBaseDatos,
   } = useTotales(financiadorInfo, prestacionesSeleccionadas, porcentajeInsumos);
 
   useFinanciador(financiadorId, setFinanciadorInfo);
@@ -104,11 +106,28 @@ export default function UserDashboard() {
     prestacionesSeleccionadas,
   });
 
-  const handleGuardarTotales = useCallback(async () => {
-    const rentabilidadConPlazoFinal = financiadorInfo?.dias_cobranza_real ? rentabilidadConPlazo : undefined;
-    await guardarVersion(totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal, rentabilidadConPlazoFinal);
-    setRecargarHistorial(prev => prev + 1);
-  }, [financiadorInfo, rentabilidadConPlazo, guardarVersion, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal]);
+  const handleFinalizarPresupuesto = useCallback(async () => {
+    try {
+      const totales = {
+        totalInsumos,
+        totalPrestaciones,
+        costoTotal,
+        totalFacturar,
+        rentabilidad,
+        rentabilidadConPlazo
+      };
+      
+      const response = await finalizarPresupuesto(totales);
+      setRecargarHistorial(prev => prev + 1);
+      
+      // Limpiar interfaz después de finalizar
+      setTimeout(() => {
+        handleNuevoPresupuesto();
+      }, 2000);
+    } catch (error) {
+      console.error('Error al finalizar presupuesto:', error);
+    }
+  }, [finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo]);
 
   const handleNuevoPresupuesto = useCallback(() => {
     resetPresupuesto();
@@ -120,23 +139,53 @@ export default function UserDashboard() {
   }, [resetPresupuesto, resetTotales]);
 
   const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLectura: boolean = true) => {
-    setDatosHistorial({
-      nombre: presupuesto.Nombre_Apellido,
-      dni: presupuesto.DNI,
-      sucursal: presupuesto.Sucursal
-    });
-    await cargarPresupuesto(
-      presupuesto.idPresupuestos,
-      presupuesto.Nombre_Apellido,
-      presupuesto.Sucursal,
-      presupuesto.idobra_social,
-      setInsumosSeleccionados,
-      setPrestacionesSeleccionadas,
-      setEsCargaHistorial,
-      soloLectura
-    );
+    if (soloLectura) {
+      // Modo visualización (historial)
+      setDatosHistorial({
+        nombre: presupuesto.Nombre_Apellido,
+        dni: presupuesto.DNI,
+        sucursal: presupuesto.Sucursal
+      });
+      await cargarPresupuesto(
+        presupuesto.idPresupuestos,
+        presupuesto.Nombre_Apellido,
+        presupuesto.Sucursal,
+        presupuesto.idobra_social,
+        setInsumosSeleccionados,
+        setPrestacionesSeleccionadas,
+        setEsCargaHistorial,
+        true,
+        setTotalesDesdeBaseDatos
+      );
+    } else {
+      // Modo edición (crear nueva versión)
+      try {
+        const response = await crearVersionParaEdicion(presupuesto.idPresupuestos);
+        
+        setDatosHistorial({
+          nombre: presupuesto.Nombre_Apellido,
+          dni: presupuesto.DNI,
+          sucursal: presupuesto.Sucursal
+        });
+        
+        // Cargar la nueva versión creada
+        await cargarPresupuesto(
+          response.id,
+          presupuesto.Nombre_Apellido,
+          presupuesto.Sucursal,
+          presupuesto.idobra_social,
+          setInsumosSeleccionados,
+          setPrestacionesSeleccionadas,
+          setEsCargaHistorial,
+          false,
+          setTotalesDesdeBaseDatos
+        );
+      } catch (error) {
+        console.error('Error al crear versión para edición:', error);
+      }
+    }
     setActiveTab('datos');
-  }, [cargarPresupuesto]);
+  }, [cargarPresupuesto, crearVersionParaEdicion]);
 
   const handleFinanciadorChange = useCallback((id: string | null, info: any) => {
     setFinanciadorId(id);
@@ -229,8 +278,8 @@ export default function UserDashboard() {
           )}
           {presupuestoId && (
             <Group gap="xs">
-              <Button onClick={handleGuardarTotales} loading={guardandoTotales} size="xs" color="green" leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}>
-                Guardar Versión
+              <Button onClick={handleFinalizarPresupuesto} loading={guardandoTotales} size="xs" color="green" leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}>
+                Finalizar Presupuesto
               </Button>
               <Button 
                 onClick={abrirModalAuditoria} 

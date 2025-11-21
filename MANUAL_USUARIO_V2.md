@@ -28,6 +28,8 @@ Sistema integral de presupuestación para servicios de salud con funcionalidades
 - ✅ **Generación de PDF** automática
 - ✅ **Dashboard por roles** (Usuario, Admin, Auditor)
 - ✅ **Historial completo** con trazabilidad
+- ✅ **Filtros con búsqueda limpiable** en todas las interfaces
+- ✅ **Actualización automática** con fallback manual
 
 ### Roles del Sistema
 - **Usuario**: Crea y gestiona presupuestos
@@ -428,7 +430,7 @@ Los auditores pueden agregar comentarios que se muestran en:
 ┌─────────────────────────────────────────────┐
 │ Nuevo Insumo                                │
 ├─────────────────────────────────────────────┤
-│ Producto: [_________________________]      │
+│ Producto: [🔍_____________________] [✕]    │
 │ Costo Base: $[_______]                     │
 │ Descripción: [_________________________]   │
 │ Activo: ☑️                                 │
@@ -436,6 +438,11 @@ Los auditores pueden agregar comentarios que se muestran en:
 │           [Cancelar] [💾 Guardar]           │
 └─────────────────────────────────────────────┘
 ```
+
+**Funcionalidades de búsqueda:**
+- **🔍 Icono de búsqueda**: Indica campos de filtro
+- **✕ Botón limpiar**: Borra el contenido del filtro
+- **Filtrado en tiempo real**: Resultados se actualizan automáticamente
 
 #### Gestión Masiva
 - **Importar CSV**: Carga múltiples insumos
@@ -569,6 +576,8 @@ Solo el usuario **'admin'** ve el ícono 👤+ en el header.
 #### Gestión de Usuarios Existentes
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
+│ 🔍 Buscar: [___________________] [✕]                                │
+├─────────────────────────────────────────────────────────────────────┤
 │ Username    │ Rol           │ Sucursal │ Estado │ Último Acceso │ Acc │
 ├─────────────┼───────────────┼──────────┼────────┼───────────────┼─────┤
 │ admin       │ Administrador │ -        │ ✅ Act │ Ahora         │ 🔒  │
@@ -762,10 +771,11 @@ Valor Atípico → Valor muy diferente → Verificar negociación
 - Notificaciones no aparecen
 
 **Solución:**
-1. Verificar conexión a internet
-2. Refrescar página (F5)
-3. Verificar que el backend esté funcionando
-4. Contactar administrador si persiste
+1. Verificar conexión a internet (punto verde/rojo en header)
+2. El sistema reintenta automáticamente cada 20 segundos
+3. Usar botón de actualización manual si está disponible
+4. Refrescar página (F5) como último recurso
+5. Contactar administrador si persiste
 
 #### 2. Error al guardar presupuesto
 **Síntomas:**
@@ -847,9 +857,10 @@ Valor Atípico → Valor muy diferente → Verificar negociación
 
 - **Ctrl + S**: Guardar presupuesto (en formularios)
 - **Ctrl + F**: Buscar en tablas
-- **Esc**: Cerrar modales
+- **Esc**: Cerrar modales y limpiar filtros
 - **Tab**: Navegar entre campos
 - **Enter**: Confirmar en modales
+- **Clic en ✕**: Limpiar filtros de búsqueda
 
 ### Navegadores Compatibles
 
@@ -860,10 +871,16 @@ Valor Atípico → Valor muy diferente → Verificar negociación
 
 ---
 
-**Versión del Manual:** 2.0  
-**Última Actualización:** 14/11/2024  
-**Sistema:** Presupuestador Web v2.0  
+**Versión del Manual:** 2.1  
+**Última Actualización:** 15/11/2024  
+**Sistema:** Presupuestador Web v2.1  
 **Autor:** Equipo de Desarrollo
+
+### Cambios en v2.1
+- ✅ Filtros con botón de limpieza en todas las interfaces
+- ✅ Optimización de código (eliminación de archivos no utilizados)
+- ✅ Mejoras en la experiencia de usuario
+- ✅ Sistema de reconexión automática mejorado
 
 ---
 

@@ -51,9 +51,9 @@ export default function Login(props: PaperProps) {
       justifyContent: 'center', 
       alignItems: 'center', 
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5'
-    }}>
-      <Paper radius="md" p="lg" withBorder w={400} {...props} shadow='xs'>
+      backgroundColor: '#f5f5f5'}}> 
+
+      <Paper radius="md" p="lg" withBorder w={400} shadow='xl' {...props}>
         <Text size="lg" fw={500} ta="center" mb="xs">
            Presupuestador Web
         </Text>

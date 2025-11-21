@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Container, Title, Text, Table, Button, Badge, Group, Paper, Loader, Center, Tabs, ActionIcon, TextInput } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useAuth } from '../contexts/AuthContext';
+import { useNotificationCount } from '../hooks/useNotificationCount';
 import { api } from '../api/api';
 import { useRealtimeUpdates } from '../hooks/useRealtimeUpdates';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BellIcon, ShieldCheckIcon, ClockIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ConnectionStatus } from '../components/ConnectionStatus';
+import { NotificationIndicator } from '../components/NotificationIndicator';
+import { ModalAuditoria } from '../components/ModalAuditoria';
+import { ModalDetallePresupuesto } from '../components/ModalDetallePresupuesto';
+import Notificaciones from './Notificaciones';
+import ListaPresupuestos from './ListaPresupuestos';
 
 interface PresupuestoPendiente {
   idPresupuestos: number;
@@ -19,12 +30,17 @@ interface PresupuestoPendiente {
 }
 
 const AuditorDashboard: React.FC = () => {
+  const { user, logout } = useAuth();
+  const { count: notificationCount, isConnected } = useNotificationCount();
   const [pendientes, setPendientes] = useState<PresupuestoPendiente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPresupuesto, setSelectedPresupuesto] = useState<number | null>(null);
-  const [comentario, setComentario] = useState('');
+  const [selectedPresupuesto, setSelectedPresupuesto] = useState<PresupuestoPendiente | null>(null);
+  const [presupuestoDetalle, setPresupuestoDetalle] = useState<any>(null);
+  const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
   const [procesando, setProcesando] = useState(false);
-  const { presupuestos, isConnected } = useRealtimeUpdates();
+  const [activeTab, setActiveTab] = useState<string | null>('pendientes');
+  const [filtroPresupuestoId, setFiltroPresupuestoId] = useState<string>('');
+  const { presupuestos } = useRealtimeUpdates();
 
   useEffect(() => {
     cargarPendientes();
@@ -40,7 +56,7 @@ const AuditorDashboard: React.FC = () => {
 
   const cargarPendientes = async () => {
     try {
-      const response = await api.get('/v2/presupuestos/auditor/pendientes');
+      const response = await api.get('/presupuestos/auditor/pendientes');
       setPendientes(response.data);
     } catch (error) {
       console.error('Error cargando pendientes:', error);
@@ -49,230 +65,256 @@ const AuditorDashboard: React.FC = () => {
     }
   };
 
-  const cambiarEstado = async (id: number, nuevoEstado: string) => {
+  const handleAuditoria = async (mensaje: string) => {
+    if (!selectedPresupuesto) return;
+    
     setProcesando(true);
     try {
-      await api.put(`/v2/presupuestos/${id}/estado`, {
-        estado: nuevoEstado,
-        comentario: comentario.trim() || null
+      const [accion, comentario] = mensaje.includes(':') ? mensaje.split(': ', 2) : ['', mensaje];
+      const estado = accion === 'APROBADO' ? 'aprobado' : accion === 'RECHAZADO' ? 'rechazado' : 'en_revision';
+      
+      await api.put(`/presupuestos/${selectedPresupuesto.idPresupuestos}/estado`, {
+        estado,
+        comentario: comentario?.trim() || null
       });
       
-      // Actualizar lista
       await cargarPendientes();
       setSelectedPresupuesto(null);
-      setComentario('');
       
-      alert(`Presupuesto ${nuevoEstado.toUpperCase()} correctamente`);
+      notifications.show({
+        title: 'Estado Actualizado',
+        message: `Presupuesto ${estado.toUpperCase()} correctamente`,
+        color: estado === 'aprobado' ? 'green' : estado === 'rechazado' ? 'red' : 'blue'
+      });
     } catch (error) {
       console.error('Error cambiando estado:', error);
-      alert('Error al cambiar estado');
+      notifications.show({
+        title: 'Error',
+        message: 'Error al cambiar estado',
+        color: 'red'
+      });
     } finally {
       setProcesando(false);
     }
   };
 
-  const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getColorEstado = (estado: string) => {
-    switch (estado) {
-      case 'pendiente': return 'bg-yellow-100 text-yellow-800';
-      case 'en_revision': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const verDetallePresupuesto = async (presupuesto: PresupuestoPendiente) => {
+    try {
+      const response = await api.get(`/presupuestos/${presupuesto.idPresupuestos}`);
+      setPresupuestoDetalle(response.data);
+      setModalDetalleAbierto(true);
+    } catch (error) {
+      console.error('Error cargando detalle:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Error al cargar detalles del presupuesto',
+        color: 'red'
+      });
     }
-  };
-
-  const getColorDias = (dias: number) => {
-    if (dias > 7) return 'text-red-600 font-bold';
-    if (dias > 3) return 'text-orange-600';
-    return 'text-gray-600';
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-lg">Cargando presupuestos pendientes...</div>
-      </div>
+      <Center h="100vh">
+        <Loader size="lg" />
+      </Center>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard Auditor Médico</h1>
-        <div className="flex items-center gap-4 mt-2">
-          <p className="text-gray-600">
-            {pendientes.length} presupuesto{pendientes.length !== 1 ? 's' : ''} pendiente{pendientes.length !== 1 ? 's' : ''} de revisión
-          </p>
-          <div className={`flex items-center gap-2 text-sm ${
-            isConnected ? 'text-green-600' : 'text-red-600'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            {isConnected ? 'Activo' : 'Desconectado'}
-          </div>
-        </div>
-      </div>
+    <Container fluid p="xl">
+      <Group justify="space-between" mb={20}>
+        <Title fw={500} order={2} c="blue">Dashboard Auditor Médico</Title>
+        <Group gap="xs">
+          <UserCircleIcon style={{ width: 20, height: 20 }} />
+          <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
+          <ConnectionStatus isConnected={isConnected} />
+          <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={{ width: 20, height: 20 }}/>}>
+            Salir
+          </Button>
+        </Group>
+      </Group>
 
-      {pendientes.length === 0 ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-          <div className="text-green-600 text-xl mb-2">✅ ¡Todo al día!</div>
-          <div className="text-green-700">No hay presupuestos pendientes de revisión</div>
-        </div>
-      ) : (
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Paciente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Versión
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Costo Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rentabilidad
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Días Pendiente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Creador
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {pendientes.map((presupuesto) => (
-                  <tr key={presupuesto.idPresupuestos} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {presupuesto.Nombre_Apellido}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          DNI: {presupuesto.DNI}
-                        </div>
-                        {presupuesto.dificil_acceso === 'SI' && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mt-1">
-                            Difícil Acceso
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">
-                        v{presupuesto.version}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getColorEstado(presupuesto.estado)}`}>
-                        {presupuesto.estado.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${presupuesto.costo_total?.toLocaleString() || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm font-medium ${presupuesto.rentabilidad < 15 ? 'text-red-600' : 'text-green-600'}`}>
-                        {presupuesto.rentabilidad?.toFixed(1) || 0}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm ${getColorDias(presupuesto.dias_pendiente)}`}>
-                        {presupuesto.dias_pendiente} día{presupuesto.dias_pendiente !== 1 ? 's' : ''}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{presupuesto.creador}</div>
-                      <div className="text-sm text-gray-500">{presupuesto.sucursal_nombre}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedPresupuesto(presupuesto.idPresupuestos)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
-                      >
-                        Revisar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <Tabs value={activeTab} onChange={setActiveTab} color="blue" radius="md">
+        <Tabs.List>
+          <Tabs.Tab value="pendientes">
+            <Group gap="xs">
+              <ShieldCheckIcon style={{ width: 20, height: 20 }} />
+              Presupuestos Pendientes
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="historial">
+            <Group gap="xs">
+              <ClockIcon style={{ width: 20, height: 20 }} />
+              Historial
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="notificaciones">
+            <Group gap="xs">
+              <BellIcon style={{ width: 20, height: 20 }} />
+              Notificaciones
+              <NotificationIndicator count={notificationCount} />
+            </Group>
+          </Tabs.Tab>
+        </Tabs.List>
 
-      {/* Modal de Revisión */}
-      {selectedPresupuesto && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Revisar Presupuesto #{selectedPresupuesto}
-              </h3>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comentario (opcional)
-                </label>
-                <textarea
-                  value={comentario}
-                  onChange={(e) => setComentario(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Agregar comentario sobre la decisión..."
-                />
-              </div>
+        <Tabs.Panel value="pendientes" pt="md">
+          <Paper p="md" radius="md" withBorder shadow="xs" mb="lg">
+            <Group justify="space-between">
+              <Text size="lg" fw={500}>
+                {pendientes.filter(p => !filtroPresupuestoId || p.idPresupuestos.toString().includes(filtroPresupuestoId)).length} presupuesto{pendientes.length !== 1 ? 's' : ''} pendiente{pendientes.length !== 1 ? 's' : ''} de revisión
+              </Text>
+              <TextInput
+                placeholder="Filtrar por ID de presupuesto"
+                leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
+                value={filtroPresupuestoId}
+                onChange={(e) => setFiltroPresupuestoId(e.currentTarget.value)}
+                rightSection={
+                  filtroPresupuestoId ? (
+                    <ActionIcon variant="subtle" onClick={() => setFiltroPresupuestoId('')}>
+                      <XMarkIcon style={{ width: 16, height: 16 }} />
+                    </ActionIcon>
+                  ) : null
+                }
+                style={{ width: 250 }}
+              />
+            </Group>
+          </Paper>
 
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => cambiarEstado(selectedPresupuesto, 'aprobado')}
-                  disabled={procesando}
-                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
-                >
-                  ✅ Aprobar
-                </button>
-                <button
-                  onClick={() => cambiarEstado(selectedPresupuesto, 'rechazado')}
-                  disabled={procesando}
-                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
-                >
-                  ❌ Rechazar
-                </button>
-              </div>
+          {pendientes.length === 0 ? (
+            <Paper p="xl" withBorder radius="md" style={{ backgroundColor: '#f0f9ff' }}>
+              <Center>
+                <div>
+                  <Text size="xl" fw={600} c="green" ta="center" mb="sm">✅ ¡Todo al día!</Text>
+                  <Text c="dimmed" ta="center">No hay presupuestos pendientes de revisión</Text>
+                </div>
+              </Center>
+            </Paper>
+          ) : (
+            <Paper withBorder radius="md" shadow="sm">
+              <Table.ScrollContainer minWidth={800}>
+                <Table striped highlightOnHover>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Paciente</Table.Th>
+                      <Table.Th>Versión</Table.Th>
+                      <Table.Th>Estado</Table.Th>
+                      <Table.Th>Costo Total</Table.Th>
+                      <Table.Th>Rentabilidad</Table.Th>
+                      <Table.Th>Días Pendiente</Table.Th>
+                      <Table.Th>Creador</Table.Th>
+                      <Table.Th>Acciones</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {pendientes
+                      .filter(presupuesto => !filtroPresupuestoId || presupuesto.idPresupuestos.toString().includes(filtroPresupuestoId))
+                      .map((presupuesto) => (
+                      <Table.Tr key={presupuesto.idPresupuestos}>
+                        <Table.Td>
+                          <div>
+                            <Text fw={500}>{presupuesto.Nombre_Apellido}</Text>
+                            <Text size="sm" c="dimmed">DNI: {presupuesto.DNI}</Text>
+                            {presupuesto.dificil_acceso === 'SI' && (
+                              <Badge size="xs" color="orange" mt={4}>Difícil Acceso</Badge>
+                            )}
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge variant="light">v{presupuesto.version}</Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={presupuesto.estado === 'pendiente' ? 'yellow' : 'blue'}>
+                            {presupuesto.estado.replace('_', ' ')}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text fw={500}>${Number(presupuesto.costo_total || 0).toLocaleString()}</Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text fw={500} c={Number(presupuesto.rentabilidad || 0) < 15 ? 'red' : 'green'}>
+                            {Number(presupuesto.rentabilidad || 0).toFixed(1)}%
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text c={presupuesto.dias_pendiente > 7 ? 'red' : presupuesto.dias_pendiente > 3 ? 'orange' : 'dimmed'}>
+                            {presupuesto.dias_pendiente} día{presupuesto.dias_pendiente !== 1 ? 's' : ''}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <div>
+                            <Text size="sm">{presupuesto.creador}</Text>
+                            <Text size="xs" c="dimmed">{presupuesto.sucursal_nombre}</Text>
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <ActionIcon
+                              variant="transparent"
+                              color="blue"
+                              onClick={() => verDetallePresupuesto(presupuesto)}
+                              title="Ver detalle"
+                            >
+                              <EyeIcon style={{ width: 20, height: 20 }} />
+                            </ActionIcon>
+                            <ActionIcon
+                              variant="transparent"
+                              color="green"
+                              onClick={() => setSelectedPresupuesto(presupuesto)}
+                              title="Auditar presupuesto"
+                            >
+                              <ShieldCheckIcon style={{ width: 20, height: 20 }} />
+                            </ActionIcon>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            </Paper>
+          )}
+        </Tabs.Panel>
 
-              <button
-                onClick={() => {
-                  setSelectedPresupuesto(null);
-                  setComentario('');
-                }}
-                className="w-full mt-3 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        <Tabs.Panel value="historial" pt="md">
+          <ListaPresupuestos onEditarPresupuesto={() => {}} recargarTrigger={0} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="notificaciones" pt="md">
+          <Notificaciones onIrAuditoria={(presupuestoId) => {
+            // Cambiar a tab de pendientes
+            setActiveTab('pendientes');
+            // Filtrar por el ID del presupuesto de la notificación
+            setFiltroPresupuestoId(presupuestoId.toString());
+          }} />
+        </Tabs.Panel>
+      </Tabs>
+
+      <ModalAuditoria
+        opened={selectedPresupuesto !== null}
+        onClose={() => setSelectedPresupuesto(null)}
+        tipo="auditar"
+        presupuesto={{
+          id: selectedPresupuesto?.idPresupuestos || 0,
+          nombre: selectedPresupuesto?.Nombre_Apellido || '',
+          dni: selectedPresupuesto?.DNI || '',
+          costoTotal: selectedPresupuesto?.costo_total,
+          rentabilidad: selectedPresupuesto?.rentabilidad,
+          version: selectedPresupuesto?.version
+        }}
+        onConfirmar={handleAuditoria}
+        loading={procesando}
+      />
+
+      <ModalDetallePresupuesto
+        opened={modalDetalleAbierto}
+        onClose={() => {
+          setModalDetalleAbierto(false);
+          setPresupuestoDetalle(null);
+        }}
+        presupuesto={presupuestoDetalle}
+      />
+    </Container>
   );
 };
 
