@@ -78,8 +78,9 @@ export const usePresupuesto = () => {
       setInsumosSeleccionados(insumos);
       setPrestacionesSeleccionadas(prestaciones);
       
-      // Cargar totales desde la base de datos si están disponibles
-      if (setTotalesDesdeDB && presupuestoData.total_insumos !== undefined) {
+      // Cargar totales desde BD solo si existen y son mayores a 0
+      // Si están en 0, dejar que useTotales calcule desde los arrays
+      if (setTotalesDesdeDB && presupuestoData.costo_total > 0) {
         setTotalesDesdeDB({
           totalInsumos: presupuestoData.total_insumos || 0,
           totalPrestaciones: presupuestoData.total_prestaciones || 0,
@@ -142,31 +143,33 @@ export const usePresupuesto = () => {
     }
   }, [presupuestoId]);
 
-  const crearVersionParaEdicion = useCallback(async (id: number) => {
+  const crearVersionParaEdicion = useCallback(async (id: number, confirmar: boolean = false) => {
     try {
-      const response = await presupuestoService.crearVersionParaEdicion(id);
+      const response = await presupuestoService.crearVersionParaEdicion(id, confirmar);
+      
+      // Si requiere confirmación, retornar sin hacer nada más
+      if (response.requiereConfirmacion) {
+        return response;
+      }
       
       setPresupuestoId(response.id);
       
       notifications.show({
-        title: 'Versión Creada',
-        message: `Nueva versión ${response.version} lista para edición`,
-        color: 'blue',
+        title: response.requiereNuevaVersion ? 'Nueva Versión Creada' : 'Editando Borrador',
+        message: response.mensaje,
+        color: response.requiereNuevaVersion ? 'orange' : 'blue',
       });
       
       return response;
     } catch (error) {
       notifications.show({
         title: 'Error',
-        message: 'Error al crear versión para edición',
+        message: 'Error al preparar edición',
         color: 'red',
       });
       throw error;
     }
   }, []);
-
-  // Mantener para compatibilidad
-  const guardarVersion = finalizarPresupuesto;
 
   return {
     presupuestoId,
@@ -181,7 +184,6 @@ export const usePresupuesto = () => {
     resetPresupuesto,
     finalizarPresupuesto,
     crearVersionParaEdicion,
-    guardarVersion, // Mantener para compatibilidad
     cargarPresupuesto,
   };
 };

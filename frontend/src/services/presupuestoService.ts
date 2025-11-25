@@ -27,14 +27,13 @@ export const presupuestoService = {
     return res.data;
   },
 
-  crearVersionParaEdicion: async (id: number) => {
-    const res = await api.post(`/presupuestos/${id}/editar`, {});
+  crearVersionParaEdicion: async (id: number, confirmar: boolean = false) => {
+    const res = await api.post(`/presupuestos/${id}/version/editar`, { confirmar });
     return res.data;
   },
 
-  // Mantener para compatibilidad
-  guardarVersion: async (id: number) => {
-    const res = await api.post(`/presupuestos/${id}/finalizar`, {});
+  obtenerHistorial: async (id: number) => {
+    const res = await api.get(`/presupuestos/${id}/versiones`);
     return res.data;
   },
 
@@ -46,5 +45,5 @@ export const presupuestoService = {
   obtenerPrestaciones: async (id: number): Promise<Prestacion[]> => {
     const res = await api.get(`/presupuestos/${id}/prestaciones`);
     return res.data;
-  },
+  }
 };

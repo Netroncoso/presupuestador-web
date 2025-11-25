@@ -24,9 +24,11 @@ interface Presupuesto {
 interface ListaPresupuestosProps {
   onEditarPresupuesto: (presupuesto: Presupuesto, soloLectura?: boolean) => void;
   recargarTrigger?: number;
+  esAuditor?: boolean;
+  onVerDetalle?: (presupuesto: Presupuesto) => void;
 }
 
-export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger }: ListaPresupuestosProps) {
+export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, onVerDetalle }: ListaPresupuestosProps) {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroNombre, setFiltroNombre] = useState('');
@@ -162,12 +164,25 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>{new Date(p.created_at).toLocaleDateString()}</Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    <ActionIcon variant="transparent" color="blue" onClick={() => onEditarPresupuesto(p, true)} title="Ver historial">
-                      <EyeIcon style={ICON_SIZE_LG} />
-                    </ActionIcon>
-                    <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(p, false)} title="Editar (nueva versión)">
-                      <PencilSquareIcon style={ICON_SIZE_LG} />
-                    </ActionIcon>
+                    {esAuditor ? (
+                      <ActionIcon 
+                        variant="transparent" 
+                        color="blue" 
+                        onClick={() => onVerDetalle?.(p)} 
+                        title="Ver detalle del presupuesto"
+                      >
+                        <EyeIcon style={ICON_SIZE_LG} />
+                      </ActionIcon>
+                    ) : (
+                      <>
+                        <ActionIcon variant="transparent" color="teal" onClick={() => onEditarPresupuesto(p, true)} title="Ver presupuesto">
+                          <EyeIcon style={ICON_SIZE_LG} />
+                        </ActionIcon>
+                        <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(p, false)} title="Editar (nueva versión)">
+                          <PencilSquareIcon style={ICON_SIZE_LG} />
+                        </ActionIcon>
+                      </>
+                    )}
                   </Group>
                 </Table.Td>
               </Table.Tr>

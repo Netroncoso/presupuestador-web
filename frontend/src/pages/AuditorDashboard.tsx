@@ -277,7 +277,25 @@ const AuditorDashboard: React.FC = () => {
         </Tabs.Panel>
 
         <Tabs.Panel value="historial" pt="md">
-          <ListaPresupuestos onEditarPresupuesto={() => {}} recargarTrigger={0} />
+          <ListaPresupuestos 
+            onEditarPresupuesto={() => {}} 
+            recargarTrigger={0} 
+            esAuditor={true}
+            onVerDetalle={async (presupuesto) => {
+              try {
+                const response = await api.get(`/presupuestos/${presupuesto.idPresupuestos}`);
+                setPresupuestoDetalle(response.data);
+                setModalDetalleAbierto(true);
+              } catch (error) {
+                console.error('Error cargando detalle:', error);
+                notifications.show({
+                  title: 'Error',
+                  message: 'Error al cargar detalles del presupuesto',
+                  color: 'red'
+                });
+              }
+            }}
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="notificaciones" pt="md">

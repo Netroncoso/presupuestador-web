@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import sucursalesRoutes from './routes/sucursales';
-// import presupuestosRoutes from './routes/presupuestos';
 import presupuestosV2Routes from './routes/presupuestosV2';
 import notificacionesRoutes from './routes/notificaciones';
 import auditoriaRoutes from './routes/auditoria-simple';
@@ -56,7 +55,6 @@ app.use('/api/stream', sseRoutes);
 
 // Protected routes
 app.use('/api/sucursales', sucursalesRoutes);
-// app.use('/api/presupuestos', presupuestosRoutes);
 app.use('/api/presupuestos', presupuestosV2Routes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/auditoria', auditoriaRoutes);

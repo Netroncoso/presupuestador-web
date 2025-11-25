@@ -8,6 +8,7 @@ import Notificaciones from "./Notificaciones";
 import Auditoria from "./Auditoria";
 import { NotificationIndicator } from '../components/NotificationIndicator';
 import { ModalAuditoria } from '../components/ModalAuditoria';
+import { ModalConfirmarEdicion } from '../components/ModalConfirmarEdicion';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
@@ -57,6 +58,10 @@ export default function UserDashboard() {
   const [filtroAuditoriaPresupuesto, setFiltroAuditoriaPresupuesto] = useState<number | null>(null);
   const [modalAuditoriaAbierto, setModalAuditoriaAbierto] = useState(false);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
+  const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false);
+  const [presupuestoParaEditar, setPresupuestoParaEditar] = useState<any>(null);
+  const [infoEdicion, setInfoEdicion] = useState<any>(null);
+  const [soloLectura, setSoloLectura] = useState(false);
 
   const {
     presupuestoId,
@@ -136,11 +141,13 @@ export default function UserDashboard() {
     setPrestacionesSeleccionadas([]);
     setEsCargaHistorial(false);
     setDatosHistorial(undefined);
+    setSoloLectura(false);
   }, [resetPresupuesto, resetTotales]);
 
-  const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLectura: boolean = true) => {
-    if (soloLectura) {
+  const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLecturaParam: boolean = true) => {
+    if (soloLecturaParam) {
       // Modo visualización (historial)
+      setSoloLectura(true);
       setDatosHistorial({
         nombre: presupuesto.Nombre_Apellido,
         dni: presupuesto.DNI,
@@ -158,17 +165,26 @@ export default function UserDashboard() {
         setTotalesDesdeBaseDatos
       );
     } else {
-      // Modo edición (crear nueva versión)
+      // Modo edición - verificar si necesita confirmación
       try {
-        const response = await crearVersionParaEdicion(presupuesto.idPresupuestos);
+        const response = await crearVersionParaEdicion(presupuesto.idPresupuestos, false);
         
+        if (response.requiereConfirmacion) {
+          // Mostrar modal de confirmación
+          setPresupuestoParaEditar(presupuesto);
+          setInfoEdicion(response);
+          setModalEdicionAbierto(true);
+          return;
+        }
+        
+        // Si no requiere confirmación, cargar directamente
+        setSoloLectura(false);
         setDatosHistorial({
           nombre: presupuesto.Nombre_Apellido,
           dni: presupuesto.DNI,
           sucursal: presupuesto.Sucursal
         });
         
-        // Cargar la nueva versión creada
         await cargarPresupuesto(
           response.id,
           presupuesto.Nombre_Apellido,
@@ -181,7 +197,7 @@ export default function UserDashboard() {
           setTotalesDesdeBaseDatos
         );
       } catch (error) {
-        console.error('Error al crear versión para edición:', error);
+        console.error('Error al preparar edición:', error);
       }
     }
     setActiveTab('datos');
@@ -251,6 +267,38 @@ export default function UserDashboard() {
       setEnviandoAuditoria(false);
     }
   }, [presupuestoId, cerrarModalAuditoria]);
+
+  const handleConfirmarEdicion = useCallback(async () => {
+    if (!presupuestoParaEditar) return;
+    
+    try {
+      const response = await crearVersionParaEdicion(presupuestoParaEditar.idPresupuestos, true);
+      
+      setSoloLectura(false);
+      setDatosHistorial({
+        nombre: presupuestoParaEditar.Nombre_Apellido,
+        dni: presupuestoParaEditar.DNI,
+        sucursal: presupuestoParaEditar.Sucursal
+      });
+      
+      await cargarPresupuesto(
+        response.id,
+        presupuestoParaEditar.Nombre_Apellido,
+        presupuestoParaEditar.Sucursal,
+        presupuestoParaEditar.idobra_social,
+        setInsumosSeleccionados,
+        setPrestacionesSeleccionadas,
+        setEsCargaHistorial,
+        false,
+        setTotalesDesdeBaseDatos
+      );
+      
+      setModalEdicionAbierto(false);
+      setActiveTab('datos');
+    } catch (error) {
+      console.error('Error al confirmar edición:', error);
+    }
+  }, [presupuestoParaEditar, crearVersionParaEdicion, cargarPresupuesto]);
 
   return (
     <Container fluid p="xl">
@@ -422,6 +470,7 @@ export default function UserDashboard() {
             esCargaHistorial={esCargaHistorial}
             setEsCargaHistorial={setEsCargaHistorial}
             datosHistorial={datosHistorial}
+            soloLectura={soloLectura}
           />
         </Tabs.Panel>
 
@@ -432,6 +481,7 @@ export default function UserDashboard() {
             onTotalChange={setTotalInsumos}
             presupuestoId={presupuestoId}
             porcentajeInsumos={porcentajeInsumos}
+            soloLectura={soloLectura}
           />
         </Tabs.Panel>
 
@@ -443,6 +493,7 @@ export default function UserDashboard() {
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
             onFinanciadorChange={handleFinanciadorChange}
+            soloLectura={soloLectura}
           />
         </Tabs.Panel>
 
@@ -478,6 +529,14 @@ export default function UserDashboard() {
         }}
         onConfirmar={handlePedirAuditoria}
         loading={enviandoAuditoria}
+      />
+
+      <ModalConfirmarEdicion
+        opened={modalEdicionAbierto}
+        onClose={() => setModalEdicionAbierto(false)}
+        presupuesto={presupuestoParaEditar || { id: 0, nombre: '', version: 0, estado: '' }}
+        requiereNuevaVersion={infoEdicion?.requiereNuevaVersion || false}
+        onConfirmar={handleConfirmarEdicion}
       />
     </Container>
   );

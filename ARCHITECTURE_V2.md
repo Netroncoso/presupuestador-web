@@ -1,568 +1,329 @@
-# Arquitectura del Sistema - Presupuestador Web V2
+# Arquitectura del Sistema - Presupuestador Web
 
-## Índice
-1. [Stack Tecnológico](#stack-tecnológico)
-2. [Estructura General](#estructura-general)
-3. [Backend](#backend)
-4. [Frontend](#frontend)
-5. [Sistema de Notificaciones](#sistema-de-notificaciones)
-6. [Sistema de Auditoría](#sistema-de-auditoría)
-7. [Optimizaciones](#optimizaciones)
-8. [Seguridad](#seguridad)
-9. [Configuración de Alertas](#configuración-de-alertas)
-10. [Configuración de Cálculos](#configuración-de-cálculos)
+## 📐 Visión General
 
----
+Sistema web de gestión de presupuestos médicos con arquitectura cliente-servidor, versionado de datos, auditoría automatizada y notificaciones en tiempo real.
 
-## Stack Tecnológico
+## 🏗️ Stack Tecnológico
 
 ### Backend
-- **Runtime**: Node.js con TypeScript
-- **Framework**: Express.js 4.18.2
-- **Base de Datos**: MySQL 8.0+ con mysql2 driver
-- **Autenticación**: JWT + bcrypt
-- **Seguridad**: Helmet, CORS, Rate Limiting, CSRF Protection
-- **Desarrollo**: tsx, ts-node, nodemon
-- **Testing**: Jest + Supertest
-- **Linting**: ESLint + Prettier
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Base de Datos**: MySQL 8.0
+- **Autenticación**: JWT (JSON Web Tokens)
+- **Tiempo Real**: SSE (Server-Sent Events)
+- **Lenguaje**: TypeScript
 
 ### Frontend
-- **Framework**: React 18.2.0 + TypeScript
-- **Build Tool**: Vite 7.2.2
-- **UI Library**: Mantine 7.17.8
-- **Tablas**: Mantine React Table + TanStack Table 8.21.3
-- **Iconos**: Heroicons React 2.2.0
-- **PDF**: jsPDF 3.0.3 + jsPDF-AutoTable 5.0.2
-- **Estado**: React Hooks + Context API
+- **Framework**: React 18
+- **Build Tool**: Vite
+- **UI Library**: Mantine UI
+- **State Management**: React Hooks
+- **HTTP Client**: Axios
+- **Lenguaje**: TypeScript
 
-### DevOps & Herramientas
-- **Control de Versiones**: Git
-- **Gestión de Dependencias**: npm
-- **Variables de Entorno**: dotenv
-- **Logging**: Winston (implementado)
-- **Migraciones**: Scripts SQL personalizados
+## 📊 Arquitectura de Datos
 
----
+### Modelo de Base de Datos
 
-## Estructura General
+#### Tablas Principales
 
-```
-presupuestador-web/
-├── backend/
-│   ├── src/
-│   │   ├── controllers/      # Lógica de endpoints
-│   │   ├── middleware/       # Auth, CSRF, errores, validación
-│   │   ├── routes/           # Definición de rutas
-│   │   │   ├── admin/        # Rutas administrativas
-│   │   │   ├── auth.ts       # Autenticación
-│   │   │   ├── notificaciones-simple.ts
-│   │   │   ├── auditoria-simple.ts
-│   │   │   └── sse.ts        # Server-Sent Events
-│   │   ├── utils/            # Utilidades (logger, validators)
-│   │   ├── app.ts            # Configuración Express
-│   │   └── db.ts             # Pool de conexiones MySQL
-│   ├── migrations/           # Scripts SQL de migración
-│   ├── scripts/              # Scripts de utilidad y migración
-│   └── tests/                # Tests automatizados
-│
-└── frontend/
-    ├── src/
-    │   ├── components/       # Componentes React
-    │   │   ├── alerts/       # Sistema de alertas inteligentes
-    │   │   ├── Notificaciones.tsx
-    │   │   └── Auditoria.tsx
-    │   ├── hooks/            # Custom hooks
-    │   │   └── useNotificationCount.tsx
-    │   ├── pages/            # Páginas principales
-    │   ├── services/         # Lógica de negocio y API
-    │   ├── types/            # TypeScript types compartidos
-    │   └── utils/            # Utilidades y constantes
-    │       ├── calculations.ts
-    │       ├── constants.ts
-    │       └── sanitize.ts
-    └── ...
-```
+**presupuestos**
+- Almacena información de presupuestos
+- Campos clave: `idPresupuestos`, `version`, `presupuesto_padre`, `es_ultima_version`
+- Sistema de versionado: cada edición crea nueva versión
+- Estados: `borrador`, `pendiente`, `en_revision`, `aprobado`, `rechazado`
 
----
+**presupuesto_insumos**
+- Insumos asociados a cada presupuesto
+- Relación: N insumos por presupuesto
+- Campos: `producto`, `costo`, `precio_facturar`, `cantidad`
 
-## Backend
+**presupuesto_prestaciones**
+- Prestaciones médicas del presupuesto
+- Relación: N prestaciones por presupuesto
+- Campos: `id_servicio`, `prestacion`, `valor_asignado`, `valor_facturar`, `cantidad`
 
-### Arquitectura en Capas Mejorada
+**financiador**
+- Información de obras sociales/financiadores
+- Campos: `idobra_social`, `Financiador`, `tasa_mensual`, `dias_cobranza_real`, `dias_cobranza_teorico`
+
+**notificaciones**
+- Sistema de notificaciones en tiempo real
+- Tipos: `pendiente`, `aprobado`, `rechazado`
+- Estados: `no_leida`, `leida`
+
+**auditorias_presupuestos**
+- Registro de auditorías realizadas
+- Trazabilidad completa de cambios de estado
+- Campos: `auditor_id`, `estado_anterior`, `estado_nuevo`, `comentario`
+
+### Sistema de Versionado
 
 ```
-Request → Rate Limit → CORS → Helmet → CSRF → Auth → Controller → Database → Response
-            ↓           ↓       ↓        ↓      ↓         ↓
-         (500/15min)  (Origin) (Headers) (Token) (JWT)  (asyncHandler)
-                                                          (AppError)
-                                                          (Logger)
+Presupuesto Original (ID: 100, version: 1)
+    ↓ (edición)
+Nueva Versión (ID: 101, version: 2, presupuesto_padre: 100)
+    ↓ (edición)
+Nueva Versión (ID: 102, version: 3, presupuesto_padre: 100)
 ```
 
-### Componentes Clave
+- Solo la última versión tiene `es_ultima_version = 1`
+- Todas las versiones mantienen `presupuesto_padre` apuntando al original
+- Historial completo de cambios
 
-#### 1. Middleware Avanzado
-- **`auth.ts`**: Autenticación JWT con refresh tokens
-- **`csrf.ts`**: Protección CSRF con whitelist de orígenes
-- **`errorHandler.ts`**: Manejo centralizado con logging
-- **`validateInput.ts`**: Validaciones reutilizables con sanitización
-- **Rate Limiting**: 500 requests por 15 minutos por IP
-- **SSE Reconnection**: Reconexión automática cada 2 segundos
+## 🔄 Flujo de Datos
 
-#### 2. Controllers Optimizados
-- Uso de `asyncHandler` para manejo automático de errores
-- Transacciones para operaciones complejas
-- Paginación implementada (100 registros por defecto)
-- Queries paralelas con `Promise.all`
-
-#### 3. Database Layer
-- **Connection Pool**: 10 conexiones máximo
-- **Transacciones**: Para operaciones atómicas
-- **Índices Optimizados**: En columnas de búsqueda frecuente
-- **Queries Parametrizadas**: Prevención SQL injection
-
-#### 4. Funcionalidades Implementadas
-- **Sistema de Notificaciones**: Triggers automáticos + API REST + SSE
-- **Sistema de Auditoría**: Workflow de aprobación médica completo
-- **Server-Sent Events**: Notificaciones en tiempo real con fallback
-- **Sistema de Versiones**: Control de cambios en presupuestos
-- **Filtros Inteligentes**: Búsqueda con limpieza en todas las interfaces
-- **Optimización de Código**: Eliminación de archivos no utilizados
-
----
-
-## Frontend
-
-### Arquitectura Reactiva Mejorada
+### Crear Presupuesto
 
 ```
-UI Components → Hooks → Services → API
-     ↓           ↓        ↓
-  (Mantine)  (Estado)  (Lógica)
-     ↓           ↓        ↓
-  (Alerts)   (Memo)   (Retry)
-     ↓           ↓        ↓
-  (PDF)    (Callback) (Timeout)
+Frontend                Backend                 Database
+   |                       |                        |
+   |-- POST /presupuestos -|                        |
+   |                       |-- INSERT presupuestos -|
+   |                       |<-- ID: 100 ------------|
+   |<-- { id: 100 } -------|                        |
+   |                       |                        |
+   |-- POST /insumos ------|                        |
+   |                       |-- INSERT insumos ------|
+   |                       |-- recalcularTotales ---|
+   |                       |-- UPDATE presupuestos -|
+   |<-- OK ----------------|                        |
 ```
 
-### Componentes Principales
-
-#### 1. Dashboard Unificado
-- **UserDashboard**: 6 pestañas integradas
-  - Datos Paciente
-  - Insumos
-  - Prestaciones
-  - Historial
-  - Notificaciones (con contador en tiempo real)
-  - Auditoría (solo para auditor médico)
-
-#### 2. Sistema de Alertas Inteligentes
-- **Alertas de Rentabilidad**: 7 niveles con colores
-- **Alertas de Monto**: Umbrales configurables
-- **Alertas de Cobranza**: Basadas en días
-- **Alertas de Tasa**: Detección de tasas altas
-
-#### 3. Optimizaciones React
-- **useMemo**: Filtrado de datos memoizado
-- **useCallback**: Handlers optimizados
-- **Lazy Loading**: Componentes bajo demanda
-- **Error Boundaries**: Manejo de errores en UI
-- **Clearable Inputs**: Filtros con botón de limpieza
-- **Dead Code Elimination**: Componentes no utilizados eliminados
-
-#### 4. Integración PDF Avanzada
-- **jsPDF**: Generación de PDFs
-- **AutoTable**: Tablas formateadas
-- **Logos y Branding**: Personalización visual
-
----
-
-## Sistema de Notificaciones
-
-### Arquitectura Event-Driven
+### Finalizar Presupuesto
 
 ```
-Database Trigger → Notificación → API → Frontend → UI Update
-       ↓              ↓           ↓        ↓         ↓
-   (Automático)   (Persistida)  (REST)  (Hook)   (Contador)
+Frontend                Backend                 Database
+   |                       |                        |
+   |-- POST /finalizar ----|                        |
+   |                       |-- SELECT con JOINs ----|
+   |                       |<-- totales calculados -|
+   |                       |-- evaluarReglas -------|
+   |                       |-- UPDATE estado -------|
+   |                       |-- notificarAuditores --|
+   |<-- { estado } --------|                        |
 ```
 
-### Componentes
-
-#### 1. Base de Datos
-```sql
-CREATE TABLE notificaciones (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
-    presupuesto_id INT NOT NULL,
-    version_presupuesto INT NOT NULL,
-    tipo ENUM('nueva_version', 'aprobacion_requerida', 'estado_cambio'),
-    mensaje TEXT NOT NULL,
-    leida TINYINT(1) DEFAULT 0,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    paciente VARCHAR(255),
-    dni_paciente VARCHAR(20)
-);
-```
-
-#### 2. Triggers Automáticos
-- **Nueva Versión**: Notifica cuando se requiere aprobación
-- **Cambio de Estado**: Informa cambios de estado
-- **Asignación Automática**: A usuarios con permisos
-
-#### 3. API Endpoints
-- `GET /api/notificaciones` - Lista paginada
-- `GET /api/notificaciones/count` - Contador no leídas
-- `PUT /api/notificaciones/:id/leer` - Marcar como leída
-
-#### 4. Frontend Integration
-- **useNotificationCount**: Hook para contador en tiempo real con refreshData
-- **Componente Notificaciones**: Lista completa con filtros clearables
-- **Dot Rojo**: Indicador visual en pestaña
-- **SSE Fallback**: Polling automático cada 20 segundos
-- **Manual Refresh**: Botón de actualización manual
-
----
-
-## Sistema de Auditoría
-
-### Workflow de Aprobación
+### Notificaciones en Tiempo Real (SSE)
 
 ```
-Usuario → Pedir Auditoría → Auditor Médico → Aprobar/Rechazar → Notificación
-   ↓           ↓                ↓               ↓                ↓
-(Crea)    (Cambia Estado)   (Revisa)      (Actualiza)      (Informa)
+Frontend                Backend                 Database
+   |                       |                        |
+   |-- GET /sse/stream ----|                        |
+   |<-- Connection open ---|                        |
+   |                       |                        |
+   |                       |<-- Evento DB ----------|
+   |                       |-- Procesar evento -----|
+   |<-- SSE: data ---------|                        |
+   |-- Actualizar UI       |                        |
 ```
 
-### Componentes
+## 🎯 Componentes Principales
 
-#### 1. Roles y Permisos
-- **Usuario Normal**: Puede solicitar auditoría
-- **Auditor Médico**: Puede aprobar/rechazar
-- **Admin**: Gestión completa del sistema
+### Backend
 
-#### 2. Estados de Presupuesto
-- **borrador**: En edición
-- **pendiente**: Requiere aprobación
-- **aprobado**: Aprobado por auditor
-- **rechazado**: Rechazado con comentarios
+#### Controllers
+- **presupuestosControllerV2.ts**: CRUD de presupuestos, versionado, finalización
+- **presupuestoInsumosController.ts**: Gestión de insumos, recálculo automático
+- **presupuestoPrestacionesController.ts**: Gestión de prestaciones, recálculo automático
+- **authController.ts**: Autenticación y autorización
+- **sseController.ts**: Manejo de conexiones SSE
 
-#### 3. Reglas Automáticas
-```javascript
-function evaluarEstadoAutomatico(datos) {
-    if (datos.rentabilidad < 15) return 'pendiente';
-    if (datos.costo_total > 150000) return 'pendiente';
-    return 'borrador';
-}
+#### Routes
+- **presupuestosV2.ts**: Rutas RESTful de presupuestos
+- **auth.ts**: Rutas de autenticación
+- **sse.ts**: Endpoint de streaming
+
+#### Middleware
+- **auth.ts**: Verificación de JWT
+- **errorHandler.ts**: Manejo centralizado de errores
+
+### Frontend
+
+#### Pages
+- **UserDashboard.tsx**: Dashboard principal de usuarios
+- **AuditorDashboard.tsx**: Dashboard de auditores médicos
+- **DatosPresupuesto.tsx**: Formulario de datos del paciente
+- **Insumos.tsx**: Gestión de insumos
+- **Prestaciones.tsx**: Gestión de prestaciones
+- **ListaPresupuestos.tsx**: Historial de presupuestos
+- **Notificaciones.tsx**: Centro de notificaciones
+- **Auditoria.tsx**: Panel de auditoría
+
+#### Hooks
+- **usePresupuesto.tsx**: Lógica de gestión de presupuestos
+- **useTotales.tsx**: Cálculo de totales y rentabilidades
+- **useNotificationCount.tsx**: Contador de notificaciones
+- **useRealtimeUpdates.tsx**: Conexión SSE y actualizaciones
+
+#### Components
+- **ModalAuditoria.tsx**: Modal para solicitar/realizar auditoría
+- **ModalConfirmarEdicion.tsx**: Confirmación de creación de versión
+- **ModalDetallePresupuesto.tsx**: Vista detallada de presupuesto
+- **ConnectionStatus.tsx**: Indicador de conexión SSE
+- **NotificationIndicator.tsx**: Badge de notificaciones
+
+## 🔐 Seguridad
+
+### Autenticación
+- JWT con expiración de 24 horas
+- Tokens almacenados en localStorage
+- Refresh automático en cada request
+
+### Autorización
+- Middleware de verificación de roles
+- Rutas protegidas por rol
+- Validación en backend y frontend
+
+### Validación de Datos
+- Validación en frontend (UX)
+- Validación en backend (seguridad)
+- Sanitización de inputs
+
+## 📈 Optimizaciones
+
+### Backend
+- **Queries Optimizadas**: JOINs en lugar de múltiples queries
+- **Recálculo Automático**: Triggers en operaciones de insumos/prestaciones
+- **Transacciones**: Solo donde es necesario
+- **Índices**: En campos de búsqueda frecuente
+
+### Frontend
+- **Code Splitting**: Carga lazy de componentes
+- **Memoization**: useMemo y useCallback
+- **Debouncing**: En búsquedas y filtros
+- **Virtual Scrolling**: En tablas grandes
+
+## 🔄 Sistema de Notificaciones
+
+### Arquitectura SSE
+
+```
+Cliente 1 ----\
+Cliente 2 ------> SSE Server --> Event Emitter --> Database Events
+Cliente 3 ----/
 ```
 
-#### 4. Dashboard de Auditoría
-- Lista de presupuestos pendientes
-- Detalles completos del presupuesto
-- Botones de Aprobar/Rechazar
-- Campo de comentarios obligatorio
+### Flujo de Eventos
 
----
+1. Cliente abre conexión SSE
+2. Backend registra cliente en pool
+3. Evento ocurre en BD (INSERT/UPDATE)
+4. Backend emite evento a clientes relevantes
+5. Cliente recibe y procesa evento
+6. UI se actualiza automáticamente
 
-## Optimizaciones
+### Tipos de Eventos
+- `presupuesto-pendiente`: Nuevo presupuesto para auditar
+- `presupuesto-aprobado`: Presupuesto aprobado
+- `presupuesto-rechazado`: Presupuesto rechazado
+- `notificacion-nueva`: Nueva notificación general
 
-### Backend Performance
+## 📊 Cálculos Financieros
 
-#### 1. Database Optimizations
-- **Connection Pooling**: 10 conexiones reutilizables
-- **Query Optimization**: Índices en columnas críticas
-- **Paginación**: Límite de 100 registros por consulta
-- **Transacciones**: Operaciones atómicas
-
-#### 2. API Optimizations
-- **Parallel Queries**: `Promise.all` para consultas independientes
-- **Error Handling**: Manejo centralizado con rollback
-- **Logging**: Structured logging con Winston
-- **Rate Limiting**: Protección contra abuso
-
-### Frontend Performance
-
-#### 1. React Optimizations
-- **Memoization**: `useMemo` para cálculos pesados
-- **Callback Optimization**: `useCallback` para handlers
-- **Component Splitting**: Lazy loading de componentes
-
-#### 2. Network Optimizations
-- **Retry Logic**: 3 intentos con backoff exponencial
-- **Timeout**: 10 segundos por request
-- **Request Batching**: Múltiples operaciones en una llamada
-
-### Recomendaciones Futuras
-- **Redis Cache**: Para datos frecuentemente accedidos
-- **CDN**: Para assets estáticos
-- **Service Worker**: Cache offline
-- **Virtual Scrolling**: Para listas largas
-
----
-
-## Seguridad
-
-### Implementaciones de Seguridad
-
-#### 1. Autenticación y Autorización
-- **JWT Tokens**: Con expiración configurable
-- **Password Hashing**: bcrypt con salt rounds
-- **Role-Based Access**: Permisos por rol de usuario
-- **Session Management**: Tokens seguros
-
-#### 2. Protecciones Web
-- **CSRF Protection**: Validación de origen
-- **XSS Prevention**: Sanitización de inputs
-- **SQL Injection**: Queries parametrizadas
-- **Rate Limiting**: 500 requests/15min por IP
-
-#### 3. Headers de Seguridad (Helmet)
-- **Content Security Policy**: Prevención XSS
-- **X-Frame-Options**: Prevención clickjacking
-- **X-Content-Type-Options**: Prevención MIME sniffing
-- **Strict-Transport-Security**: HTTPS enforcement
-
-#### 4. Validación de Datos
-- **Input Sanitization**: Limpieza de datos de entrada
-- **Type Validation**: Validación de tipos TypeScript
-- **Business Logic Validation**: Reglas de negocio
-
-### Variables de Entorno Seguras
-
-```env
-# Base de datos
-DB_HOST=127.0.0.1
-DB_USER=usuario_seguro
-DB_PASSWORD=password_complejo_64_chars
-DB_NAME=presupuestador_db
-
-# Seguridad
-JWT_SECRET=jwt_secret_aleatorio_64_caracteres
-SESSION_SECRET=session_secret_aleatorio_64_caracteres
-
-# CORS
-FRONTEND_URL=http://localhost:5173,https://dominio-produccion.com
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=500
+### Rentabilidad Simple
+```
+rentabilidad = ((totalFacturar - costoTotal) / costoTotal) * 100
 ```
 
----
-
-## Configuración de Alertas
-
-### Sistema de Alertas Inteligentes
-
-#### Ubicación
-**Archivo:** `frontend/src/utils/constants.ts`
-
-#### 1. Umbrales de Rentabilidad (7 Niveles)
-
-```typescript
-export const RENTABILIDAD_THRESHOLDS = {
-  DESAPROBADO: 0,        // < 0% → Rojo crítico
-  MEJORAR: 1,            // 1-35% → Naranja
-  AUTORIZADO_MEJORA: 35, // 35-40% → Amarillo
-  AUTORIZADO: 40,        // 40-50% → Azul
-  FELICITACIONES: 50,    // 50-60% → Verde
-  SUPER_RENTABLE: 60,    // 60-70% → Teal
-  EXCEPCIONAL: 70,       // 70%+ → Violeta
-} as const;
+### Rentabilidad con Plazo
+```
+mesesCobranza = diasCobranza / 30
+valorPresente = totalFacturar / (1 + tasaMensual)^mesesCobranza
+utilidadConPlazo = valorPresente - costoTotal
+rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100
 ```
 
-#### 2. Umbrales de Monto
-
-```typescript
-export const MONTO_THRESHOLDS = {
-  ELEVADO: 1000000,  // $1M → Alerta naranja
-  CRITICO: 5000000,  // $5M → Alerta roja
-} as const;
+### Precio de Insumos
+```
+precioFacturar = costoBase * (1 + porcentajeSucursal / 100)
 ```
 
-#### 3. Umbrales de Cobranza
+## 🧪 Testing
 
-```typescript
-export const DIAS_COBRANZA_THRESHOLDS = {
-  LENTO: 40,      // > 40 días → Amarillo
-  EXTENDIDO: 60,  // > 60 días → Naranja
-} as const;
-```
+### Backend
+- Unit tests con Jest
+- Integration tests de endpoints
+- Tests de reglas de auditoría
 
-#### 4. Configuración de Tasas
+### Frontend
+- Component tests con React Testing Library
+- E2E tests con Playwright (futuro)
 
-```typescript
-export const TASA_MENSUAL_ALTA = 0.08; // 8% mensual
-export const TASA_DEFAULT = 2;         // 2% por defecto
-export const DIAS_DEFAULT = 30;        // 30 días por defecto
-```
+## 📦 Deployment
 
-### Personalización de Alertas
-
-#### Modificar Umbrales
-```typescript
-// Ejemplo: Cambiar umbral de autorización a 38%
-AUTORIZADO_MEJORA: 35,
-AUTORIZADO: 38,  // ← Cambio aquí
-```
-
-#### Agregar Nueva Alerta
-1. **Constante**: Agregar en `constants.ts`
-2. **Lógica**: Implementar en `services/alertaService.ts`
-3. **Componente**: Crear en `components/alerts/`
-4. **Integración**: Usar en `hooks/useAlertaCotizador.tsx`
-
----
-
-## Configuración de Cálculos
-
-### Motor de Cálculos Financieros
-
-#### Ubicación
-**Archivo:** `frontend/src/utils/calculations.ts`
-
-#### 1. Cálculos Básicos
-
-```typescript
-// Costo Total
-export const calcularCostoTotal = (
-  totalInsumos: number, 
-  totalPrestaciones: number
-): number => totalInsumos + totalPrestaciones;
-
-// Total a Facturar
-export const calcularTotalFacturar = (
-  totalInsumos: number,
-  totalFacturarPrestaciones: number,
-  porcentajeInsumos: number
-): number => {
-  return totalInsumos * (1 + porcentajeInsumos / 100) + totalFacturarPrestaciones;
-};
-```
-
-#### 2. Cálculos Avanzados
-
-```typescript
-// Rentabilidad
-export const calcularRentabilidad = (
-  costoTotal: number, 
-  totalFacturar: number
-): number => {
-  return costoTotal > 0 
-    ? ((totalFacturar - costoTotal) / costoTotal) * 100 
-    : 0;
-};
-
-// Valor Presente con Plazo
-export const calcularUtilidadConPlazo = (
-  totalFacturar: number,
-  costoTotal: number,
-  financiadorInfo?: FinanciadorInfo
-): number => {
-  if (costoTotal === 0 || !financiadorInfo) 
-    return totalFacturar - costoTotal;
-
-  const diasCobranza = financiadorInfo.dias_cobranza_real 
-    || financiadorInfo.dias_cobranza_teorico 
-    || DIAS_DEFAULT;
-    
-  const tasaMensual = (financiadorInfo.tasa_mensual || TASA_DEFAULT) / 100;
-  const mesesCobranza = Math.floor(diasCobranza / 30);
-  
-  const valorPresente = totalFacturar / Math.pow(1 + tasaMensual, mesesCobranza);
-  return valorPresente - costoTotal;
-};
-```
-
-### Fórmulas Implementadas
-
-1. **Costo Total**: `Insumos + Prestaciones`
-2. **Total Facturar**: `Insumos × (1 + %) + Prestaciones`
-3. **Rentabilidad**: `((Facturar - Costo) / Costo) × 100`
-4. **Valor Presente**: `Facturar / (1 + tasa)^meses - Costo`
-
----
-
-## Mantenimiento y Desarrollo
-
-### Estructura de Desarrollo
-
-#### 1. Scripts Disponibles
-
-**Backend:**
+### Desarrollo
 ```bash
-npm run dev          # Desarrollo con hot reload
-npm run build        # Compilar TypeScript
-npm run start        # Producción
-npm run test         # Tests automatizados
-npm run lint         # Linting
+# Backend
+cd backend && npm run dev
+
+# Frontend
+cd frontend && npm run dev
 ```
 
-**Frontend:**
+### Producción
 ```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build para producción
-npm run preview      # Preview del build
+# Backend
+cd backend && npm run build && npm start
+
+# Frontend
+cd frontend && npm run build
+# Servir carpeta dist/ con nginx/apache
 ```
 
-#### 2. Testing Strategy
-- **Unit Tests**: Funciones puras (calculations.ts)
-- **Integration Tests**: API endpoints
-- **E2E Tests**: Flujos críticos de usuario
+## 🔍 Monitoreo
 
-#### 3. Deployment
-- **Backend**: Node.js con PM2
-- **Frontend**: Build estático con Nginx
-- **Database**: MySQL 8.0+ con backups automáticos
+### Logs
+- Winston para logging estructurado
+- Niveles: error, warn, info, debug
+- Rotación diaria de archivos
 
-### Próximas Mejoras Planificadas
+### Métricas
+- Tiempo de respuesta de endpoints
+- Conexiones SSE activas
+- Errores por tipo
 
-#### 1. Performance
-- [x] Optimización de código (eliminación de archivos no utilizados)
-- [x] Filtros con limpieza para mejor UX
-- [x] SSE con fallback automático
-- [ ] Implementar Redis para cache
-- [ ] Optimizar queries con índices adicionales
-- [ ] Implementar lazy loading en frontend
+## 🚀 Escalabilidad
 
-#### 2. Funcionalidades
-- [x] Sistema de notificaciones en tiempo real
-- [x] Sistema de auditoría completo
-- [x] Filtros inteligentes con limpieza
-- [ ] Sistema de reportes avanzados
-- [ ] Integración con APIs externas
-- [ ] Dashboard de analytics
+### Horizontal
+- Backend stateless (excepto SSE)
+- Load balancer con sticky sessions para SSE
+- Base de datos con replicación
 
-#### 3. DevOps
-- [ ] CI/CD con GitHub Actions
-- [ ] Monitoreo con Prometheus
-- [ ] Logs centralizados con ELK Stack
+### Vertical
+- Optimización de queries
+- Índices en BD
+- Caching de datos frecuentes
+
+## 📝 Convenciones de Código
+
+### Backend
+- Nombres de archivos: camelCase
+- Funciones: camelCase
+- Constantes: UPPER_SNAKE_CASE
+- Async/await para operaciones asíncronas
+
+### Frontend
+- Componentes: PascalCase
+- Hooks: useCamelCase
+- Archivos: PascalCase para componentes, camelCase para utils
+- Props: camelCase
+
+## 🔄 Versionado de API
+
+Actualmente: **v2**
+- Rutas: `/api/v2/presupuestos`
+- Cambios breaking requieren nueva versión
+- Mantener compatibilidad con versión anterior
+
+## 📚 Recursos Adicionales
+
+- [Manual de Usuario](./MANUAL_USUARIO_V2.md)
+- [Documentación de API](./backend/RUTAS_API.md)
+- [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md)
+- [Changelog](./CHANGELOG_LIMPIEZA.md)
 
 ---
 
-## Contacto y Soporte
-
-### Documentación Técnica
-- **Arquitectura**: Este documento
-- **API**: Documentación en `/backend/README.md`
-- **Frontend**: Guía en `/frontend/README.md`
-- **Migraciones**: Scripts en `/backend/migrations/`
-
-### Archivos Clave para Configuración
-- **Alertas**: `frontend/src/utils/constants.ts`
-- **Cálculos**: `frontend/src/utils/calculations.ts`
-- **Seguridad**: `backend/.env`
-- **Base de datos**: `backend/src/db.ts`
-- **Notificaciones**: `backend/src/routes/notificaciones.ts`
-- **Auditoría**: `backend/src/routes/auditoria-simple.ts`
-- **SSE**: `backend/src/controllers/sseController.ts`
-- **Hooks**: `frontend/src/hooks/useRealtimeUpdates.tsx`
-
-### Estado del Proyecto
-- ✅ **Sistema Base**: 100% funcional
-- ✅ **Frontend**: Completamente implementado con filtros clearables
-- ✅ **Base de Datos**: Migrada y optimizada
-- ✅ **APIs Avanzadas**: Completamente activadas
-- ✅ **SSE en Tiempo Real**: Implementado con fallback
-- ✅ **Código Optimizado**: Archivos no utilizados eliminados
-- 🚀 **Producción**: Completamente listo para deploy
-
-**El sistema está completamente funcional, optimizado y listo para uso en producción con todas las funcionalidades implementadas.**
+**Última actualización:** Enero 2025

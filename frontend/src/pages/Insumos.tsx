@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, Checkbox, Center, Tooltip } from '@mantine/core'
+import { Paper, TextInput, Button, Group, Stack, Title, Grid, NumberInput, Table, ActionIcon, Checkbox, Center, Tooltip, Text } from '@mantine/core'
 import { TrashIcon, PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
@@ -16,9 +16,10 @@ interface Props {
   onTotalChange: (total: number) => void
   presupuestoId: number | null
   porcentajeInsumos: number
+  soloLectura?: boolean
 }
 
-export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados, onTotalChange, presupuestoId, porcentajeInsumos }: Props) {
+export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados, onTotalChange, presupuestoId, porcentajeInsumos, soloLectura = false }: Props) {
   const [insumosDisponibles, setInsumosDisponibles] = useState<any[]>([])
   const [filtro, setFiltro] = useState('')
   const [insumoSeleccionado, setInsumoSeleccionado] = useState<any>(null)
@@ -132,9 +133,14 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
 
   return (
     <Stack gap="md">
+      {soloLectura && (
+        <Paper p="xs" withBorder style={{ backgroundColor: '#e7f5ff' }}>
+          <Text size="sm" c="blue" fw={500} ta="center">Modo solo lectura - No se pueden realizar modificaciones</Text>
+        </Paper>
+      )}
       <Grid>
         <Grid.Col span={6}>
-          <Paper p="md" withBorder>
+          <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.6 : 1 }}>
             <Title order={4} mb="md">Insumos Disponibles</Title>
             <TextInput 
               value={filtro} 
@@ -148,6 +154,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                 ) : null
               }
               placeholder="Buscar Insumo..." 
+              disabled={soloLectura}
             />
             <Table.ScrollContainer mt="xs" minWidth={500} maxHeight={300} >
               <Table striped="odd" highlightOnHover stickyHeader>
@@ -173,6 +180,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                                 setCantidad(1)
                               }
                             }}
+                            disabled={soloLectura}
                           />
                           <span>{insumo.producto.charAt(0).toUpperCase() + insumo.producto.slice(1).toLowerCase()}</span>
                         </Group>
@@ -187,7 +195,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
         </Grid.Col>
         
         <Grid.Col span={6}>
-          <Paper p="md" withBorder style={{ backgroundColor: insumoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: insumoSeleccionado ? 1 : 0.6 }}>
+          <Paper p="md" withBorder style={{ backgroundColor: insumoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: (insumoSeleccionado && !soloLectura) ? 1 : 0.6 }}>
             <Title order={4} mb="md">Agregar al Presupuesto</Title>
             <Stack gap="sm">
               <TextInput
@@ -204,13 +212,13 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                 onChange={(value) => setCantidad(Number(value) || 1)}
                 min={1}
                 size="sm"
-                disabled={!insumoSeleccionado}
+                disabled={!insumoSeleccionado || soloLectura}
                 description={insumoSeleccionado ? `Costo base: $${Number(insumoSeleccionado.costo).toFixed(2)}` : 'Seleccione insumo'}
                 hideControls
               />
               <Group>
-                <Button size="sm" onClick={agregarInsumo} disabled={!insumoSeleccionado}>Agregar</Button>
-                <Button size="sm" variant="outline" color="gray" disabled={!insumoSeleccionado} onClick={() => {
+                <Button size="sm" onClick={agregarInsumo} disabled={!insumoSeleccionado || soloLectura}>Agregar</Button>
+                <Button size="sm" variant="outline" color="gray" disabled={!insumoSeleccionado || soloLectura} onClick={() => {
                   setInsumoSeleccionado(null)
                   setCantidad(1)
                 }}>Cancelar</Button>
@@ -285,24 +293,26 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                   <Table.Td>${subtotalCosto.toFixed(2)}</Table.Td>
                   <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
                   <Table.Td>
-                    <Group gap="xs" align='baseline'>
-                      <ActionIcon
-                        variant="transparent"
-                        onClick={() => {
-                          setEditandoIndex(index)
-                          setNuevaCantidad(insumo.cantidad)
-                        }}
-                      >
-                        <PencilSquareIcon width={20} height={20} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="transparent"
-                        color="red"
-                        onClick={() => eliminarInsumo(index)}
-                      >
-                        <TrashIcon width={20} height={20} />
-                      </ActionIcon>
-                    </Group>
+                    {!soloLectura && (
+                      <Group gap="xs" align='baseline'>
+                        <ActionIcon
+                          variant="transparent"
+                          onClick={() => {
+                            setEditandoIndex(index)
+                            setNuevaCantidad(insumo.cantidad)
+                          }}
+                        >
+                          <PencilSquareIcon width={20} height={20} />
+                        </ActionIcon>
+                        <ActionIcon
+                          variant="transparent"
+                          color="red"
+                          onClick={() => eliminarInsumo(index)}
+                        >
+                          <TrashIcon width={20} height={20} />
+                        </ActionIcon>
+                      </Group>
+                    )}
                   </Table.Td>
                 </Table.Tr>
                 );

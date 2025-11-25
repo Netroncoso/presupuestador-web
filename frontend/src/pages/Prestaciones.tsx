@@ -36,9 +36,10 @@ interface Props {
   presupuestoId: number | null
   financiadorId?: string | null
   onFinanciadorChange?: (financiadorId: string | null, financiadorInfo: any) => void
+  soloLectura?: boolean
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange }: Props) {
+export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false }: Props) {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string | null>(null)
   const [financiadorConfirmado, setFinanciadorConfirmado] = useState(false)
@@ -147,15 +148,29 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     setCantidad('1')
     setValorAsignado('')
     
-    if (value && onFinanciadorChange) {
-      try {
-        const infoRes = await api.get(`/prestaciones/prestador/${value}/info`)
-        setFinanciadorInfo(infoRes.data)
-        onFinanciadorChange(value, infoRes.data)
-      } catch (error) {
-        console.error('Error loading financiador info:', error)
-        setFinanciadorInfo({})
-        onFinanciadorChange(value, {})
+    if (value) {
+      // Guardar automáticamente en BD si hay presupuestoId
+      if (presupuestoId) {
+        try {
+          await api.put(`/presupuestos/${presupuestoId}/prestador`, {
+            idobra_social: value
+          });
+        } catch (error) {
+          console.error('Error guardando financiador:', error);
+        }
+      }
+      
+      // Cargar info del financiador
+      if (onFinanciadorChange) {
+        try {
+          const infoRes = await api.get(`/prestaciones/prestador/${value}/info`)
+          setFinanciadorInfo(infoRes.data)
+          onFinanciadorChange(value, infoRes.data)
+        } catch (error) {
+          console.error('Error loading financiador info:', error)
+          setFinanciadorInfo({})
+          onFinanciadorChange(value, {})
+        }
       }
     } else if (onFinanciadorChange) {
       setFinanciadorInfo({})
@@ -344,7 +359,12 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   return (
     <Stack gap="lg" mb={25}>
-      <Paper p="md" withBorder shadow="sm" >
+      {soloLectura && (
+        <Paper p="xs" withBorder style={{ backgroundColor: '#e7f5ff' }}>
+          <Text size="sm" c="blue" fw={500} ta="center">Modo solo lectura - No se pueden realizar modificaciones</Text>
+        </Paper>
+      )}
+      <Paper p="md" withBorder shadow="sm" style={{ opacity: soloLectura ? 0.8 : 1 }}>
         <Title order={4} mb="md">Selección de Financiador</Title>
         <Flex direction={'column'}>
           <Group  grow align="baseline" mb={20} > 
@@ -354,17 +374,17 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             value={financiadorSeleccionado}
             onChange={handleFinanciadorChange}
             searchable
-            disabled={financiadorConfirmado}
+            disabled={financiadorConfirmado || soloLectura}
             checkIconPosition="right"
           />
             <Button bottom={0}
               onClick={confirmarFinanciador} 
-              disabled={!financiadorSeleccionado || financiadorConfirmado}
+              disabled={!financiadorSeleccionado || financiadorConfirmado || soloLectura}
               color={financiadorConfirmado ? 'green' : 'blue'}
             >
               {financiadorConfirmado ? 'Financiador Confirmado' : 'Confirmar'}
             </Button>
-            {financiadorConfirmado && (
+            {financiadorConfirmado && !soloLectura && (
               <Button  
                 onClick={modificarFinanciador}
                 variant="outline"
@@ -428,6 +448,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                                     setValorAsignado('')
                                   }
                                 }}
+                                disabled={soloLectura}
                               />
                               <span>{p.nombre.charAt(0).toUpperCase() + p.nombre.slice(1).toLowerCase()}</span>
                             </Group>
@@ -444,7 +465,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             </Grid.Col>
             
             <Grid.Col span={6}>
-              <Paper p="md" withBorder style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: prestacionSeleccionada ? 1 : 0.6 }}>
+              <Paper p="md" withBorder style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: (prestacionSeleccionada && !soloLectura) ? 1 : 0.6 }}>
                 <Title order={4} mb="md">Agregar al Presupuesto</Title>
                 <Stack gap="sm">
                   <TextInput
@@ -462,7 +483,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     type="number"
                     min="1"
                     size="sm"
-                    disabled={!prestacionSeleccionada}
+                    disabled={!prestacionSeleccionada || soloLectura}
                     description={prestacionSeleccionadaData ? `Total Mensual ${prestacionSeleccionadaData.cant_total || 1}` : 'Seleccione prestación'}
                   />
                   <Select
@@ -471,12 +492,12 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     data={valoresDisponibles}
                     value={valorAsignado}
                     onChange={(val) => setValorAsignado(val || '')}
-                    disabled={!prestacionSeleccionada}
+                    disabled={!prestacionSeleccionada || soloLectura}
                     searchable
                   />
                   <Group>
-                    <Button size="sm" onClick={agregarPrestacion} disabled={!prestacionSeleccionada}>Agregar</Button>
-                    <Button size="sm" variant="outline" color="gray" disabled={!prestacionSeleccionada} onClick={() => {
+                    <Button size="sm" onClick={agregarPrestacion} disabled={!prestacionSeleccionada || soloLectura}>Agregar</Button>
+                    <Button size="sm" variant="outline" color="gray" disabled={!prestacionSeleccionada || soloLectura} onClick={() => {
                       setPrestacionSeleccionada(null)
                       setCantidad('1')
                       setValorAsignado('')
@@ -564,35 +585,37 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                         <Table.Td>${subtotalCosto.toFixed(2)}</Table.Td>
                         <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
                         <Table.Td>
-                          {editandoIndex === i ? (
-                            <Group gap="xs" justify="left">
-                              <Button size="xs" onClick={() => actualizarPrestacion(i)}>
-                                OK
-                              </Button>
-                              <Button size="xs" variant="outline" onClick={() => setEditandoIndex(null)}>
-                                Cancelar
-                              </Button>
-                            </Group>
-                          ) : (
-                            <Group gap="xs" justify="left">
-                              <ActionIcon
-                                variant="transparent"
-                                onClick={() => {
-                                  setEditandoIndex(i)
-                                  setNuevaCantidad(p.cantidad)
-                                  setNuevoValor(Number(p.valor_asignado))
-                                }}
-                              >
-                                <PencilSquareIcon  width={20} height={20} />
-                              </ActionIcon>
-                              <ActionIcon
-                                variant="transparent"
-                                color="red"
-                                onClick={() => eliminarPrestacion(i)}
-                              >
-                                <TrashIcon  width={20} height={20} />
-                              </ActionIcon>
-                            </Group>
+                          {!soloLectura && (
+                            editandoIndex === i ? (
+                              <Group gap="xs" justify="left">
+                                <Button size="xs" onClick={() => actualizarPrestacion(i)}>
+                                  OK
+                                </Button>
+                                <Button size="xs" variant="outline" onClick={() => setEditandoIndex(null)}>
+                                  Cancelar
+                                </Button>
+                              </Group>
+                            ) : (
+                              <Group gap="xs" justify="left">
+                                <ActionIcon
+                                  variant="transparent"
+                                  onClick={() => {
+                                    setEditandoIndex(i)
+                                    setNuevaCantidad(p.cantidad)
+                                    setNuevoValor(Number(p.valor_asignado))
+                                  }}
+                                >
+                                  <PencilSquareIcon  width={20} height={20} />
+                                </ActionIcon>
+                                <ActionIcon
+                                  variant="transparent"
+                                  color="red"
+                                  onClick={() => eliminarPrestacion(i)}
+                                >
+                                  <TrashIcon  width={20} height={20} />
+                                </ActionIcon>
+                              </Group>
+                            )
                           )}
                         </Table.Td>
                       </Table.Tr>

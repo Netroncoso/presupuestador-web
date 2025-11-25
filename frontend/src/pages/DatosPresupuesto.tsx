@@ -9,9 +9,10 @@ interface Props {
   esCargaHistorial?: boolean
   setEsCargaHistorial?: (esHistorial: boolean) => void
   datosHistorial?: { nombre: string; dni: string; sucursal: string }
+  soloLectura?: boolean
 }
 
-export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupuesto, esCargaHistorial: esCargaHistorialProp, setEsCargaHistorial: setEsCargaHistorialProp, datosHistorial }: Props) {
+export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupuesto, esCargaHistorial: esCargaHistorialProp, setEsCargaHistorial: setEsCargaHistorialProp, datosHistorial, soloLectura = false }: Props) {
   const [nombre, setNombre] = useState('')
   const [dni, setDni] = useState('')
   const [sucursal, setSucursal] = useState('')
@@ -211,10 +212,17 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
 
   return (
     <Paper p="xl" withBorder>
-      <Title order={3} mb="lg" ta="center" c={esCargaHistorial ? "orange" : "blue"}>
-        {esCargaHistorial ? "Presupuesto del Historial" : "Datos del Paciente"}
+      <Title order={3} mb="lg" ta="center" c={soloLectura ? "teal" : esCargaHistorial ? "orange" : "blue"}>
+        {soloLectura ? "Visualizando Presupuesto" : esCargaHistorial ? "Presupuesto del Historial" : "Datos del Paciente"}
       </Title>
-      {esCargaHistorial && (
+      {soloLectura && (
+        <Paper p="xs" withBorder mb="md" style={{ backgroundColor: '#e7f5ff' }}>
+          <Text size="sm" c="blue" fw={500} ta="center">
+            Modo solo lectura - No se pueden realizar modificaciones
+          </Text>
+        </Paper>
+      )}
+      {esCargaHistorial && !soloLectura && (
         <Group justify="center" gap="xs" mb="md">
           <Text size="sm" c="orange" ta="center">
             Presupuesto cargado del historial - Nombre y sucursal no modificables
@@ -228,15 +236,15 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
-          disabled={esCargaHistorial}
-          variant={esCargaHistorial ? "filled" : "default"}
+          disabled={esCargaHistorial || soloLectura}
+          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
         />
         
         <TextInput
           label="DNI"
           value={dni}
-          disabled={esCargaHistorial}
-          variant={esCargaHistorial ? "filled" : "default"}
+          disabled={esCargaHistorial || soloLectura}
+          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
           onChange={(e) => setDni(e.target.value)}
           required
         />
@@ -248,8 +256,8 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           onChange={(value) => setSucursal(value || '')}
           placeholder="Seleccione una sucursal"
           required
-          disabled={esCargaHistorial}
-          variant={esCargaHistorial ? "filled" : "default"}
+          disabled={esCargaHistorial || soloLectura}
+          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
           searchable
           checkIconPosition="right"
         />
@@ -258,18 +266,21 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           label="Difícil Acceso"
           checked={dificilAcceso}
           onChange={(e) => setDificilAcceso(e.target.checked)}
+          disabled={soloLectura}
         />
         
-        <Group justify="center" mt="lg">
-          {presupuestoCreado && (
-            <Button onClick={nuevoPresupuesto} variant="outline">
-              Nuevo Presupuesto
+        {!soloLectura && (
+          <Group justify="center" mt="lg">
+            {presupuestoCreado && (
+              <Button onClick={nuevoPresupuesto} variant="outline">
+                Nuevo Presupuesto
+              </Button>
+            )}
+            <Button onClick={guardarYContinuar} disabled={presupuestoCreado}>
+              {presupuestoCreado ? 'Paciente Guardado' : 'Crear Presupuesto'}
             </Button>
-          )}
-          <Button onClick={guardarYContinuar} disabled={presupuestoCreado}>
-            {presupuestoCreado ? 'Paciente Guardado' : 'Crear Presupuesto'}
-          </Button>
-        </Group>
+          </Group>
+        )}
       </Stack>
 
       <Modal opened={modalDNI} onClose={() => setModalDNI(false)} title="DNI Existente">

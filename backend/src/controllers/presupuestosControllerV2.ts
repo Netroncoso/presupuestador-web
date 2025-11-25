@@ -18,6 +18,10 @@ const evaluarEstadoAutomatico = (presupuesto: any) => {
     reglas.push('Marcado como difícil acceso');
   }
   
+  if (presupuesto.rentabilidad_con_plazo > 25) {
+    reglas.push('Rentabilidad con plazo superior a 25%');
+  }
+  
   return reglas.length > 0 ? 'pendiente' : 'borrador';
 };
 
@@ -80,67 +84,87 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
 // Finalizar presupuesto (evaluar estado final, no crear versión)
 export const finalizarPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const id = parseInt(req.params.id);
-  const { totales } = req.body; // Recibir totales del frontend
   
-  const [presupuesto] = await pool.query<any[]>(
-    'SELECT * FROM presupuestos WHERE idPresupuestos = ? AND es_ultima_version = 1',
-    [id]
-  );
+  // 1. Obtener presupuesto con totales calculados en una sola query
+  const [result] = await pool.query<any[]>(`
+    SELECT 
+      p.*,
+      COALESCE(SUM(i.costo * i.cantidad), 0) as total_insumos_costo,
+      COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as total_insumos_facturar,
+      COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as total_prestaciones_costo,
+      COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as total_prestaciones_facturar,
+      f.tasa_mensual,
+      f.dias_cobranza_real,
+      f.dias_cobranza_teorico
+    FROM presupuestos p
+    LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
+    LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
+    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    WHERE p.idPresupuestos = ? AND p.es_ultima_version = 1
+    GROUP BY p.idPresupuestos
+  `, [id]);
 
-  if (presupuesto.length === 0) {
+  if (result.length === 0) {
     throw new AppError(404, 'Presupuesto no encontrado');
   }
 
-  const current = presupuesto[0];
+  const current = result[0];
   
-  // Actualizar totales si se proporcionaron
-  if (totales) {
-    await pool.query(`
-      UPDATE presupuestos SET 
-        total_insumos = ?, 
-        total_prestaciones = ?, 
-        costo_total = ?, 
-        total_facturar = ?, 
-        rentabilidad = ?, 
-        rentabilidad_con_plazo = ?
-      WHERE idPresupuestos = ?
-    `, [
-      totales.totalInsumos || 0,
-      totales.totalPrestaciones || 0, 
-      totales.costoTotal || 0,
-      totales.totalFacturar || 0,
-      totales.rentabilidad || 0,
-      totales.rentabilidadConPlazo || 0,
-      id
-    ]);
+  if (current.estado !== 'borrador') {
+    throw new AppError(400, 'Solo se pueden finalizar presupuestos en borrador');
   }
   
-  // Evaluar estado final usando totales actualizados
-  const rentabilidadFinal = totales?.rentabilidad || current.rentabilidad || 0;
-  const costoTotalFinal = totales?.costoTotal || current.costo_total || 0;
+  const totalInsumos = Number(current.total_insumos_costo);
+  const totalPrestaciones = Number(current.total_prestaciones_costo);
+  const costoTotal = totalInsumos + totalPrestaciones;
+  
+  if (costoTotal === 0) {
+    throw new AppError(400, 'No se puede finalizar un presupuesto sin insumos ni prestaciones');
+  }
+  
+  const totalFacturar = Number(current.total_insumos_facturar) + Number(current.total_prestaciones_facturar);
+  const rentabilidad = ((totalFacturar - costoTotal) / costoTotal) * 100;
+  
+  let rentabilidadConPlazo = rentabilidad;
+  
+  if (current.idobra_social && current.tasa_mensual) {
+    const diasCobranza = current.dias_cobranza_real || current.dias_cobranza_teorico || 30;
+    const tasaMensual = (current.tasa_mensual || 2) / 100;
+    const mesesCobranza = Math.floor(diasCobranza / 30);
+    const valorPresente = totalFacturar / Math.pow(1 + tasaMensual, mesesCobranza);
+    const utilidadConPlazo = valorPresente - costoTotal;
+    rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100;
+  }
   
   const estadoFinal = evaluarEstadoAutomatico({ 
-    rentabilidad: rentabilidadFinal, 
-    costo_total: costoTotalFinal, 
+    rentabilidad, 
+    rentabilidad_con_plazo: rentabilidadConPlazo,
+    costo_total: costoTotal, 
     dificil_acceso: current.dificil_acceso 
   });
-
-  // Actualizar estado si cambió
-  if (estadoFinal !== current.estado) {
-    await pool.query(
-      'UPDATE presupuestos SET estado = ? WHERE idPresupuestos = ?',
-      [estadoFinal, id]
-    );
-    
-    // Notificar auditores si quedó pendiente
-    if (estadoFinal === 'pendiente') {
-      await notificarAuditores(id, current.version, `Presupuesto finalizado requiere aprobación: ${current.Nombre_Apellido}`);
-    }
+  
+  // Actualizar estado
+  await pool.query(
+    'UPDATE presupuestos SET estado = ?, total_insumos = ?, total_prestaciones = ?, costo_total = ?, total_facturar = ?, rentabilidad = ?, rentabilidad_con_plazo = ? WHERE idPresupuestos = ?',
+    [estadoFinal, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, id]
+  );
+  
+  // Notificar auditores si es necesario (sin await para no bloquear)
+  if (estadoFinal === 'pendiente') {
+    notificarAuditores(id, current.version, `Presupuesto finalizado requiere aprobación: ${current.Nombre_Apellido}`).catch(err => console.error('Error notificando:', err));
   }
-
+  
   res.json({ 
     success: true,
     estado: estadoFinal,
+    totales: {
+      totalInsumos,
+      totalPrestaciones,
+      costoTotal,
+      totalFacturar,
+      rentabilidad: Number(rentabilidad.toFixed(2)),
+      rentabilidadConPlazo: Number(rentabilidadConPlazo.toFixed(2))
+    },
     mensaje: estadoFinal === 'pendiente' ? 'Presupuesto enviado para auditoría' : 'Presupuesto finalizado'
   });
 });
@@ -149,8 +173,8 @@ export const finalizarPresupuesto = asyncHandler(async (req: Request & { user?: 
 export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const idOriginal = parseInt(req.params.id);
   const usuario_id = req.user?.id;
+  const { confirmar } = req.body;
   
-  // Obtener presupuesto original (cualquier versión)
   const [presupuestoOriginal] = await pool.query<any[]>(
     'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
     [idOriginal]
@@ -162,88 +186,83 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
 
   const original = presupuestoOriginal[0];
   
-  // Obtener insumos y prestaciones para copiar
-  const [[insumos], [prestaciones]] = await Promise.all([
+  // Si es borrador y no se confirmó, solo retornar info sin crear versión
+  if (original.estado === 'borrador' && !confirmar) {
+    return res.json({
+      requiereNuevaVersion: false,
+      id: idOriginal,
+      version: original.version,
+      estado: 'borrador',
+      mensaje: 'Este presupuesto ya está en borrador, puede editarlo directamente'
+    });
+  }
+  
+  // Si no es borrador y no se confirmó, pedir confirmación
+  if (original.estado !== 'borrador' && !confirmar) {
+    return res.json({
+      requiereNuevaVersion: true,
+      requiereConfirmacion: true,
+      estadoActual: original.estado,
+      versionActual: original.version,
+      mensaje: `El presupuesto está ${original.estado}. Se creará una nueva versión para editar.`
+    });
+  }
+  
+  // Crear nueva versión (solo si se confirmó o es necesario)
+  const presupuestoPadreId = original.presupuesto_padre || idOriginal;
+  
+  const [[maxVersion], [insumos], [prestaciones]] = await Promise.all([
+    pool.query<any[]>('SELECT MAX(version) as max_version FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?', [presupuestoPadreId, presupuestoPadreId]),
     pool.query<any[]>('SELECT producto, costo, precio_facturar, cantidad FROM presupuesto_insumos WHERE idPresupuestos = ?', [idOriginal]),
     pool.query<any[]>('SELECT id_servicio, prestacion, valor_asignado, valor_facturar, cantidad FROM presupuesto_prestaciones WHERE idPresupuestos = ?', [idOriginal])
   ]);
-
-  const connection = await pool.getConnection();
   
-  try {
-    await connection.beginTransaction();
+  const nuevaVersion = (maxVersion[0]?.max_version || 0) + 1;
+  
+  await pool.query(
+    'UPDATE presupuestos SET es_ultima_version = 0 WHERE idPresupuestos = ? OR presupuesto_padre = ?',
+    [presupuestoPadreId, presupuestoPadreId]
+  );
+  
+  const [resultPresupuesto] = await pool.query<any>(`
+    INSERT INTO presupuestos 
+    (version, presupuesto_padre, es_ultima_version, estado, usuario_id,
+     Nombre_Apellido, DNI, Sucursal, dificil_acceso, idobra_social,
+     total_insumos, total_prestaciones, costo_total, total_facturar, 
+     rentabilidad, rentabilidad_con_plazo)
+    VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    nuevaVersion, presupuestoPadreId, usuario_id,
+    original.Nombre_Apellido, original.DNI, original.Sucursal,
+    original.dificil_acceso, original.idobra_social,
+    original.total_insumos, original.total_prestaciones,
+    original.costo_total, original.total_facturar,
+    original.rentabilidad, original.rentabilidad_con_plazo
+  ]);
 
-    // Marcar todas las versiones del mismo grupo como no-actual
-    const presupuestoPadreId = original.presupuesto_padre || idOriginal;
-    await connection.query(
-      'UPDATE presupuestos SET es_ultima_version = 0 WHERE idPresupuestos = ? OR presupuesto_padre = ?',
-      [presupuestoPadreId, presupuestoPadreId]
-    );
+  const nuevoId = resultPresupuesto.insertId;
 
-    // Obtener la versión más alta del grupo
-    const [maxVersion] = await connection.query<any[]>(
-      'SELECT MAX(version) as max_version FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?',
-      [presupuestoPadreId, presupuestoPadreId]
-    );
-    const nuevaVersion = (maxVersion[0]?.max_version || 0) + 1;
-
-    // Crear nueva versión para edición
-    const [resultPresupuesto] = await connection.query<any>(`
-      INSERT INTO presupuestos 
-      (version, presupuesto_padre, es_ultima_version, estado, usuario_id,
-       Nombre_Apellido, DNI, Sucursal, dificil_acceso, idobra_social,
-       total_insumos, total_prestaciones, costo_total, total_facturar, 
-       rentabilidad, rentabilidad_con_plazo)
-      VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      nuevaVersion,
-      presupuestoPadreId,
-      usuario_id,
-      original.Nombre_Apellido,
-      original.DNI,
-      original.Sucursal,
-      original.dificil_acceso,
-      original.idobra_social,
-      original.total_insumos,
-      original.total_prestaciones,
-      original.costo_total,
-      original.total_facturar,
-      original.rentabilidad,
-      original.rentabilidad_con_plazo
-    ]);
-
-    const nuevoId = resultPresupuesto.insertId;
-
-    // Copiar insumos y prestaciones
-    console.log(`Copiando ${insumos.length} insumos y ${prestaciones.length} prestaciones para presupuesto ${nuevoId}`);
-    
-    if (insumos.length > 0) {
-      const insumosValues = insumos.map(i => [nuevoId, i.producto, i.costo, i.precio_facturar, i.cantidad]);
-      await connection.query('INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad) VALUES ?', [insumosValues]);
-      console.log(`✓ Copiados ${insumos.length} insumos`);
-    }
-
-    if (prestaciones.length > 0) {
-      const prestacionesValues = prestaciones.map(p => [nuevoId, p.id_servicio, p.prestacion, p.cantidad, p.valor_asignado, p.valor_facturar]);
-      await connection.query('INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES ?', [prestacionesValues]);
-      console.log(`✓ Copiadas ${prestaciones.length} prestaciones`);
-    }
-    
-    console.log(`✓ Nueva versión creada: ID ${nuevoId}, versión ${nuevaVersion}, financiador: ${original.idobra_social}`);
-
-    await connection.commit();
-    res.status(201).json({ 
-      id: nuevoId, 
-      version: nuevaVersion,
-      estado: 'borrador'
-    });
-    
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  const promises = [];
+  
+  if (insumos.length > 0) {
+    const insumosValues = insumos.map(i => [nuevoId, i.producto, i.costo, i.precio_facturar, i.cantidad]);
+    promises.push(pool.query('INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad) VALUES ?', [insumosValues]));
   }
+
+  if (prestaciones.length > 0) {
+    const prestacionesValues = prestaciones.map(p => [nuevoId, p.id_servicio, p.prestacion, p.cantidad, p.valor_asignado, p.valor_facturar]);
+    promises.push(pool.query('INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES ?', [prestacionesValues]));
+  }
+  
+  await Promise.all(promises);
+
+  res.status(201).json({ 
+    requiereNuevaVersion: true,
+    id: nuevoId, 
+    version: nuevaVersion,
+    estado: 'borrador',
+    mensaje: `Nueva versión ${nuevaVersion} creada para edición`
+  });
 });
 
 // Obtener historial de versiones
@@ -372,21 +391,56 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
 export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   
-  // Obtener presupuesto con información del financiador (cualquier versión)
+  // Obtener presupuesto con totales calculados
   const [rows] = await pool.query<any[]>(`
-    SELECT p.*, f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
-           fa.nombre as acuerdo_nombre
+    SELECT 
+      p.*, 
+      f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
+      fa.nombre as acuerdo_nombre,
+      COALESCE(SUM(i.costo * i.cantidad), 0) as calc_total_insumos,
+      COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as calc_total_insumos_facturar,
+      COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as calc_total_prestaciones,
+      COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar
     FROM presupuestos p 
     LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
+    LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
+    LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
     WHERE p.idPresupuestos = ?
+    GROUP BY p.idPresupuestos
   `, [id]);
 
   if (rows.length === 0) {
     throw new AppError(404, 'Presupuesto no encontrado');
   }
 
-  const presupuesto = rows[0];
+  let presupuesto = rows[0];
+  
+  // Si los totales están en 0, usar los calculados
+  if (presupuesto.costo_total === 0 && (presupuesto.calc_total_insumos > 0 || presupuesto.calc_total_prestaciones > 0)) {
+    const totalInsumos = Number(presupuesto.calc_total_insumos);
+    const totalPrestaciones = Number(presupuesto.calc_total_prestaciones);
+    const costoTotal = totalInsumos + totalPrestaciones;
+    const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar);
+    const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
+    
+    let rentabilidadConPlazo = rentabilidad;
+    if (presupuesto.idobra_social && presupuesto.tasa_mensual && costoTotal > 0) {
+      const diasCobranza = presupuesto.dias_cobranza_real || presupuesto.dias_cobranza_teorico || 30;
+      const tasaMensual = (presupuesto.tasa_mensual || 2) / 100;
+      const mesesCobranza = Math.floor(diasCobranza / 30);
+      const valorPresente = totalFacturar / Math.pow(1 + tasaMensual, mesesCobranza);
+      const utilidadConPlazo = valorPresente - costoTotal;
+      rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100;
+    }
+    
+    presupuesto.total_insumos = totalInsumos;
+    presupuesto.total_prestaciones = totalPrestaciones;
+    presupuesto.costo_total = costoTotal;
+    presupuesto.total_facturar = totalFacturar;
+    presupuesto.rentabilidad = rentabilidad;
+    presupuesto.rentabilidad_con_plazo = rentabilidadConPlazo;
+  }
 
   // Obtener prestaciones del presupuesto
   const [prestaciones] = await pool.query<any[]>(`
@@ -415,18 +469,59 @@ export const actualizarPrestador = asyncHandler(async (req: Request, res: Respon
   const id = parseInt(req.params.id);
   const { idobra_social } = req.body;
   
-  const [result] = await pool.query<any>(`
-    UPDATE presupuestos 
-    SET idobra_social = ? 
-    WHERE idPresupuestos = ?
-  `, [idobra_social, id]);
-
-  if (result.affectedRows === 0) {
-    throw new AppError(404, 'Presupuesto no encontrado');
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    // Actualizar financiador
+    await connection.query(
+      'UPDATE presupuestos SET idobra_social = ? WHERE idPresupuestos = ?',
+      [idobra_social, id]
+    );
+    
+    // Obtener presupuesto actualizado
+    const [presupuesto] = await connection.query<any[]>(
+      'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
+      [id]
+    );
+    
+    if (presupuesto.length === 0) {
+      throw new AppError(404, 'Presupuesto no encontrado');
+    }
+    
+    const current = presupuesto[0];
+    
+    // Recalcular rentabilidad con plazo si hay financiador y totales
+    if (idobra_social && current.costo_total > 0) {
+      const [financiador] = await connection.query<any[]>(
+        'SELECT tasa_mensual, dias_cobranza_real, dias_cobranza_teorico FROM financiador WHERE idobra_social = ?',
+        [idobra_social]
+      );
+      
+      if (financiador.length > 0) {
+        const diasCobranza = financiador[0].dias_cobranza_real || financiador[0].dias_cobranza_teorico || 30;
+        const tasaMensual = (financiador[0].tasa_mensual || 2) / 100;
+        const mesesCobranza = Math.floor(diasCobranza / 30);
+        
+        const valorPresente = current.total_facturar / Math.pow(1 + tasaMensual, mesesCobranza);
+        const utilidadConPlazo = valorPresente - current.costo_total;
+        const rentabilidadConPlazo = (utilidadConPlazo / current.costo_total) * 100;
+        
+        await connection.query(
+          'UPDATE presupuestos SET rentabilidad_con_plazo = ? WHERE idPresupuestos = ?',
+          [rentabilidadConPlazo, id]
+        );
+      }
+    }
+    
+    await connection.commit();
+    res.json({ ok: true });
+    
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
-
-  res.json({ ok: true });
 });
-
-// Alias para compatibilidad
-export const guardarVersion = finalizarPresupuesto;
