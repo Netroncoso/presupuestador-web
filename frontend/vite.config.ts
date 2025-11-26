@@ -8,7 +8,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if (err.code === 'ECONNRESET') return;
+            console.error('proxy error', err);
+          });
+        }
       }
     }
   },

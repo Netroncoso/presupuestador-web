@@ -69,14 +69,14 @@ export const listarPresupuestos = asyncHandler(async (req: Request, res: Respons
 
 // Crear presupuesto (versión 1)
 export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
-  const { nombre, dni, sucursal, dificil_acceso } = req.body;
+  const { nombre, dni, sucursal, dificil_acceso, porcentaje_insumos } = req.body;
   const usuario_id = req.user?.id;
   
   const [result] = await pool.query<any>(`
     INSERT INTO presupuestos 
-    (Nombre_Apellido, DNI, Sucursal, dificil_acceso, usuario_id, version, es_ultima_version, estado) 
-    VALUES (?,?,?,?,?, 1, 1, 'borrador')
-  `, [nombre.trim(), dni, sucursal, dificil_acceso || 'no', usuario_id]);
+    (Nombre_Apellido, DNI, Sucursal, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+    VALUES (?,?,?,?,?,?, 1, 1, 'borrador')
+  `, [nombre.trim(), dni, sucursal, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id]);
   
   res.status(201).json({ id: result.insertId, version: 1 });
 });

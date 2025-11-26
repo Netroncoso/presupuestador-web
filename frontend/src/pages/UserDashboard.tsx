@@ -9,6 +9,7 @@ import Auditoria from "./Auditoria";
 import { NotificationIndicator } from '../components/NotificationIndicator';
 import { ModalAuditoria } from '../components/ModalAuditoria';
 import { ModalConfirmarEdicion } from '../components/ModalConfirmarEdicion';
+import { ModalValidacionItems } from '../components/ModalValidacionItems';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
@@ -62,6 +63,9 @@ export default function UserDashboard() {
   const [presupuestoParaEditar, setPresupuestoParaEditar] = useState<any>(null);
   const [infoEdicion, setInfoEdicion] = useState<any>(null);
   const [soloLectura, setSoloLectura] = useState(false);
+  const [modalValidacionAbierto, setModalValidacionAbierto] = useState(false);
+  const [itemsFaltantes, setItemsFaltantes] = useState<any[]>([]);
+  const [validacionCompletada, setValidacionCompletada] = useState(false);
 
   const {
     presupuestoId,
@@ -111,28 +115,84 @@ export default function UserDashboard() {
     prestacionesSeleccionadas,
   });
 
-  const handleFinalizarPresupuesto = useCallback(async () => {
+  const validarItemsAntesDeFinalizarPresupuesto = useCallback(async () => {
+    if (!presupuestoId) return { valido: false, faltantes: [] };
+    
     try {
-      const totales = {
-        totalInsumos,
-        totalPrestaciones,
-        costoTotal,
-        totalFacturar,
-        rentabilidad,
-        rentabilidadConPlazo
-      };
+      const response = await api.get(`/presupuestos/${presupuestoId}`);
+      const { insumos, prestaciones } = response.data;
       
-      const response = await finalizarPresupuesto(totales);
-      setRecargarHistorial(prev => prev + 1);
+      const faltantes: any[] = [];
       
-      // Limpiar interfaz después de finalizar
-      setTimeout(() => {
-        handleNuevoPresupuesto();
-      }, 2000);
+      // Comparar insumos del frontend vs BD
+      insumosSeleccionados.forEach(insumo => {
+        const existe = insumos.find((i: any) => 
+          i.id_insumo === insumo.idInsumos && 
+          i.cantidad === insumo.cantidad
+        );
+        if (!existe) {
+          faltantes.push({
+            tipo: 'insumo',
+            nombre: insumo.producto,
+            cantidad: insumo.cantidad,
+            datos: insumo,
+            accion: 'guardar'
+          });
+        }
+      });
+      
+      // Detectar insumos en BD que no están en frontend (eliminados)
+      insumos.forEach((insumo: any) => {
+        const existe = insumosSeleccionados.find(i => i.idInsumos === insumo.id_insumo);
+        if (!existe) {
+          faltantes.push({
+            tipo: 'insumo',
+            nombre: insumo.producto,
+            cantidad: insumo.cantidad,
+            datos: insumo,
+            accion: 'eliminar'
+          });
+        }
+      });
+      
+      // Comparar prestaciones del frontend vs BD
+      prestacionesSeleccionadas.forEach(prestacion => {
+        const existe = prestaciones.find((p: any) => 
+          String(p.id_servicio) === String(prestacion.id_servicio) &&
+          p.cantidad === prestacion.cantidad &&
+          Math.abs(p.valor_asignado - prestacion.valor_asignado) < 0.01
+        );
+        if (!existe) {
+          faltantes.push({
+            tipo: 'prestacion',
+            nombre: prestacion.prestacion,
+            cantidad: prestacion.cantidad,
+            datos: prestacion,
+            accion: 'guardar'
+          });
+        }
+      });
+      
+      // Detectar prestaciones en BD que no están en frontend (eliminadas)
+      prestaciones.forEach((prestacion: any) => {
+        const existe = prestacionesSeleccionadas.find(p => String(p.id_servicio) === String(prestacion.id_servicio));
+        if (!existe) {
+          faltantes.push({
+            tipo: 'prestacion',
+            nombre: prestacion.prestacion,
+            cantidad: prestacion.cantidad,
+            datos: prestacion,
+            accion: 'eliminar'
+          });
+        }
+      });
+      
+      return { valido: faltantes.length === 0, faltantes };
     } catch (error) {
-      console.error('Error al finalizar presupuesto:', error);
+      console.error('Error validando items:', error);
+      return { valido: false, faltantes: [] };
     }
-  }, [finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo]);
+  }, [presupuestoId, insumosSeleccionados, prestacionesSeleccionadas]);
 
   const handleNuevoPresupuesto = useCallback(() => {
     resetPresupuesto();
@@ -143,6 +203,46 @@ export default function UserDashboard() {
     setDatosHistorial(undefined);
     setSoloLectura(false);
   }, [resetPresupuesto, resetTotales]);
+
+  const ejecutarFinalizacion = useCallback(async () => {
+    try {
+      const totales = {
+        totalInsumos,
+        totalPrestaciones,
+        costoTotal,
+        totalFacturar,
+        rentabilidad,
+        rentabilidadConPlazo
+      };
+      
+      await finalizarPresupuesto(totales);
+      setRecargarHistorial(prev => prev + 1);
+      setValidacionCompletada(false);
+      
+      setTimeout(() => {
+        handleNuevoPresupuesto();
+      }, 2000);
+    } catch (error) {
+      console.error('Error al finalizar presupuesto:', error);
+      setValidacionCompletada(false);
+    }
+  }, [finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, handleNuevoPresupuesto]);
+
+  const handleFinalizarPresupuesto = useCallback(async () => {
+    if (validacionCompletada) {
+      await ejecutarFinalizacion();
+      return;
+    }
+    
+    const { valido, faltantes } = await validarItemsAntesDeFinalizarPresupuesto();
+    
+    if (!valido && faltantes.length > 0) {
+      setItemsFaltantes(faltantes);
+      setModalValidacionAbierto(true);
+    } else {
+      await ejecutarFinalizacion();
+    }
+  }, [validacionCompletada, validarItemsAntesDeFinalizarPresupuesto, ejecutarFinalizacion]);
 
   const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLecturaParam: boolean = true) => {
     if (soloLecturaParam) {
@@ -268,6 +368,64 @@ export default function UserDashboard() {
     }
   }, [presupuestoId, cerrarModalAuditoria]);
 
+  const handleReintentarItem = useCallback(async (item: any): Promise<boolean> => {
+    if (!presupuestoId) return false;
+    
+    try {
+      if (item.accion === 'eliminar') {
+        // Eliminar item de BD
+        if (item.tipo === 'insumo') {
+          await api.delete(`/presupuestos/${presupuestoId}/insumos`, {
+            data: { producto: item.datos.producto }
+          });
+        } else {
+          await api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
+            data: { id_servicio: item.datos.id_servicio }
+          });
+        }
+      } else {
+        // Guardar item en BD
+        if (item.tipo === 'insumo') {
+          await api.post(`/presupuestos/${presupuestoId}/insumos`, {
+            producto: item.datos.producto,
+            costo: item.datos.costo,
+            cantidad: item.datos.cantidad,
+            id_insumo: item.datos.idInsumos
+          });
+        } else {
+          await api.post(`/presupuestos/${presupuestoId}/prestaciones`, {
+            id_servicio: item.datos.id_servicio,
+            prestacion: item.datos.prestacion,
+            cantidad: item.datos.cantidad,
+            valor_asignado: item.datos.valor_asignado,
+            valor_facturar: item.datos.valor_facturar
+          });
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Error procesando item:', error);
+      return false;
+    }
+  }, [presupuestoId]);
+
+  const handleTodosItemsGuardados = useCallback(() => {
+    setModalValidacionAbierto(false);
+    setValidacionCompletada(true);
+    handleFinalizarPresupuesto();
+  }, [handleFinalizarPresupuesto]);
+
+  const handleContinuarSinItems = useCallback(() => {
+    setModalValidacionAbierto(false);
+    setValidacionCompletada(true);
+    handleFinalizarPresupuesto();
+  }, [handleFinalizarPresupuesto]);
+
+  const handleCerrarModalValidacion = useCallback(() => {
+    setModalValidacionAbierto(false);
+    setItemsFaltantes([]);
+  }, []);
+
   const handleConfirmarEdicion = useCallback(async () => {
     if (!presupuestoParaEditar) return;
     
@@ -382,6 +540,12 @@ export default function UserDashboard() {
 
           <Card shadow="xs" padding="md" radius="md" withBorder>
             <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Utilidad:</Text>
+                <Text fw={500} c={totalFacturar - costoTotal >= 0 ? "green" : "red"}>
+                  {formatCurrency(totalFacturar - costoTotal)}
+                </Text>
+              </Flex>
               <Flex justify="space-between">
                 <Text fw={600}>Rentabilidad:</Text>
                 <Text fw={600} c={rentabilidad >= 0 ? "green" : "red"}>
@@ -537,6 +701,15 @@ export default function UserDashboard() {
         presupuesto={presupuestoParaEditar || { id: 0, nombre: '', version: 0, estado: '' }}
         requiereNuevaVersion={infoEdicion?.requiereNuevaVersion || false}
         onConfirmar={handleConfirmarEdicion}
+      />
+
+      <ModalValidacionItems
+        opened={modalValidacionAbierto}
+        onClose={handleCerrarModalValidacion}
+        itemsFaltantes={itemsFaltantes}
+        onReintentarItem={handleReintentarItem}
+        onContinuarDeTodasFormas={handleContinuarSinItems}
+        onFinalizarPresupuesto={handleTodosItemsGuardados}
       />
     </Container>
   );

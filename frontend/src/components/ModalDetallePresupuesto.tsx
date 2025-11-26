@@ -74,6 +74,12 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
               <Text fw={500} size="lg" c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Text>
             </div>
             <div>
+              <Text size="sm" c="dimmed">Utilidad</Text>
+              <Text fw={500} size="lg" c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
+                ${(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)).toLocaleString()}
+              </Text>
+            </div>
+            <div>
               <Text size="sm" c="dimmed">Rentabilidad</Text>
               <Text fw={500} size="lg" c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
                 {Number(presupuesto.rentabilidad || 0).toFixed(2)}%

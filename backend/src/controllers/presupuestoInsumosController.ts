@@ -57,18 +57,24 @@ const recalcularTotales = async (presupuestoId: number) => {
 
 export const guardarInsumoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
-  const { producto, costo, precio_facturar, cantidad } = req.body;
+  const { producto, costo, cantidad, id_insumo } = req.body;
 
   if (isNaN(presupuestoId) || !producto || !costo || !cantidad) {
     throw new AppError(400, 'Datos inválidos');
   }
 
-  // Si no se proporciona precio_facturar, usar costo como fallback (compatibilidad)
-  const precioFinal = precio_facturar || costo;
+  // Obtener porcentaje del presupuesto
+  const [presupuesto] = await pool.query<any[]>(
+    'SELECT porcentaje_insumos FROM presupuestos WHERE idPresupuestos = ?',
+    [presupuestoId]
+  );
+  
+  const porcentaje = presupuesto[0]?.porcentaje_insumos || 0;
+  const precio_facturar = costo * (1 + porcentaje / 100);
 
   await pool.query(
-    'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE costo = VALUES(costo), precio_facturar = VALUES(precio_facturar), cantidad = VALUES(cantidad)',
-    [presupuestoId, producto, costo, precioFinal, cantidad]
+    'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad, id_insumo) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE costo = VALUES(costo), precio_facturar = VALUES(precio_facturar), cantidad = VALUES(cantidad), id_insumo = VALUES(id_insumo)',
+    [presupuestoId, producto, costo, precio_facturar, cantidad, id_insumo || null]
   );
   
   // Recalcular totales
@@ -104,7 +110,7 @@ export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: 
   }
 
   const [rows] = await pool.query(
-    'SELECT producto, costo, precio_facturar, cantidad FROM presupuesto_insumos WHERE idPresupuestos = ?',
+    'SELECT producto, costo, precio_facturar, cantidad, id_insumo FROM presupuesto_insumos WHERE idPresupuestos = ?',
     [presupuestoId]
   );
 

@@ -76,7 +76,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
       api.post(`/presupuestos/${presupuestoId}/insumos`, {
         producto: insumoSeleccionado.producto,
         costo: insumoSeleccionado.costo,
-        cantidad
+        cantidad,
+        id_insumo: insumoSeleccionado.idInsumos
       }).catch((err: any) => console.error('Error saving insumo:', err))
     }
 
@@ -119,7 +120,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
       api.post(`/presupuestos/${presupuestoId}/insumos`, {
         producto: nuevosInsumos[index].producto,
         costo: nuevosInsumos[index].costo,
-        cantidad: nuevaCantidad
+        cantidad: nuevaCantidad,
+        id_insumo: nuevosInsumos[index].idInsumos
       }).catch((err: any) => console.error('Error updating insumo:', err))
     }
     

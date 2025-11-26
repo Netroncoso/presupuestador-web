@@ -39,7 +39,10 @@ export const presupuestoService = {
 
   obtenerInsumos: async (id: number): Promise<Insumo[]> => {
     const res = await api.get(`/presupuestos/${id}/insumos`);
-    return res.data;
+    return res.data.map((insumo: any) => ({
+      ...insumo,
+      idInsumos: insumo.id_insumo
+    }));
   },
 
   obtenerPrestaciones: async (id: number): Promise<Prestacion[]> => {

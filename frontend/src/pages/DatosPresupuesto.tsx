@@ -82,15 +82,16 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
 
   const crearNuevoPresupuesto = async () => {
     try {
+      const sucursalData = sucursales.find(s => s.Sucursales_mh === sucursal)
+      const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
+      
       const res = await api.post('/presupuestos', {
         nombre,
         dni,
         sucursal,
-        dificil_acceso: dificilAcceso ? 'si' : 'no'
+        dificil_acceso: dificilAcceso ? 'si' : 'no',
+        porcentaje_insumos: porcentajeInsumos
       })
-      
-      const sucursalData = sucursales.find(s => s.Sucursales_mh === sucursal)
-      const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
       
       setPresupuestoCreado(true)
       onPresupuestoCreado(res.data.id, nombre, sucursal, porcentajeInsumos)
@@ -111,15 +112,16 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
 
   const crearNuevoConDatos = async (nombreParam: string, sucursalParam: string) => {
     try {
+      const sucursalData = sucursales.find(s => s.Sucursales_mh === sucursalParam)
+      const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
+      
       const res = await api.post('/presupuestos', {
         nombre: nombreParam,
         dni,
         sucursal: sucursalParam,
-        dificil_acceso: dificilAcceso ? 'si' : 'no'
+        dificil_acceso: dificilAcceso ? 'si' : 'no',
+        porcentaje_insumos: porcentajeInsumos
       })
-      
-      const sucursalData = sucursales.find(s => s.Sucursales_mh === sucursalParam)
-      const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
       
       setPresupuestoCreado(true)
       onPresupuestoCreado(res.data.id, nombreParam, sucursalParam, porcentajeInsumos)
