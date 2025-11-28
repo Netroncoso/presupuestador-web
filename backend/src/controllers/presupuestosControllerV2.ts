@@ -404,6 +404,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
       p.*, 
       f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
       fa.nombre as acuerdo_nombre,
+      u.username as usuario_creador,
       COALESCE(SUM(i.costo * i.cantidad), 0) as calc_total_insumos,
       COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as calc_total_insumos_facturar,
       COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as calc_total_prestaciones,
@@ -411,6 +412,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
     FROM presupuestos p 
     LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
+    LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
     LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
     WHERE p.idPresupuestos = ?

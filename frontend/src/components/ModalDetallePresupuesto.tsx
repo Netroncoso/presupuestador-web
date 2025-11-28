@@ -40,55 +40,55 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           <Title order={4} mb="sm">Información del Paciente</Title>
           <Group grow>
             <div>
-              <Text size="sm" c="dimmed">Paciente</Text>
-              <Text fw={500}>{presupuesto.Nombre_Apellido}</Text>
+              <Text size="md" c="dimmed">Paciente</Text>
+              <Text fw={450}>{presupuesto.Nombre_Apellido}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">DNI</Text>
-              <Text fw={500}>{presupuesto.DNI}</Text>
+              <Text size="md" c="dimmed">DNI</Text>
+              <Text fw={450}>{presupuesto.DNI}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Sucursal</Text>
-              <Text fw={500}>{presupuesto.Sucursal || presupuesto.sucursal_nombre}</Text>
+              <Text size="md" c="dimmed">Sucursal</Text>
+              <Text fw={450}>{presupuesto.Sucursal || presupuesto.sucursal_nombre}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Financiador</Text>
-              <Text fw={500}>{presupuesto.Financiador || presupuesto.financiador || 'No asignado'}</Text>
+              <Text size="md" c="dimmed">Financiador</Text>
+              <Text fw={450}>{presupuesto.Financiador || presupuesto.financiador || 'No asignado'}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Creado por</Text>
-              <Text fw={500}>{presupuesto.creador || presupuesto.usuario_creador || 'No disponible'}</Text>
+              <Text size="md" c="dimmed">Creado por</Text>
+              <Text fw={450}>{presupuesto.creador || presupuesto.usuario_creador || 'No disponible'}</Text>
             </div>
           </Group>
         </Paper>
 
         <Paper p="md" withBorder>
-          <Title order={4} mb="sm">Totales del Presupuesto</Title>
+          <Title order={4} mb="md">Totales del Presupuesto</Title>
           <Group grow>
             <div>
-              <Text size="sm" c="dimmed">Costo Total</Text>
-              <Text fw={500} size="lg">${Number(presupuesto.costo_total || 0).toLocaleString()}</Text>
+              <Text size="md" c="dimmed">Costo Total</Text>
+              <Text fw={450} size="lg">${Number(presupuesto.costo_total || 0).toLocaleString()}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Total a Facturar</Text>
-              <Text fw={500} size="lg" c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Text>
+              <Text size="md" c="dimmed">Total a Facturar</Text>
+              <Text fw={450} size="lg" c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Utilidad</Text>
-              <Text fw={500} size="lg" c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
+              <Text size="md" c="dimmed">Utilidad</Text>
+              <Text fw={450} size="lg" c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
                 ${(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)).toLocaleString()}
               </Text>
             </div>
             <div>
-              <Text size="sm" c="dimmed">Rentabilidad</Text>
-              <Text fw={500} size="lg" c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
+              <Text size="md" c="dimmed">Rentabilidad</Text>
+              <Text fw={450} size="lg" c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
                 {Number(presupuesto.rentabilidad || 0).toFixed(2)}%
               </Text>
             </div>
             {presupuesto.rentabilidad_con_plazo && (
               <div>
-                <Text size="sm" c="dimmed">Rentabilidad con Plazo</Text>
-                <Text fw={500} size="lg" c={Number(presupuesto.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'}>
+                <Text size="md" c="dimmed">Rent. con Plazo</Text>
+                <Text fw={450} size="lg" c={Number(presupuesto.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'}>
                   {Number(presupuesto.rentabilidad_con_plazo || 0).toFixed(2)}%
                 </Text>
               </div>
