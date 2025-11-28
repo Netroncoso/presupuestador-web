@@ -58,6 +58,17 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     return calcularRentabilidadConPlazo(utilidadConPlazo, costoTotal);
   }, [utilidadConPlazo, costoTotal, totalesDesdeDB]);
 
+  const setTotalInsumosWrapper = useCallback((total: number) => {
+    setTotalInsumos(total);
+    setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo
+  }, []);
+
+  const setTotalesPrestaciones = useCallback((costo: number, facturar: number) => {
+    setTotalPrestaciones(costo);
+    setTotalFacturarPrestaciones(facturar);
+    setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo
+  }, []);
+
   const resetTotales = useCallback(() => {
     setTotalInsumos(0);
     setTotalPrestaciones(0);
@@ -72,11 +83,6 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     setTotalPrestaciones(totales.totalPrestaciones || 0);
   }, []);
 
-  const setTotalesPrestaciones = useCallback((costo: number, facturar: number) => {
-    setTotalPrestaciones(costo);
-    setTotalFacturarPrestaciones(facturar);
-  }, []);
-
   return {
     totalInsumos,
     totalPrestaciones,
@@ -87,7 +93,7 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     utilidadConPlazo,
     margenConPlazo,
     rentabilidadConPlazo,
-    setTotalInsumos,
+    setTotalInsumos: setTotalInsumosWrapper,
     setTotalesPrestaciones,
     resetTotales,
     setTotalesDesdeBaseDatos,
