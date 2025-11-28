@@ -51,6 +51,13 @@ prestador_servicio,condicion,6,text,text,65535,YES,NULL,,,,NULL,NULL,NULL
 prestador_servicio,activo,7,tinyint(1),tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 prestador_servicio,cant_total,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 prestador_servicio,valor_sugerido,9,"decimal(10,2)",decimal,NULL,YES,NULL,,,"Valor recomendado",NULL,NULL,NULL
+prestador_servicio_valores,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
+prestador_servicio_valores,id_prestador_servicio,2,int,int,NULL,NO,NULL,MUL,,,prestador_servicio_valores_ibfk_1,prestador_servicio,id_prestador_servicio
+prestador_servicio_valores,valor_asignado,3,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
+prestador_servicio_valores,valor_facturar,4,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
+prestador_servicio_valores,fecha_inicio,5,date,date,NULL,NO,NULL,,,,NULL,NULL,NULL
+prestador_servicio_valores,fecha_fin,6,date,date,NULL,YES,NULL,,,,NULL,NULL,NULL
+prestador_servicio_valores,created_at,7,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 presupuesto_insumos,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuesto_insumos,idPresupuestos,2,int,int,NULL,NO,NULL,MUL,,,presupuesto_insumos_ibfk_1,presupuestos,idPresupuestos
 presupuesto_insumos,producto,3,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL

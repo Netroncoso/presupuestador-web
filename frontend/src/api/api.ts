@@ -124,8 +124,11 @@ export async function getFinanciadorAcuerdos() {
   return res.data;
 }
 
-export async function getPrestacionesPorPrestador(id: string) {
-  const res = await api.get(`/prestaciones/prestador/${id}`);
+export async function getPrestacionesPorPrestador(id: string, fecha?: string) {
+  const url = fecha 
+    ? `/prestaciones/prestador/${id}?fecha=${fecha}`
+    : `/prestaciones/prestador/${id}`;
+  const res = await api.get(url);
   return res.data;
 }
 

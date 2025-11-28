@@ -13,7 +13,7 @@ export const useRealtimeUpdates = () => {
   const [isConnected, setIsConnected] = useState(false);
   const retryCountRef = useRef(0);
   const maxRetries = 5;
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackIntervalRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
 
   // Fallback function to refresh data manually

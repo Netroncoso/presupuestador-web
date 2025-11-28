@@ -10,11 +10,34 @@ export const getPrestadores = asyncHandler(async (req: Request, res: Response) =
 
 export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id;
+  const fecha = (req.query.fecha as string) || new Date().toISOString().slice(0, 10);
+  
   const [rows] = await pool.query(
-    `SELECT ps.id_servicio, s.nombre, ps.valor_facturar, ps.cant_total, ps.valor_sugerido, s.tipo_unidad
+    `SELECT 
+      ps.id_servicio,
+      s.nombre,
+      s.tipo_unidad,
+      ps.cant_total,
+      COALESCE(
+        (SELECT valor_asignado 
+         FROM prestador_servicio_valores v 
+         WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
+           AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
+         LIMIT 1),
+        ps.valor_sugerido
+      ) AS valor_sugerido,
+      COALESCE(
+        (SELECT valor_facturar 
+         FROM prestador_servicio_valores v 
+         WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
+           AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
+         LIMIT 1),
+        ps.valor_facturar
+      ) AS valor_facturar
      FROM prestador_servicio AS ps
      JOIN servicios AS s ON ps.id_servicio = s.id_servicio
-     WHERE ps.idobra_social = ? AND ps.activo = 1`, [id]
+     WHERE ps.idobra_social = ? AND ps.activo = 1`, 
+    [fecha, fecha, id]
   );
   res.json(rows);
 });

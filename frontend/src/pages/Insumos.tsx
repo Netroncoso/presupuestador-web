@@ -8,6 +8,7 @@ interface Insumo {
   producto: string
   costo: number
   cantidad: number
+  idInsumos?: number
 }
 
 interface Props {

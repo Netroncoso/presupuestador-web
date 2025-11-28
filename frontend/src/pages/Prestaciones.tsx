@@ -86,16 +86,26 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   useEffect(() => {
     if (presupuestoId && financiadorId) {
-      // Convertir a string para que coincida con el formato del select
       const financiadorIdStr = String(financiadorId)
       setFinanciadorSeleccionado(financiadorIdStr)
-      // Marcar como confirmado automáticamente cuando se carga desde historial
       setFinanciadorConfirmado(true)
-      cargarPrestacionesPorFinanciador(financiadorIdStr)
+      
+      // Si es solo lectura, cargar valores históricos según fecha del presupuesto
+      if (soloLectura) {
+        api.get(`/presupuestos/${presupuestoId}`).then(presupuestoRes => {
+          const fechaPresupuesto = presupuestoRes.data.created_at?.slice(0, 10)
+          cargarPrestacionesPorFinanciador(financiadorIdStr, fechaPresupuesto)
+        }).catch(err => {
+          console.error('Error loading presupuesto:', err)
+          cargarPrestacionesPorFinanciador(financiadorIdStr)
+        })
+      } else {
+        // Si es edición, usar valores actuales (nueva versión = nuevo contexto)
+        cargarPrestacionesPorFinanciador(financiadorIdStr)
+      }
       
       api.get(`/prestaciones/prestador/${financiadorIdStr}/info`).then(infoRes => {
         setFinanciadorInfo(infoRes.data)
-        // Notificar al componente padre sobre el financiador cargado
         if (onFinanciadorChange) {
           onFinanciadorChange(financiadorIdStr, infoRes.data)
         }
@@ -109,7 +119,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       setValorAsignado('')
       setFinanciadorInfo({})
     }
-  }, [presupuestoId, financiadorId, onFinanciadorChange])
+  }, [presupuestoId, financiadorId, onFinanciadorChange, soloLectura])
 
   const cargarFinanciadores = async () => {
     try {
@@ -124,10 +134,10 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     }
   }
 
-  const cargarPrestacionesPorFinanciador = async (financiadorId: string) => {
+  const cargarPrestacionesPorFinanciador = async (financiadorId: string, fecha?: string) => {
     setLoading(true)
     try {
-      const data = await getPrestacionesPorPrestador(financiadorId)
+      const data = await getPrestacionesPorPrestador(financiadorId, fecha)
       setPrestacionesDisponibles(data)
     } catch (error) {
       notifications.show({

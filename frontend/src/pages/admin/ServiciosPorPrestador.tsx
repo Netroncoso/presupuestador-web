@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput, Tooltip } from '@mantine/core';
-import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput } from '@mantine/core';
+import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+
 
 interface Financiador {
   idobra_social: string;
@@ -28,6 +29,16 @@ export default function ServiciosPorPrestador() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<ServicioPrestador | null>(null);
   const [loading, setLoading] = useState(false);
+  const [valoresHistoricos, setValoresHistoricos] = useState<any[]>([]);
+  const [nuevosValores, setNuevosValores] = useState<Array<{
+    valor_asignado: string;
+    valor_facturar: string;
+    fecha_inicio: string;
+  }>>([{
+    valor_asignado: '',
+    valor_facturar: '',
+    fecha_inicio: new Date().toISOString().slice(0, 10)
+  }]);
 
   const formatName = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -35,6 +46,14 @@ export default function ServiciosPorPrestador() {
 
   const formatNumber = (value: number | null | undefined): number => {
     return Number(value) || 0;
+  };
+
+  const formatPeso = (value: number): string => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2
+    }).format(value);
   };
 
   useEffect(() => {
@@ -216,13 +235,15 @@ export default function ServiciosPorPrestador() {
                       </Badge>
                     </Group>
                   </Table.Td>
-                  <Table.Td>${formatNumber(servicio.valor_facturar).toFixed(2)}</Table.Td>
-                  <Table.Td>${formatNumber(servicio.valor_sugerido).toFixed(2)}</Table.Td>
+                  <Table.Td>{formatPeso(formatNumber(servicio.valor_facturar))}</Table.Td>
+                  <Table.Td>{formatPeso(formatNumber(servicio.valor_sugerido))}</Table.Td>
                   <Table.Td>{formatNumber(servicio.cant_total)}</Table.Td>
                   <Table.Td>
-                    <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
-                      <PencilSquareIcon width={20} height={20} />
-                    </ActionIcon>
+                    <Tooltip label="Editar valores">
+                      <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
+                        <PencilSquareIcon width={20} height={20} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -237,53 +258,260 @@ export default function ServiciosPorPrestador() {
         </Paper>
       )}
 
-      {/* Modal Editar */}
+      {/* Modal Editar con Histórico */}
       <Modal
         opened={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setValoresHistoricos([]);
+          setNuevosValores([{
+            valor_asignado: '',
+            valor_facturar: '',
+            fecha_inicio: new Date().toISOString().slice(0, 10)
+          }]);
+        }}
         title={`Editar Servicio: ${editingServicio ? formatName(editingServicio.nombre) : ''}`}
-        size="md"
+        styles={{title:{fontWeight:600,}}} 
+        size="xl"
       >
         {editingServicio && (
-          <Stack gap="md">
-            <TextInput
-              label="Valor a Facturar"
-              type="number"
-              value={formatNumber(editingServicio.valor_facturar).toString()}
-              onChange={(e) => setEditingServicio({
-                ...editingServicio,
-                valor_facturar: parseFloat(e.target.value) || 0
-              })}
-              min={0}
-              step={0.01}
-            />
-            <TextInput
-              label="Valor Sugerido"
-              type="number"
-              value={formatNumber(editingServicio.valor_sugerido).toString()}
-              onChange={(e) => setEditingServicio({
-                ...editingServicio,
-                valor_sugerido: parseFloat(e.target.value) || 0
-              })}
-              min={0}
-              step={0.01}
-            />
-            <TextInput
-              label="Cantidad Sugerida"
-              type="number"
-              value={formatNumber(editingServicio.cant_total).toString()}
-              onChange={(e) => setEditingServicio({
-                ...editingServicio,
-                cant_total: parseInt(e.target.value) || 0
-              })}
-              min={0}
-            />
-            <Group style={{ justifyContent: 'flex-end' }}>
-              <Button variant="outline" onClick={() => setModalOpen(false)}>
-                Cancelar
+          <Stack gap="lg">
+            {/* Edición Rápida */}
+            <Paper p="md" withBorder>
+              <MantineText size="sm" fw={500} mb="sm">Edición Rápida (Valores Actuales)</MantineText>
+              <Stack gap="sm">
+                <Group grow>
+                  <NumberInput
+                    label="Valor Sugerido"
+                    value={formatNumber(editingServicio.valor_sugerido)}
+                    onChange={(val) => setEditingServicio({
+                      ...editingServicio,
+                      valor_sugerido: Number(val) || 0
+                    })}
+                    decimalScale={2}
+                    fixedDecimalScale
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="$ "
+                  />
+                  <NumberInput
+                    label="Valor a Facturar"
+                    value={formatNumber(editingServicio.valor_facturar)}
+                    onChange={(val) => setEditingServicio({
+                      ...editingServicio,
+                      valor_facturar: Number(val) || 0
+                    })}
+                    decimalScale={2}
+                    fixedDecimalScale
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="$ "
+                  />
+                  <TextInput
+                    label="Cantidad Sugerida"
+                    type="number"
+                    value={formatNumber(editingServicio.cant_total).toString()}
+                    onChange={(e) => setEditingServicio({
+                      ...editingServicio,
+                      cant_total: parseInt(e.target.value) || 0
+                    })}
+                  />
+                </Group>
+                <Group justify="flex-end">
+                  <Button onClick={handleSubmit} loading={loading}>
+                    Guardar Cambios
+                  </Button>
+                </Group>
+              </Stack>
+            </Paper>
+
+            {/* Histórico de Valores */}
+            <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
+              <Group justify="space-between" mb="sm">
+                <MantineText size="sm" fw={500}>Agregar Valores con Fecha de Vigencia</MantineText>
+                <ActionIcon 
+                  variant="filled" 
+                  color="green" 
+                  size="sm"
+                  onClick={() => setNuevosValores([...nuevosValores, {
+                    valor_asignado: '',
+                    valor_facturar: '',
+                    fecha_inicio: new Date().toISOString().slice(0, 10)
+                  }])}
+                >
+                  <PlusIcon style={{ width: 16, height: 16 }} />
+                </ActionIcon>
+              </Group>
+              
+              <Stack gap="sm">
+                {nuevosValores.map((valor, index) => (
+                  <Group key={index} align="flex-end">
+                    <NumberInput
+                      label="Valor Sugerido"
+                      value={valor.valor_asignado ? Number(valor.valor_asignado) : undefined}
+                      onChange={(val) => {
+                        const updated = [...nuevosValores];
+                        updated[index].valor_asignado = val?.toString() || '';
+                        setNuevosValores(updated);
+                      }}
+                      decimalScale={2}
+                      fixedDecimalScale
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="$ "
+                      style={{ flex: 1 }}
+                    />
+                    <NumberInput
+                      label="Valor a Facturar"
+                      value={valor.valor_facturar ? Number(valor.valor_facturar) : undefined}
+                      onChange={(val) => {
+                        const updated = [...nuevosValores];
+                        updated[index].valor_facturar = val?.toString() || '';
+                        setNuevosValores(updated);
+                      }}
+                      decimalScale={2}
+                      fixedDecimalScale
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="$ "
+                      style={{ flex: 1 }}
+                    />
+                    <TextInput
+                      label="Fecha Inicio"
+                      type="date"
+                      value={valor.fecha_inicio}
+                      onChange={(e) => {
+                        const updated = [...nuevosValores];
+                        updated[index].fecha_inicio = e.target.value;
+                        setNuevosValores(updated);
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    {nuevosValores.length > 1 && (
+                      <ActionIcon 
+                        variant="subtle" 
+                        color="red"
+                        onClick={() => setNuevosValores(nuevosValores.filter((_, i) => i !== index))}
+                      >
+                        <TrashIcon style={{ width: 20, height: 20 }} />
+                      </ActionIcon>
+                    )}
+                  </Group>
+                ))}
+                
+                <Group justify="flex-end">
+                  <Button 
+                    onClick={async () => {
+                      // Validar que todos los campos estén completos
+                      const validos = nuevosValores.every(v => v.valor_asignado && v.valor_facturar && v.fecha_inicio);
+                      if (!validos) {
+                        notifications.show({
+                          title: 'Error',
+                          message: 'Todos los campos son obligatorios',
+                          color: 'red'
+                        });
+                        return;
+                      }
+                      
+                      setLoading(true);
+                      try {
+                        // Guardar todos los valores
+                        for (const valor of nuevosValores) {
+                          await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`, {
+                            valor_asignado: parseFloat(valor.valor_asignado),
+                            valor_facturar: parseFloat(valor.valor_facturar),
+                            fecha_inicio: valor.fecha_inicio
+                          });
+                        }
+                        
+                        notifications.show({
+                          title: 'Éxito',
+                          message: `${nuevosValores.length} valor(es) guardado(s) correctamente`,
+                          color: 'green'
+                        });
+                        
+                        setNuevosValores([{
+                          valor_asignado: '',
+                          valor_facturar: '',
+                          fecha_inicio: new Date().toISOString().slice(0, 10)
+                        }]);
+                        
+                        // Recargar histórico
+                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                        setValoresHistoricos(res.data);
+                        cargarServicios();
+                      } catch (err: any) {
+                        notifications.show({
+                          title: 'Error',
+                          message: err.response?.data?.message || 'Error al guardar valores',
+                          color: 'red'
+                        });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    loading={loading}
+                  >
+                    Guardar {nuevosValores.length > 1 ? `${nuevosValores.length} Valores` : 'Valor'}
+                  </Button>
+                </Group>
+              </Stack>
+            </Paper>
+
+            {/* Tabla Histórico */}
+            {valoresHistoricos.length > 0 && (
+              <Paper withBorder>
+                <Table striped highlightOnHover>
+                  <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+                    <Table.Tr>
+                      <Table.Th>Fecha Inicio</Table.Th>
+                      <Table.Th>Fecha Fin</Table.Th>
+                      <Table.Th style={{ textAlign: 'right' }}>Valor Sugerido</Table.Th>
+                      <Table.Th style={{ textAlign: 'right' }}>Valor Facturar</Table.Th>
+                      <Table.Th>Estado</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {valoresHistoricos.map((v: any) => (
+                      <Table.Tr key={v.id}>
+                        <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
+                        <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
+                        <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
+                        <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                        <Table.Td>
+                          {!v.fecha_fin ? (
+                            <Badge color="green" variant="dot" size="sm">Vigente</Badge>
+                          ) : (
+                            <Badge color="gray" variant="dot" size="sm">Histórico</Badge>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Paper>
+            )}
+
+            <Group justify="space-between">
+              <Button 
+                variant="subtle" 
+                onClick={async () => {
+                  try {
+                    const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                    setValoresHistoricos(res.data);
+                  } catch (err) {
+                    notifications.show({
+                      title: 'Error',
+                      message: 'Error al cargar histórico',
+                      color: 'red'
+                    });
+                  }
+                }}
+              >
+                {valoresHistoricos.length > 0 ? 'Actualizar' : 'Ver'} Histórico
               </Button>
-              <Button onClick={handleSubmit} loading={loading}>
-                Guardar
+              <Button variant="outline" onClick={() => setModalOpen(false)}>
+                Cerrar
               </Button>
             </Group>
           </Stack>

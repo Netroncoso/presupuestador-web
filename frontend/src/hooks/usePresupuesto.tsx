@@ -80,7 +80,7 @@ export const usePresupuesto = () => {
       
       // Cargar totales desde BD solo si existen y son mayores a 0
       // Si están en 0, dejar que useTotales calcule desde los arrays
-      if (setTotalesDesdeDB && presupuestoData.costo_total > 0) {
+      if (setTotalesDesdeDB && presupuestoData.costo_total && presupuestoData.costo_total > 0) {
         setTotalesDesdeDB({
           totalInsumos: presupuestoData.total_insumos || 0,
           totalPrestaciones: presupuestoData.total_prestaciones || 0,

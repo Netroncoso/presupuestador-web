@@ -50,7 +50,7 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       
       <Textarea
         ref={textareaRef}
-        label="Mensaje para el auditor (opcional)"
+        label="Mensaje"
         placeholder="Explica por qué necesitas esta auditoría o cualquier información relevante..."
         value={mensaje}
         onChange={(e) => setMensaje(e.currentTarget.value)}
@@ -112,12 +112,14 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       )}
       
       <Textarea
-        label="Comentario (opcional)"
-        placeholder="Agregar comentario sobre la decisión..."
+        label="Mensaje"
+        placeholder="Breve mensaje de tu auditoria..."
         value={mensaje}
         onChange={(e) => setMensaje(e.currentTarget.value)}
         rows={6}
         mb="md"
+        required
+        error={!mensaje.trim() && 'El comentario es obligatorio'}
       />
 
       <Group justify="right" gap="md">
@@ -127,6 +129,7 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
           onClick={() => handleConfirmar('RECHAZADO')}
           loading={loading}
           variant='outline'
+          disabled={!mensaje.trim() || loading}
         >
           Rechazar
         </Button>
@@ -136,6 +139,7 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
           onClick={() => handleConfirmar('APROBADO')}
           loading={loading}
           rightSection={<CheckBadgeIcon style={ICON_SIZE} />}
+          disabled={!mensaje.trim() || loading}
         >
           Aprobar
         </Button>

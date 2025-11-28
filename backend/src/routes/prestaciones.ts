@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getPrestadores, getPrestacionesPorPrestador, getPrestadorInfo } from '../controllers/prestacionesController';
+import { getValoresPrestadorServicio, guardarValorPrestadorServicio } from '../controllers/prestadorValoresController';
 
 const router = Router();
 
@@ -11,4 +12,9 @@ const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
 router.get('/prestadores', asyncHandler(getPrestadores));
 router.get('/prestador/:id', asyncHandler(getPrestacionesPorPrestador));
 router.get('/prestador/:id/info', asyncHandler(getPrestadorInfo));
+
+// Rutas para valores históricos
+router.get('/servicio/:id/valores', asyncHandler(getValoresPrestadorServicio));
+router.post('/servicio/:id/valores', asyncHandler(guardarValorPrestadorServicio));
+
 export default router;

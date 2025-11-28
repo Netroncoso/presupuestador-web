@@ -35,22 +35,57 @@ export const createOrUpdateServicioPrestador = asyncHandler(async (req: Request,
   const { prestadorId, servicioId } = req.params;
   const { valor_facturar, activo, cant_total, valor_sugerido } = req.body;
 
-  const [existing] = await pool.query<RowDataPacket[]>(
-    'SELECT id_prestador_servicio FROM prestador_servicio WHERE idobra_social = ? AND id_servicio = ?',
-    [prestadorId, servicioId]
-  );
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
 
-  if (existing.length > 0) {
-    await pool.query<ResultSetHeader>(
-      'UPDATE prestador_servicio SET valor_facturar = ?, activo = ?, cant_total = ?, valor_sugerido = ? WHERE id_prestador_servicio = ?',
-      [valor_facturar, activo, cant_total, valor_sugerido, existing[0].id_prestador_servicio]
+  try {
+    const [existing] = await connection.query<RowDataPacket[]>(
+      'SELECT id_prestador_servicio FROM prestador_servicio WHERE idobra_social = ? AND id_servicio = ?',
+      [prestadorId, servicioId]
     );
-  } else {
-    await pool.query<ResultSetHeader>(
-      'INSERT INTO prestador_servicio (idobra_social, id_servicio, valor_facturar, activo, cant_total, valor_sugerido) VALUES (?, ?, ?, ?, ?, ?)',
-      [prestadorId, servicioId, valor_facturar, activo, cant_total, valor_sugerido]
-    );
+
+    let prestadorServicioId: number;
+
+    if (existing.length > 0) {
+      prestadorServicioId = existing[0].id_prestador_servicio;
+      await connection.query<ResultSetHeader>(
+        'UPDATE prestador_servicio SET valor_facturar = ?, activo = ?, cant_total = ?, valor_sugerido = ? WHERE id_prestador_servicio = ?',
+        [valor_facturar, activo, cant_total, valor_sugerido, prestadorServicioId]
+      );
+
+      // Verificar si existe registro en valores históricos
+      const [valoresExist] = await connection.query<RowDataPacket[]>(
+        'SELECT id FROM prestador_servicio_valores WHERE id_prestador_servicio = ? LIMIT 1',
+        [prestadorServicioId]
+      );
+
+      // Si no existe, crear registro inicial
+      if (valoresExist.length === 0) {
+        await connection.query(
+          'INSERT INTO prestador_servicio_valores (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio) VALUES (?, ?, ?, CURDATE())',
+          [prestadorServicioId, valor_sugerido || 0, valor_facturar || 0]
+        );
+      }
+    } else {
+      const [result] = await connection.query<ResultSetHeader>(
+        'INSERT INTO prestador_servicio (idobra_social, id_servicio, valor_facturar, activo, cant_total, valor_sugerido) VALUES (?, ?, ?, ?, ?, ?)',
+        [prestadorId, servicioId, valor_facturar, activo, cant_total, valor_sugerido]
+      );
+      prestadorServicioId = result.insertId;
+
+      // Crear registro inicial en valores históricos
+      await connection.query(
+        'INSERT INTO prestador_servicio_valores (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio) VALUES (?, ?, ?, CURDATE())',
+        [prestadorServicioId, valor_sugerido || 0, valor_facturar || 0]
+      );
+    }
+
+    await connection.commit();
+    res.json({ message: 'Servicio actualizado correctamente' });
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
-
-  res.json({ message: 'Servicio actualizado correctamente' });
 });

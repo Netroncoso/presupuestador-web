@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { MantineProvider, Loader, Center } from '@mantine/core';
+import { MantineProvider, Loader, Center, ScrollArea } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
@@ -40,7 +40,22 @@ function AppContent() {
 
 export default function App() {
   return (
-    <MantineProvider>
+    <MantineProvider
+      theme={{
+        components: {
+          Modal: { 
+            defaultProps: { 
+              scrollAreaComponent: ScrollArea.Autosize
+            },
+            styles: {
+              title: {
+                fontWeight: 600
+              }
+            }
+          }
+        }
+      }}
+    >
       <Notifications />
       <AuthProvider>
         <AppContent />

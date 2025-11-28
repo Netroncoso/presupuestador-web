@@ -59,16 +59,78 @@ export const guardarPrestacionPresupuesto = asyncHandler(async (req: Request, re
   const presupuestoId = parseInt(req.params.id);
   const { id_servicio, prestacion, cantidad, valor_asignado, valor_facturar } = req.body;
 
-  if (isNaN(presupuestoId) || !id_servicio || !prestacion || !cantidad || !valor_asignado || !valor_facturar) {
+  if (isNaN(presupuestoId) || !id_servicio || !prestacion || !cantidad || !valor_asignado) {
     throw new AppError(400, 'Datos inválidos');
   }
 
-  await pool.query(
-    'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE prestacion = VALUES(prestacion), cantidad = VALUES(cantidad), valor_asignado = VALUES(valor_asignado), valor_facturar = VALUES(valor_facturar)',
-    [presupuestoId, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar]
+  // Obtener fecha y financiador del presupuesto
+  const [presupuesto] = await pool.query<any[]>(
+    'SELECT created_at, idobra_social FROM presupuestos WHERE idPresupuestos = ?',
+    [presupuestoId]
   );
   
-  // Recalcular totales
+  if (!presupuesto.length) {
+    throw new AppError(404, 'Presupuesto no encontrado');
+  }
+  
+  const fechaPresupuesto = new Date(presupuesto[0].created_at).toISOString().slice(0, 10);
+  const idobra_social = presupuesto[0].idobra_social;
+  
+  // Obtener id_prestador_servicio desde id_servicio
+  const [servicio] = await pool.query<any[]>(
+    'SELECT id_prestador_servicio FROM prestador_servicio WHERE id_servicio = ? AND idobra_social = ?',
+    [id_servicio, idobra_social]
+  );
+  
+  if (!servicio.length) {
+    throw new AppError(400, 'Servicio no encontrado para este financiador');
+  }
+  
+  const id_prestador_servicio = servicio[0].id_prestador_servicio;
+  
+  // Consultar valor_facturar histórico (valor_asignado viene del usuario)
+  const [valores] = await pool.query<any[]>(
+    `SELECT valor_facturar 
+     FROM prestador_servicio_valores 
+     WHERE id_prestador_servicio = ? 
+       AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
+     LIMIT 1`,
+    [id_prestador_servicio, fechaPresupuesto]
+  );
+  
+  let valor_facturar_final;
+  
+  if (valores.length > 0) {
+    valor_facturar_final = valores[0].valor_facturar;
+  } else if (valor_facturar) {
+    // Si no hay valores históricos, usar el enviado por el frontend
+    valor_facturar_final = valor_facturar;
+  } else {
+    // Fallback a tabla prestador_servicio
+    const [fallback] = await pool.query<any[]>(
+      'SELECT valor_facturar FROM prestador_servicio WHERE id_prestador_servicio = ?',
+      [id_prestador_servicio]
+    );
+    
+    if (!fallback.length) {
+      throw new AppError(400, 'No se encontró valor_facturar para este servicio');
+    }
+    
+    valor_facturar_final = fallback[0].valor_facturar;
+  }
+
+  await pool.query(
+    `INSERT INTO presupuesto_prestaciones 
+     (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) 
+     VALUES (?, ?, ?, ?, ?, ?) 
+     ON DUPLICATE KEY UPDATE 
+       prestacion = VALUES(prestacion), 
+       cantidad = VALUES(cantidad), 
+       valor_asignado = VALUES(valor_asignado), 
+       valor_facturar = VALUES(valor_facturar)`,
+    [presupuestoId, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar_final]
+  );
+  
   await recalcularTotales(presupuestoId);
 
   res.json({ ok: true });

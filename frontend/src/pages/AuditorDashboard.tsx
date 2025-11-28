@@ -73,7 +73,7 @@ const AuditorDashboard: React.FC = () => {
       const [accion, comentario] = mensaje.includes(':') ? mensaje.split(': ', 2) : ['', mensaje];
       const estado = accion === 'APROBADO' ? 'aprobado' : accion === 'RECHAZADO' ? 'rechazado' : 'en_revision';
       
-      await api.put(`/presupuestos/${selectedPresupuesto.idPresupuestos}/estado`, {
+      await api.put(`/auditoria/estado/${selectedPresupuesto.idPresupuestos}`, {
         estado,
         comentario: comentario?.trim() || null
       });
@@ -124,7 +124,7 @@ const AuditorDashboard: React.FC = () => {
   return (
     <Container fluid p="xl">
       <Group justify="space-between" mb={20}>
-        <Title fw={500} order={2} c="blue">Dashboard Auditor Médico</Title>
+        <Title fw={500} order={2} c="blue">Auditor Médico</Title>
         <Group gap="xs">
           <UserCircleIcon style={{ width: 20, height: 20 }} />
           <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
@@ -182,11 +182,10 @@ const AuditorDashboard: React.FC = () => {
           </Paper>
 
           {pendientes.length === 0 ? (
-            <Paper p="xl" withBorder radius="md" style={{ backgroundColor: '#f0f9ff' }}>
+            <Paper p="xl" withBorder radius="md">
               <Center>
                 <div>
-                  <Text size="xl" fw={600} c="green" ta="center" mb="sm">✅ ¡Todo al día!</Text>
-                  <Text c="dimmed" ta="center">No hay presupuestos pendientes de revisión</Text>
+                  <Text size="xl" fw={400} c="green" ta="center" mb="sm">No hay presupuestos pendientes</Text>
                 </div>
               </Center>
             </Paper>

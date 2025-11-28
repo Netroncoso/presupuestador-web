@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNotificationCount } from '../hooks/useNotificationCount';
 import DatosPresupuesto from "./DatosPresupuesto";
 import Notificaciones from "./Notificaciones";
-import Auditoria from "./Auditoria";
 import { NotificationIndicator } from '../components/NotificationIndicator';
 import { ModalAuditoria } from '../components/ModalAuditoria';
 import { ModalConfirmarEdicion } from '../components/ModalConfirmarEdicion';
@@ -34,6 +33,8 @@ import { useAlertaCotizador } from '../hooks/useAlertaCotizador';
 import { usePresupuesto } from '../hooks/usePresupuesto';
 import { useTotales } from '../hooks/useTotales';
 import { useFinanciador } from '../hooks/useFinanciador';
+import { useModalState } from '../hooks/useModalState';
+import { useItemValidation } from '../hooks/useItemValidation';
 import { pdfClientService } from '../services/pdfClientService';
 import { api } from '../api/api';
 
@@ -56,16 +57,24 @@ export default function UserDashboard() {
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<{ nombre: string; dni: string; sucursal: string } | undefined>();
   const [recargarHistorial, setRecargarHistorial] = useState(0);
-  const [filtroAuditoriaPresupuesto, setFiltroAuditoriaPresupuesto] = useState<number | null>(null);
-  const [modalAuditoriaAbierto, setModalAuditoriaAbierto] = useState(false);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
-  const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false);
   const [presupuestoParaEditar, setPresupuestoParaEditar] = useState<any>(null);
   const [infoEdicion, setInfoEdicion] = useState<any>(null);
   const [soloLectura, setSoloLectura] = useState(false);
-  const [modalValidacionAbierto, setModalValidacionAbierto] = useState(false);
   const [itemsFaltantes, setItemsFaltantes] = useState<any[]>([]);
   const [validacionCompletada, setValidacionCompletada] = useState(false);
+
+  const { 
+    modalAuditoriaAbierto, 
+    modalEdicionAbierto, 
+    modalValidacionAbierto,
+    abrirModalAuditoria: abrirModalAuditoriaBase,
+    cerrarModalAuditoria,
+    abrirModalEdicion,
+    cerrarModalEdicion,
+    abrirModalValidacion,
+    cerrarModalValidacion
+  } = useModalState();
 
   const {
     presupuestoId,
@@ -98,6 +107,8 @@ export default function UserDashboard() {
 
   useFinanciador(financiadorId, setFinanciadorInfo);
 
+  const { validarItems, procesarItem } = useItemValidation(presupuestoId);
+
   const rentabilidadFinal = useMemo(() => 
     financiadorInfo?.dias_cobranza_real ? rentabilidadConPlazo : rentabilidad,
     [financiadorInfo, rentabilidadConPlazo, rentabilidad]
@@ -115,84 +126,7 @@ export default function UserDashboard() {
     prestacionesSeleccionadas,
   });
 
-  const validarItemsAntesDeFinalizarPresupuesto = useCallback(async () => {
-    if (!presupuestoId) return { valido: false, faltantes: [] };
-    
-    try {
-      const response = await api.get(`/presupuestos/${presupuestoId}`);
-      const { insumos, prestaciones } = response.data;
-      
-      const faltantes: any[] = [];
-      
-      // Comparar insumos del frontend vs BD
-      insumosSeleccionados.forEach(insumo => {
-        const existe = insumos.find((i: any) => 
-          i.id_insumo === insumo.idInsumos && 
-          i.cantidad === insumo.cantidad
-        );
-        if (!existe) {
-          faltantes.push({
-            tipo: 'insumo',
-            nombre: insumo.producto,
-            cantidad: insumo.cantidad,
-            datos: insumo,
-            accion: 'guardar'
-          });
-        }
-      });
-      
-      // Detectar insumos en BD que no están en frontend (eliminados)
-      insumos.forEach((insumo: any) => {
-        const existe = insumosSeleccionados.find(i => i.idInsumos === insumo.id_insumo);
-        if (!existe) {
-          faltantes.push({
-            tipo: 'insumo',
-            nombre: insumo.producto,
-            cantidad: insumo.cantidad,
-            datos: insumo,
-            accion: 'eliminar'
-          });
-        }
-      });
-      
-      // Comparar prestaciones del frontend vs BD
-      prestacionesSeleccionadas.forEach(prestacion => {
-        const existe = prestaciones.find((p: any) => 
-          String(p.id_servicio) === String(prestacion.id_servicio) &&
-          p.cantidad === prestacion.cantidad &&
-          Math.abs(p.valor_asignado - prestacion.valor_asignado) < 0.01
-        );
-        if (!existe) {
-          faltantes.push({
-            tipo: 'prestacion',
-            nombre: prestacion.prestacion,
-            cantidad: prestacion.cantidad,
-            datos: prestacion,
-            accion: 'guardar'
-          });
-        }
-      });
-      
-      // Detectar prestaciones en BD que no están en frontend (eliminadas)
-      prestaciones.forEach((prestacion: any) => {
-        const existe = prestacionesSeleccionadas.find(p => String(p.id_servicio) === String(prestacion.id_servicio));
-        if (!existe) {
-          faltantes.push({
-            tipo: 'prestacion',
-            nombre: prestacion.prestacion,
-            cantidad: prestacion.cantidad,
-            datos: prestacion,
-            accion: 'eliminar'
-          });
-        }
-      });
-      
-      return { valido: faltantes.length === 0, faltantes };
-    } catch (error) {
-      console.error('Error validando items:', error);
-      return { valido: false, faltantes: [] };
-    }
-  }, [presupuestoId, insumosSeleccionados, prestacionesSeleccionadas]);
+
 
   const handleNuevoPresupuesto = useCallback(() => {
     resetPresupuesto();
@@ -234,15 +168,15 @@ export default function UserDashboard() {
       return;
     }
     
-    const { valido, faltantes } = await validarItemsAntesDeFinalizarPresupuesto();
+    const { valido, faltantes } = await validarItems(insumosSeleccionados, prestacionesSeleccionadas);
     
     if (!valido && faltantes.length > 0) {
       setItemsFaltantes(faltantes);
-      setModalValidacionAbierto(true);
+      abrirModalValidacion();
     } else {
       await ejecutarFinalizacion();
     }
-  }, [validacionCompletada, validarItemsAntesDeFinalizarPresupuesto, ejecutarFinalizacion]);
+  }, [validacionCompletada, validarItems, insumosSeleccionados, prestacionesSeleccionadas, abrirModalValidacion, ejecutarFinalizacion]);
 
   const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLecturaParam: boolean = true) => {
     if (soloLecturaParam) {
@@ -270,10 +204,9 @@ export default function UserDashboard() {
         const response = await crearVersionParaEdicion(presupuesto.idPresupuestos, false);
         
         if (response.requiereConfirmacion) {
-          // Mostrar modal de confirmación
           setPresupuestoParaEditar(presupuesto);
           setInfoEdicion(response);
-          setModalEdicionAbierto(true);
+          abrirModalEdicion();
           return;
         }
         
@@ -329,13 +262,8 @@ export default function UserDashboard() {
   }, [presupuestoId, datosHistorial, insumosSeleccionados, prestacionesSeleccionadas, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidadFinal]);
 
   const abrirModalAuditoria = useCallback(() => {
-    if (!presupuestoId) return;
-    setModalAuditoriaAbierto(true);
-  }, [presupuestoId]);
-
-  const cerrarModalAuditoria = useCallback(() => {
-    setModalAuditoriaAbierto(false);
-  }, []);
+    if (presupuestoId) abrirModalAuditoriaBase();
+  }, [presupuestoId, abrirModalAuditoriaBase]);
 
   const handlePedirAuditoria = useCallback(async (mensaje: string) => {
     if (!presupuestoId) return;
@@ -368,63 +296,24 @@ export default function UserDashboard() {
     }
   }, [presupuestoId, cerrarModalAuditoria]);
 
-  const handleReintentarItem = useCallback(async (item: any): Promise<boolean> => {
-    if (!presupuestoId) return false;
-    
-    try {
-      if (item.accion === 'eliminar') {
-        // Eliminar item de BD
-        if (item.tipo === 'insumo') {
-          await api.delete(`/presupuestos/${presupuestoId}/insumos`, {
-            data: { producto: item.datos.producto }
-          });
-        } else {
-          await api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
-            data: { id_servicio: item.datos.id_servicio }
-          });
-        }
-      } else {
-        // Guardar item en BD
-        if (item.tipo === 'insumo') {
-          await api.post(`/presupuestos/${presupuestoId}/insumos`, {
-            producto: item.datos.producto,
-            costo: item.datos.costo,
-            cantidad: item.datos.cantidad,
-            id_insumo: item.datos.idInsumos
-          });
-        } else {
-          await api.post(`/presupuestos/${presupuestoId}/prestaciones`, {
-            id_servicio: item.datos.id_servicio,
-            prestacion: item.datos.prestacion,
-            cantidad: item.datos.cantidad,
-            valor_asignado: item.datos.valor_asignado,
-            valor_facturar: item.datos.valor_facturar
-          });
-        }
-      }
-      return true;
-    } catch (error) {
-      console.error('Error procesando item:', error);
-      return false;
-    }
-  }, [presupuestoId]);
+
 
   const handleTodosItemsGuardados = useCallback(() => {
-    setModalValidacionAbierto(false);
+    cerrarModalValidacion();
     setValidacionCompletada(true);
     handleFinalizarPresupuesto();
-  }, [handleFinalizarPresupuesto]);
+  }, [cerrarModalValidacion, handleFinalizarPresupuesto]);
 
   const handleContinuarSinItems = useCallback(() => {
-    setModalValidacionAbierto(false);
+    cerrarModalValidacion();
     setValidacionCompletada(true);
     handleFinalizarPresupuesto();
-  }, [handleFinalizarPresupuesto]);
+  }, [cerrarModalValidacion, handleFinalizarPresupuesto]);
 
   const handleCerrarModalValidacion = useCallback(() => {
-    setModalValidacionAbierto(false);
+    cerrarModalValidacion();
     setItemsFaltantes([]);
-  }, []);
+  }, [cerrarModalValidacion]);
 
   const handleConfirmarEdicion = useCallback(async () => {
     if (!presupuestoParaEditar) return;
@@ -451,7 +340,7 @@ export default function UserDashboard() {
         setTotalesDesdeBaseDatos
       );
       
-      setModalEdicionAbierto(false);
+      cerrarModalEdicion();
       setActiveTab('datos');
     } catch (error) {
       console.error('Error al confirmar edición:', error);
@@ -617,14 +506,6 @@ export default function UserDashboard() {
               <NotificationIndicator count={notificationCount} />
             </Group>
           </Tabs.Tab>
-          {user?.rol === 'auditor_medico' && (
-            <Tabs.Tab value="auditoria" style={TAB_HOVER_STYLE}>
-              <Group gap="xs">
-                <ShieldCheckIcon style={ICON_SIZE} />
-                Auditoría
-              </Group>
-            </Tabs.Tab>
-          )}
         </Tabs.List>
 
         <Tabs.Panel value="datos" pt="md">
@@ -666,21 +547,8 @@ export default function UserDashboard() {
         </Tabs.Panel>
 
         <Tabs.Panel value="notificaciones" pt="md">
-          <Notificaciones onIrAuditoria={(presupuestoId) => {
-            setFiltroAuditoriaPresupuesto(presupuestoId);
-            setActiveTab('auditoria');
-          }} />
+          <Notificaciones />
         </Tabs.Panel>
-
-        {user?.rol === 'auditor_medico' && (
-          <Tabs.Panel value="auditoria" pt="md">
-            <Auditoria 
-              onCargarPresupuesto={handleEditarPresupuesto} 
-              filtroPresupuesto={filtroAuditoriaPresupuesto}
-              onLimpiarFiltro={() => setFiltroAuditoriaPresupuesto(null)}
-            />
-          </Tabs.Panel>
-        )}
       </Tabs>
 
       <ModalAuditoria
@@ -697,7 +565,7 @@ export default function UserDashboard() {
 
       <ModalConfirmarEdicion
         opened={modalEdicionAbierto}
-        onClose={() => setModalEdicionAbierto(false)}
+        onClose={cerrarModalEdicion}
         presupuesto={presupuestoParaEditar || { id: 0, nombre: '', version: 0, estado: '' }}
         requiereNuevaVersion={infoEdicion?.requiereNuevaVersion || false}
         onConfirmar={handleConfirmarEdicion}
@@ -707,7 +575,7 @@ export default function UserDashboard() {
         opened={modalValidacionAbierto}
         onClose={handleCerrarModalValidacion}
         itemsFaltantes={itemsFaltantes}
-        onReintentarItem={handleReintentarItem}
+        onReintentarItem={procesarItem}
         onContinuarDeTodasFormas={handleContinuarSinItems}
         onFinalizarPresupuesto={handleTodosItemsGuardados}
       />

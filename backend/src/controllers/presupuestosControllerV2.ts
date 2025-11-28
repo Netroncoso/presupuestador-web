@@ -35,13 +35,20 @@ const notificarAuditores = async (presupuestoId: number, version: number, mensaj
 };
 
 // Listar solo últimas versiones
-export const listarPresupuestos = asyncHandler(async (req: Request, res: Response) => {
+export const listarPresupuestos = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 100;
   const offset = parseInt(req.query.offset as string) || 0;
   const estado = req.query.estado as string;
+  const userId = req.user?.id;
+  const userRole = req.user?.rol;
   
   let whereClause = 'WHERE p.es_ultima_version = 1';
   const params: any[] = [];
+  
+  if (userRole === 'user') {
+    whereClause += ' AND p.usuario_id = ?';
+    params.push(userId);
+  }
   
   if (estado) {
     whereClause += ' AND p.estado = ?';
