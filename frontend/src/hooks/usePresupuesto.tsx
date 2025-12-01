@@ -49,8 +49,8 @@ export const usePresupuesto = () => {
 
       const [presupuestoData, insumos, prestaciones] = await Promise.all([
         presupuestoService.obtener(id),
-        presupuestoService.obtenerInsumos(id),
-        presupuestoService.obtenerPrestaciones(id)
+        presupuestoService.obtenerInsumos(id, soloLectura),
+        presupuestoService.obtenerPrestaciones(id, soloLectura)
       ]);
 
       // Cargar financiador desde el presupuesto (prioridad) o parámetro
@@ -78,9 +78,9 @@ export const usePresupuesto = () => {
       setInsumosSeleccionados(insumos);
       setPrestacionesSeleccionadas(prestaciones);
       
-      // Cargar totales desde BD solo si existen y son mayores a 0
-      // Si están en 0, dejar que useTotales calcule desde los arrays
-      if (setTotalesDesdeDB && presupuestoData.costo_total && presupuestoData.costo_total > 0) {
+      // Cargar totales desde BD SOLO en modo solo lectura
+      // En modo edición, dejar que se recalculen automáticamente desde los items
+      if (soloLectura && setTotalesDesdeDB && presupuestoData.costo_total && presupuestoData.costo_total > 0) {
         setTotalesDesdeDB({
           totalInsumos: presupuestoData.total_insumos || 0,
           totalPrestaciones: presupuestoData.total_prestaciones || 0,

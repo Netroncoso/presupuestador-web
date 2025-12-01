@@ -37,16 +37,28 @@ export const presupuestoService = {
     return res.data;
   },
 
-  obtenerInsumos: async (id: number): Promise<Insumo[]> => {
-    const res = await api.get(`/presupuestos/${id}/insumos`);
+  /**
+   * Obtiene insumos de un presupuesto
+   * @param soloLectura - Si es true, trae costos históricos guardados.
+   *                      Si es false (modo edición), trae costos actuales de tabla insumos
+   *                      y recalcula precio_facturar con porcentaje original del presupuesto
+   */
+  obtenerInsumos: async (id: number, soloLectura: boolean = false): Promise<Insumo[]> => {
+    const res = await api.get(`/presupuestos/${id}/insumos?soloLectura=${soloLectura}`);
     return res.data.map((insumo: any) => ({
       ...insumo,
       idInsumos: insumo.id_insumo
     }));
   },
 
-  obtenerPrestaciones: async (id: number): Promise<Prestacion[]> => {
-    const res = await api.get(`/presupuestos/${id}/prestaciones`);
+  /**
+   * Obtiene prestaciones de un presupuesto
+   * @param soloLectura - Si es true, trae valores históricos guardados.
+   *                      Si es false (modo edición), mantiene valor_asignado original
+   *                      pero actualiza valor_facturar con precios vigentes actuales
+   */
+  obtenerPrestaciones: async (id: number, soloLectura: boolean = false): Promise<Prestacion[]> => {
+    const res = await api.get(`/presupuestos/${id}/prestaciones?soloLectura=${soloLectura}`);
     return res.data;
   }
 };

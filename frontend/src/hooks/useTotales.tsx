@@ -9,7 +9,7 @@ import {
   calcularRentabilidadConPlazo,
 } from '../utils/calculations';
 
-export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSeleccionadas: Prestacion[] = [], porcentajeInsumos: number = 0) => {
+export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSeleccionadas: Prestacion[] = [], porcentajeInsumos: number = 0, soloLectura: boolean = false) => {
   const [totalInsumos, setTotalInsumos] = useState(0);
   const [totalPrestaciones, setTotalPrestaciones] = useState(0);
   const [totalFacturarPrestaciones, setTotalFacturarPrestaciones] = useState(0);
@@ -60,14 +60,18 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
 
   const setTotalInsumosWrapper = useCallback((total: number) => {
     setTotalInsumos(total);
-    setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo
-  }, []);
+    if (!soloLectura) {
+      setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo solo en modo edición
+    }
+  }, [soloLectura]);
 
   const setTotalesPrestaciones = useCallback((costo: number, facturar: number) => {
     setTotalPrestaciones(costo);
     setTotalFacturarPrestaciones(facturar);
-    setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo
-  }, []);
+    if (!soloLectura) {
+      setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo solo en modo edición
+    }
+  }, [soloLectura]);
 
   const resetTotales = useCallback(() => {
     setTotalInsumos(0);

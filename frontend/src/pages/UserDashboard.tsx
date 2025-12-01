@@ -103,7 +103,7 @@ export default function UserDashboard() {
     setTotalesPrestaciones,
     resetTotales,
     setTotalesDesdeBaseDatos,
-  } = useTotales(financiadorInfo, prestacionesSeleccionadas, porcentajeInsumos);
+  } = useTotales(financiadorInfo, prestacionesSeleccionadas, porcentajeInsumos, soloLectura);
 
   useFinanciador(financiadorId, setFinanciadorInfo);
 

@@ -147,12 +147,19 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 - Consulta de valores vigentes por fecha
 - Integración con presupuestos históricos
 
-### Comportamiento
+### Comportamiento de Prestaciones
 | Escenario | `valor_asignado` | `valor_facturar` |
 |-----------|------------------|------------------|
 | **Crear presupuesto nuevo** | Usuario elige | Valores actuales |
 | **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD |
 | **Editar → Nueva versión** | Mantiene original | Actualiza a valores actuales |
+
+### Comportamiento de Insumos
+| Escenario | `costo` | `precio_facturar` |
+|-----------|---------|-------------------|
+| **Crear presupuesto nuevo** | Precio actual tabla insumos | costo * (1 + porcentaje%) |
+| **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD |
+| **Editar → Nueva versión** | Actualiza a precio actual | Recalcula con porcentaje original |
 
 ### Gestión (Admin)
 - Modal unificado con edición rápida
@@ -247,8 +254,9 @@ WHERE CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31');
 ### Integración con Presupuestos
 - ✅ Validación automática de `valor_facturar` según fecha
 - ✅ Visualización histórica en modo solo lectura
-- ✅ Actualización de precios al crear nueva versión
-- ✅ Mantenimiento de costos negociados originales
+- ✅ Actualización automática de precios al cargar para edición
+- ✅ Mantenimiento de costos negociados originales (valor_asignado)
+- ✅ Recalculo de totales en modo edición, congelados en modo solo lectura
 
 ## 🤝 Contribuir
 

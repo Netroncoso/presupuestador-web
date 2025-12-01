@@ -242,8 +242,14 @@ Frontend                Backend                 Database
 - **presupuestosControllerV2.ts**: CRUD de presupuestos, versionado, finalización
   - `crearVersionParaEdicion()`: Actualiza `valor_facturar` con valores actuales
 - **presupuestoInsumosController.ts**: Gestión de insumos, recálculo automático
+  - `obtenerInsumosPresupuesto()`: Acepta `?soloLectura=true/false`
+    - `soloLectura=true`: Devuelve costos históricos guardados
+    - `soloLectura=false`: Actualiza costos con precios actuales de tabla insumos y recalcula precio_facturar
 - **presupuestoPrestacionesController.ts**: Gestión de prestaciones
   - `guardarPrestacionPresupuesto()`: Convierte `id_servicio` a `id_prestador_servicio` y valida `valor_facturar` histórico
+  - `obtenerPrestacionesPresupuesto()`: Acepta `?soloLectura=true/false`
+    - `soloLectura=true`: Devuelve valores históricos guardados
+    - `soloLectura=false`: Mantiene valor_asignado original pero actualiza valor_facturar con precios vigentes actuales
 - **prestacionesController.ts**: Consulta de prestaciones
   - `getPrestacionesPorPrestador()`: Acepta parámetro `?fecha=` opcional, usa `ps.id_prestador_servicio` en subqueries
 - **prestadorValoresController.ts** ⭐ NUEVO: Gestión de valores históricos
@@ -416,13 +422,22 @@ Tabla: prestador_servicio_valores
 
 ### Comportamiento por Escenario
 
+#### Prestaciones
 | Escenario | `valor_asignado` | `valor_facturar` | Fecha Usada |
 |-----------|------------------|------------------|-------------|
 | **Crear presupuesto nuevo** | Usuario elige | Tabla histórica | HOY |
 | **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD | N/A |
 | **Ver histórico - Lista disponibles** | Tabla prestador_servicio | Tabla histórica | Fecha presupuesto |
-| **Editar → Nueva versión** | Usuario elige | Tabla histórica | HOY |
-| **Editar → Prestaciones copiadas** | Copiado (original) | Actualizado (HOY) | HOY |
+| **Cargar para edición** | Guardado en BD (original) | Actualizado (HOY) | HOY |
+| **Editar → Agregar nueva** | Usuario elige | Tabla histórica | HOY |
+
+#### Insumos
+| Escenario | `costo` | `precio_facturar` | Porcentaje |
+|-----------|---------|-------------------|------------|
+| **Crear presupuesto nuevo** | Tabla insumos | costo * (1 + %) | Sucursal actual |
+| **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD | N/A |
+| **Cargar para edición** | Actualizado (HOY) | Recalculado | Porcentaje original |
+| **Editar → Agregar nuevo** | Tabla insumos | costo * (1 + %) | Porcentaje original |
 
 ### Cierre Automático de Períodos
 

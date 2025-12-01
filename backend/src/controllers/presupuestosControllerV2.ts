@@ -231,17 +231,26 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
     [presupuestoPadreId, presupuestoPadreId]
   );
   
+  // Obtener porcentaje actual de la sucursal para recalcular insumos
+  const [sucursal] = await pool.query<any[]>(
+    'SELECT suc_porcentaje_insumos FROM sucursales_mh WHERE Sucursales_mh = ?',
+    [original.Sucursal]
+  );
+  
+  const porcentajeActual = sucursal[0]?.suc_porcentaje_insumos || 0;
+  
   const [resultPresupuesto] = await pool.query<any>(`
     INSERT INTO presupuestos 
     (version, presupuesto_padre, es_ultima_version, estado, usuario_id,
      Nombre_Apellido, DNI, Sucursal, dificil_acceso, idobra_social,
-     total_insumos, total_prestaciones, costo_total, total_facturar, 
+     porcentaje_insumos, total_insumos, total_prestaciones, costo_total, total_facturar, 
      rentabilidad, rentabilidad_con_plazo)
-    VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     nuevaVersion, presupuestoPadreId, usuario_id,
     original.Nombre_Apellido, original.DNI, original.Sucursal,
     original.dificil_acceso, original.idobra_social,
+    porcentajeActual,
     original.total_insumos, original.total_prestaciones,
     original.costo_total, original.total_facturar,
     original.rentabilidad, original.rentabilidad_con_plazo

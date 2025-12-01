@@ -102,17 +102,49 @@ export const eliminarInsumoPresupuesto = asyncHandler(async (req: Request, res: 
   res.json({ ok: true });
 });
 
+/**
+ * Obtiene insumos de un presupuesto
+ * @param soloLectura - Query param que determina el comportamiento:
+ *   - true: Devuelve costos históricos guardados (para visualización)
+ *   - false: Actualiza costos con precios actuales de tabla insumos
+ *            y recalcula precio_facturar con porcentaje original (para edición)
+ */
 export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
+  const soloLectura = req.query.soloLectura === 'true';
 
   if (isNaN(presupuestoId)) {
     throw new AppError(400, 'ID inválido');
   }
 
-  const [rows] = await pool.query(
+  const [rows] = await pool.query<any[]>(
     'SELECT producto, costo, precio_facturar, cantidad, id_insumo FROM presupuesto_insumos WHERE idPresupuestos = ?',
     [presupuestoId]
   );
+
+  // Si es modo edición, actualizar costos con valores actuales
+  if (!soloLectura && rows.length > 0) {
+    const [presupuesto] = await pool.query<any[]>(
+      'SELECT porcentaje_insumos FROM presupuestos WHERE idPresupuestos = ?',
+      [presupuestoId]
+    );
+    
+    const porcentaje = presupuesto[0]?.porcentaje_insumos || 0;
+    
+    for (const row of rows) {
+      if (row.id_insumo) {
+        const [insumo] = await pool.query<any[]>(
+          'SELECT Precio FROM insumos WHERE idInsumos = ?',
+          [row.id_insumo]
+        );
+        
+        if (insumo.length > 0) {
+          row.costo = insumo[0].Precio;
+          row.precio_facturar = row.costo * (1 + porcentaje / 100);
+        }
+      }
+    }
+  }
 
   res.json(rows);
 });

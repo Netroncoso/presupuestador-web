@@ -155,17 +155,59 @@ export const eliminarPrestacionPresupuesto = asyncHandler(async (req: Request, r
   res.json({ ok: true });
 });
 
+/**
+ * Obtiene prestaciones de un presupuesto
+ * @param soloLectura - Query param que determina el comportamiento:
+ *   - true: Devuelve valores históricos guardados (para visualización)
+ *   - false: Mantiene valor_asignado original pero actualiza valor_facturar
+ *            con precios vigentes actuales de prestador_servicio_valores (para edición)
+ */
 export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
+  const soloLectura = req.query.soloLectura === 'true';
 
   if (isNaN(presupuestoId)) {
     throw new AppError(400, 'ID inválido');
   }
 
-  const [rows] = await pool.query(
+  const [rows] = await pool.query<any[]>(
     'SELECT id_servicio, prestacion, cantidad, valor_asignado, valor_facturar FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
     [presupuestoId]
   );
+
+  // Si es modo edición, actualizar valor_facturar con valores actuales
+  if (!soloLectura && rows.length > 0) {
+    const [presupuesto] = await pool.query<any[]>(
+      'SELECT idobra_social FROM presupuestos WHERE idPresupuestos = ?',
+      [presupuestoId]
+    );
+    
+    if (presupuesto.length > 0 && presupuesto[0].idobra_social) {
+      const idobra_social = presupuesto[0].idobra_social;
+      
+      for (const row of rows) {
+        const [servicio] = await pool.query<any[]>(
+          'SELECT id_prestador_servicio FROM prestador_servicio WHERE id_servicio = ? AND idobra_social = ?',
+          [row.id_servicio, idobra_social]
+        );
+        
+        if (servicio.length > 0) {
+          const [valores] = await pool.query<any[]>(
+            `SELECT valor_facturar 
+             FROM prestador_servicio_valores 
+             WHERE id_prestador_servicio = ? 
+               AND CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
+             LIMIT 1`,
+            [servicio[0].id_prestador_servicio]
+          );
+          
+          if (valores.length > 0) {
+            row.valor_facturar = valores[0].valor_facturar;
+          }
+        }
+      }
+    }
+  }
 
   res.json(rows);
 });
