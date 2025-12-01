@@ -18,7 +18,7 @@ if exist "%MYSQL_PATH%\mysqldump.exe" (
     echo Archivo: %BACKUP_FILE%
     echo.
     
-    "%MYSQL_PATH%\mysqldump.exe" -u PRUEBAS -pMedihome2006 mh_1 > "%BACKUP_FILE%"
+    "%MYSQL_PATH%\mysqldump.exe" -u PRUEBAS -pMedihome2006 --no-tablespaces mh_1 > "%BACKUP_FILE%"
     
     if %ERRORLEVEL% EQU 0 (
         echo.
