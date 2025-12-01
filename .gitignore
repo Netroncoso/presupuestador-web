@@ -4,3 +4,12 @@ dist/
 .env.local
 /.vite
 /mnt/data
+
+# Database backups
+backup_*.sql
+*.sql.gz
+*.sql.zip
+
+# Logs
+*.log
+npm-debug.log*
