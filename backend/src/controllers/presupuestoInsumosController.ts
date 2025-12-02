@@ -117,34 +117,37 @@ export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: 
     throw new AppError(400, 'ID inválido');
   }
 
-  const [rows] = await pool.query<any[]>(
-    'SELECT producto, costo, precio_facturar, cantidad, id_insumo FROM presupuesto_insumos WHERE idPresupuestos = ?',
-    [presupuestoId]
-  );
-
-  // Si es modo edición, actualizar costos con valores actuales
-  if (!soloLectura && rows.length > 0) {
-    const [presupuesto] = await pool.query<any[]>(
-      'SELECT porcentaje_insumos FROM presupuestos WHERE idPresupuestos = ?',
+  // Si es solo lectura, devolver datos históricos guardados
+  if (soloLectura) {
+    const [rows] = await pool.query<any[]>(
+      'SELECT producto, costo, precio_facturar, cantidad, id_insumo FROM presupuesto_insumos WHERE idPresupuestos = ?',
       [presupuestoId]
     );
-    
-    const porcentaje = presupuesto[0]?.porcentaje_insumos || 0;
-    
-    for (const row of rows) {
-      if (row.id_insumo) {
-        const [insumo] = await pool.query<any[]>(
-          'SELECT Precio FROM insumos WHERE idInsumos = ?',
-          [row.id_insumo]
-        );
-        
-        if (insumo.length > 0) {
-          row.costo = insumo[0].Precio;
-          row.precio_facturar = row.costo * (1 + porcentaje / 100);
-        }
-      }
-    }
+    return res.json(rows);
   }
 
-  res.json(rows);
+  // Modo edición: Obtener con precios actuales en una sola query (JOIN)
+  const [rows] = await pool.query<any[]>(`
+    SELECT 
+      pi.producto,
+      COALESCE(i.Precio, pi.costo) as costo,
+      pi.cantidad,
+      pi.id_insumo,
+      p.porcentaje_insumos
+    FROM presupuesto_insumos pi
+    LEFT JOIN insumos i ON pi.id_insumo = i.idInsumos
+    CROSS JOIN presupuestos p
+    WHERE pi.idPresupuestos = ? AND p.idPresupuestos = ?
+  `, [presupuestoId, presupuestoId]);
+
+  // Calcular precio_facturar con porcentaje
+  const resultado = rows.map(row => ({
+    producto: row.producto,
+    costo: row.costo,
+    precio_facturar: row.costo * (1 + (row.porcentaje_insumos || 0) / 100),
+    cantidad: row.cantidad,
+    id_insumo: row.id_insumo
+  }));
+
+  res.json(resultado);
 });
