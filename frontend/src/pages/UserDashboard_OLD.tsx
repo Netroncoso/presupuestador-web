@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import {Tabs,Container,Title, Group,Text,Button, Paper, Flex,SimpleGrid,ScrollArea,Card} from "@mantine/core";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import {Tabs,Container,Title, Group,Text,Button, Paper, Flex,SimpleGrid,Collapse,ActionIcon,Card,Modal,Textarea,Badge} from "@mantine/core";
 import { notifications } from '@mantine/notifications';
 import { useAuth } from "../contexts/AuthContext";
 import { useNotificationCount } from '../hooks/useNotificationCount';
@@ -49,7 +49,7 @@ const formatCurrency = (value: number) =>
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
-  const { count: notificationCount, isConnected } = useNotificationCount();
+  const { count: notificationCount, isConnected, refreshData } = useNotificationCount();
   const [insumosSeleccionados, setInsumosSeleccionados] = useState<any[]>([]);
   const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<any[]>([]);
   const [alertasAbiertas, setAlertasAbiertas] = useState(true);
@@ -126,6 +126,8 @@ export default function UserDashboard() {
     prestacionesSeleccionadas,
   });
 
+
+
   const handleNuevoPresupuesto = useCallback(() => {
     resetPresupuesto();
     resetTotales();
@@ -178,6 +180,7 @@ export default function UserDashboard() {
 
   const handleEditarPresupuesto = useCallback(async (presupuesto: any, soloLecturaParam: boolean = true) => {
     if (soloLecturaParam) {
+      // Modo visualización (historial)
       setSoloLectura(true);
       setDatosHistorial({
         nombre: presupuesto.Nombre_Apellido,
@@ -196,6 +199,7 @@ export default function UserDashboard() {
         setTotalesDesdeBaseDatos
       );
     } else {
+      // Modo edición - verificar si necesita confirmación
       try {
         const response = await crearVersionParaEdicion(presupuesto.idPresupuestos, false);
         
@@ -206,6 +210,7 @@ export default function UserDashboard() {
           return;
         }
         
+        // Si no requiere confirmación, cargar directamente
         setSoloLectura(false);
         setDatosHistorial({
           nombre: presupuesto.Nombre_Apellido,
@@ -291,6 +296,8 @@ export default function UserDashboard() {
     }
   }, [presupuestoId, cerrarModalAuditoria]);
 
+
+
   const handleTodosItemsGuardados = useCallback(() => {
     cerrarModalValidacion();
     setValidacionCompletada(true);
@@ -347,135 +354,124 @@ export default function UserDashboard() {
         <Group gap="xs">
           <UserCircleIcon style={ICON_SIZE} />
           <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
-          <ConnectionStatus isConnected={isConnected} />
+          <ConnectionStatus 
+            isConnected={isConnected}
+          />
           <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={ICON_SIZE}/>}>
             Salir
           </Button>
         </Group>
       </Group>
 
-      <Group align="stretch" gap="md">
-        <Paper p="md" radius="md" withBorder shadow="xs" style={{ backgroundColor: '#c5e4b6', flex: 1 }}>
-          <Group align="stretch" gap="md">
-            <Card shadow="xs" padding="md" radius="md" withBorder style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {presupuestoId && (
-                <Flex direction="column" gap={4} mb="md">
-                  <Group gap="xs">
-                    <DocumentTextIcon style={ICON_SIZE} />
-                    <Text fw={500} size="sm" tt="capitalize">Paciente: {clienteNombre}</Text>
-                  </Group>
-                  {financiadorInfo?.Financiador && (
-                    <Text fw={400} size="xs" c="dimmed" pl={24}>
-                      Financiador: {financiadorInfo.Financiador}
-                    </Text>
-                  )}
+      <Paper p="md" radius="md" withBorder shadow="xs" style={{ backgroundColor: '#c5e4b6' }}>
+        <Group justify="space-between" px="xs" pt="xs">
+          {presupuestoId && (
+            <Group gap="xs">
+              <DocumentTextIcon style={ICON_SIZE} />
+              <Text fw={500} tt="capitalize">Paciente: {clienteNombre}</Text>
+            </Group>
+          )}
+          {presupuestoId && (
+            <Group gap="xs">
+              <Button onClick={handleFinalizarPresupuesto} loading={guardandoTotales} size="xs" color="green" leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}>
+                Finalizar Presupuesto
+              </Button>
+              <Button 
+                onClick={abrirModalAuditoria} 
+                size="xs" 
+                variant="outline" 
+                color="orange"
+                leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
+                disabled={!presupuestoId}
+              >
+                Pedir Auditoría
+              </Button>
+              <Button 
+                onClick={handleDescargarPDF} 
+                size="xs" 
+                variant="outline" 
+                color="Green"
+                leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
+              >
+                Descargar PDF
+              </Button>
+            </Group>
+          )}
+        </Group>
+        
+
+        <Group grow p="xs">
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Insumos:</Text>
+                <Text fw={500}>{formatCurrency(totalInsumos)}</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text fw={500}>Prestaciones:</Text>
+                <Text fw={500}>{formatCurrency(totalPrestaciones)}</Text>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Costo Total:</Text>
+                <Text fw={500} c="blue">{formatCurrency(costoTotal)}</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text fw={500}>Total a Facturar:</Text>
+                <Text fw={500} c="orange">{formatCurrency(totalFacturar)}</Text>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Card shadow="xs" padding="md" radius="md" withBorder>
+            <Flex direction="column" gap="xs">
+              <Flex justify="space-between">
+                <Text fw={500}>Utilidad:</Text>
+                <Text fw={500} c={totalFacturar - costoTotal >= 0 ? "green" : "red"}>
+                  {formatCurrency(totalFacturar - costoTotal)}
+                </Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text fw={600}>Rentabilidad:</Text>
+                <Text fw={600} c={rentabilidad >= 0 ? "green" : "red"}>
+                  {rentabilidad.toFixed(2)}%
+                </Text>
+              </Flex>
+              {financiadorInfo?.dias_cobranza_real && (
+                <Flex justify="space-between">
+                  <Text fw={600}>Con Plazo:</Text>
+                  <Text fw={600} c={rentabilidadConPlazo >= 0 ? "teal" : "red"}>
+                    {rentabilidadConPlazo.toFixed(2)}%
+                  </Text>
                 </Flex>
               )}
-              
-              <SimpleGrid cols={3} mt="lg" spacing="lg" style={{ flex: 1, }}>
-                <Flex direction="column" gap="xs">
-                  <Flex justify="space-between">
-                    <Text fw={500} size="sm">Insumos:</Text>
-                    <Text fw={500} size="sm">{formatCurrency(totalInsumos)}</Text>
-                  </Flex>
-                  <Flex justify="space-between">
-                    <Text fw={500} size="sm">Prestaciones:</Text>
-                    <Text fw={500} size="sm">{formatCurrency(totalPrestaciones)}</Text>
-                  </Flex>
-                </Flex>
+            </Flex>
+          </Card>
+        </Group>
+      </Paper>
 
-                <Flex direction="column" gap="xs">
-                  <Flex justify="space-between">
-                    <Text fw={500} size="sm">Costo Total:</Text>
-                    <Text fw={500} size="sm" c="blue">{formatCurrency(costoTotal)}</Text>
-                  </Flex>
-                  <Flex justify="space-between">
-                    <Text fw={500} size="sm">A Facturar:</Text>
-                    <Text fw={500} size="sm" c="orange">{formatCurrency(totalFacturar)}</Text>
-                  </Flex>
-                </Flex>
-
-                <Flex direction="column" gap="xs">
-                  <Flex justify="space-between">
-                    <Text fw={500} size="sm">Utilidad:</Text>
-                    <Text fw={500} size="sm" c={totalFacturar - costoTotal >= 0 ? "green" : "red"}>
-                      {formatCurrency(totalFacturar - costoTotal)}
-                    </Text>
-                  </Flex>
-                  <Flex justify="space-between" gap="xs">
-                    <Text fw={600} size="sm">Rentabilidad:</Text>
-                    <Group gap={4}>
-                      <Text fw={600} size="sm" c={rentabilidad >= 0 ? "green" : "red"}>
-                        {rentabilidad.toFixed(2)}%
-                      </Text>
-                      {financiadorInfo?.dias_cobranza_real && (
-                        <>
-                          <Text fw={400} size="xs" c="dimmed">|</Text>
-                          <Text fw={600} size="sm" c={rentabilidadConPlazo >= 0 ? "teal" : "red"}>
-                            {rentabilidadConPlazo.toFixed(2)}%
-                          </Text>
-                          <Text fw={400} size="xs" c="dimmed">(plazo)</Text>
-                        </>
-                      )}
-                    </Group>
-                  </Flex>
-                </Flex>
-              </SimpleGrid>
-            </Card>
-
-            {presupuestoId && (
-              <Card shadow="xs" padding="md" radius="md" withBorder style={{ width: '200px' }}>
-                <Flex direction="column" gap="xs">
-                  <Button 
-                    onClick={handleFinalizarPresupuesto} 
-                    loading={guardandoTotales} 
-                    size="sm" 
-                    color="green" 
-                    fullWidth
-                    leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}
-                  >
-                    Finalizar
-                  </Button>
-                  <Button 
-                    onClick={abrirModalAuditoria} 
-                    size="sm" 
-                    variant="outline" 
-                    color="orange"
-                    fullWidth
-                    leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
-                  >
-                    Auditoría
-                  </Button>
-                  <Button 
-                    onClick={handleDescargarPDF} 
-                    size="sm" 
-                    variant="outline" 
-                    color="green"
-                    fullWidth
-                    leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
-                  >
-                    PDF
-                  </Button>
-                </Flex>
-              </Card>
-            )}
-          </Group>
-        </Paper>
-
-        {alertas.length > 0 && (
-          <Paper  p="xs" radius="md"  style={{ width: '350px', alignSelf: 'stretch' }}>
-            <Group gap="xs" mb="sm">
+      {alertas.length > 0 && (
+        <Paper shadow="xs" p="md" radius="md" withBorder mt="xs" onClick={() => setAlertasAbiertas(!alertasAbiertas)} style={{ cursor: 'pointer' }}>
+          <Group justify="space-between" mb={alertasAbiertas ? 12 : 0}>
+            <Group gap="xs">
               <ShieldExclamationIcon color="red" style={ICON_SIZE} />
-              <Text fw={500} size="sm" c="red">Alertas ({alertas.length})</Text>
+              <Text fw={400} size="md" color="red">Alertas Disponibles</Text>
             </Group>
-            <ScrollArea h={110} type="auto">
-              <Flex direction="column" >
-                {alertas}
-              </Flex>
-            </ScrollArea>
-          </Paper>
-        )}
-      </Group>  
+            <ActionIcon variant="subtle">
+              {alertasAbiertas ? <ChevronUpIcon style={{ width: 18, height: 18 }} /> : <ChevronDownIcon style={{ width: 18, height: 18 }} />}
+            </ActionIcon>
+          </Group>
+          <Collapse in={alertasAbiertas}>
+            <SimpleGrid cols={2}>
+              {alertas}
+            </SimpleGrid>
+          </Collapse>
+        </Paper>
+      )}  
 
       <Tabs value={activeTab} onChange={setActiveTab} color="green" mt="lg" radius="md">
         <Tabs.List grow>

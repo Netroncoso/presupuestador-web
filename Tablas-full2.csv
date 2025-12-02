@@ -32,8 +32,8 @@ financiador,id_acuerdo,7,int,int,NULL,YES,NULL,MUL,,"Relación con la tabla fina
 financiador_acuerdo,id_acuerdo,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 financiador_acuerdo,nombre,2,varchar(150),varchar,150,NO,NULL,UNI,,"Nombre del tipo de acuerdo",NULL,NULL,NULL
 insumos,idInsumos,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-insumos,producto,2,varchar(255),varchar,255,NO,NULL,PRI,,,NULL,NULL,NULL
-insumos,costo,3,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+insumos,producto,2,varchar(255),varchar,255,NO,NULL,UNI,,,NULL,NULL,NULL
+insumos,costo,3,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
 notificaciones,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 notificaciones,usuario_id,2,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_1,usuarios,id
 notificaciones,presupuesto_id,3,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_2,presupuestos,idPresupuestos
@@ -78,30 +78,31 @@ presupuesto_prestaciones,created_at,8,timestamp,timestamp,NULL,YES,CURRENT_TIMES
 presupuesto_prestaciones,updated_at,9,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
 presupuestos,idPresupuestos,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuestos,Nombre_Apellido,2,varchar(45),varchar,45,YES,NULL,,,,NULL,NULL,NULL
-presupuestos,DNI,3,int,int,NULL,NO,NULL,,,,NULL,NULL,NULL
+presupuestos,DNI,3,varchar(20),varchar,20,NO,NULL,,,,NULL,NULL,NULL
 presupuestos,Sucursal,4,varchar(45),varchar,45,NO,NULL,,,,NULL,NULL,NULL
-presupuestos,total_insumos,5,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,dificil_acceso,6,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
-presupuestos,total_prestaciones,7,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,idobra_social,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-presupuestos,costo_total,9,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,created_at,10,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-presupuestos,updated_at,11,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
-presupuestos,total_facturar,12,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,rentabilidad,13,"decimal(5,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,rentabilidad_con_plazo,14,"decimal(5,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
-presupuestos,usuario_id,15,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_usuario,usuarios,id
-presupuestos,presupuesto_padre,16,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_padre,presupuestos,idPresupuestos
-presupuestos,es_ultima_version,17,tinyint(1),tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
-presupuestos,estado,18,"enum('borrador','pendiente','en_revision','aprobado','rechazado')",enum,11,YES,borrador,MUL,,,NULL,NULL,NULL
-presupuestos,version,19,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-presupuestos,porcentaje_insumos,20,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
+presupuestos,sucursal_id,5,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+presupuestos,total_insumos,6,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+presupuestos,dificil_acceso,7,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
+presupuestos,total_prestaciones,8,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+presupuestos,idobra_social,9,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_financiador,financiador,idobra_social
+presupuestos,costo_total,10,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+presupuestos,created_at,11,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+presupuestos,updated_at,12,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
+presupuestos,total_facturar,13,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+presupuestos,rentabilidad,14,"decimal(5,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+presupuestos,rentabilidad_con_plazo,15,"decimal(5,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
+presupuestos,usuario_id,16,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_usuario,usuarios,id
+presupuestos,presupuesto_padre,17,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_padre,presupuestos,idPresupuestos
+presupuestos,es_ultima_version,18,tinyint(1),tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
+presupuestos,estado,19,"enum('borrador','pendiente','en_revision','aprobado','rechazado')",enum,11,YES,borrador,MUL,,,NULL,NULL,NULL
+presupuestos,version,20,int,int,NULL,YES,1,,,,NULL,NULL,NULL
+presupuestos,porcentaje_insumos,21,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
 servicios,id_servicio,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 servicios,nombre,2,varchar(100),varchar,100,NO,NULL,,,,NULL,NULL,NULL
 servicios,tipo_unidad,3,"enum('horas','sesiones','consultas','días','unidades')",enum,9,YES,horas,,,,NULL,NULL,NULL
 servicios,max_unidades_sugerido,4,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 sucursales_mh,ID,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-sucursales_mh,Sucursales_mh,2,varchar(45),varchar,45,NO,NULL,PRI,,,NULL,NULL,NULL
+sucursales_mh,Sucursales_mh,2,varchar(45),varchar,45,NO,NULL,UNI,,,NULL,NULL,NULL
 sucursales_mh,suc_porcentaje_dificil_acceso,3,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 sucursales_mh,suc_porcentaje_insumos,4,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 usuarios,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL

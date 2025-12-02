@@ -16,8 +16,9 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const [nombre, setNombre] = useState('')
   const [dni, setDni] = useState('')
   const [sucursal, setSucursal] = useState('')
+  const [sucursalId, setSucursalId] = useState<number | null>(null)
   const [dificilAcceso, setDificilAcceso] = useState(false)
-  const [sucursales, setSucursales] = useState<{Sucursales_mh: string, suc_porcentaje_insumos: number}[]>([])
+  const [sucursales, setSucursales] = useState<{ID: number, Sucursales_mh: string, suc_porcentaje_insumos: number}[]>([])
   const [presupuestoCreado, setPresupuestoCreado] = useState(false)
   const [modalDNI, setModalDNI] = useState(false)
   const [presupuestoExistente, setPresupuestoExistente] = useState<any>(null)
@@ -82,13 +83,13 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
 
   const crearNuevoPresupuesto = async () => {
     try {
-      const sucursalData = sucursales.find(s => s.Sucursales_mh === sucursal)
+      const sucursalData = sucursales.find(s => s.ID === sucursalId)
       const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
       
       const res = await api.post('/presupuestos', {
         nombre,
         dni,
-        sucursal,
+        sucursal_id: sucursalId,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
       })
@@ -118,7 +119,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       const res = await api.post('/presupuestos', {
         nombre: nombreParam,
         dni,
-        sucursal: sucursalParam,
+        sucursal_id: sucursalData?.ID,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
       })
@@ -253,9 +254,17 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         
         <Select
           label="Sucursal"
-          data={sucursales.map(s => s.Sucursales_mh)}
-          value={sucursal}
-          onChange={(value) => setSucursal(value || '')}
+          data={sucursales.map(s => ({
+            value: s.ID.toString(),
+            label: s.Sucursales_mh
+          }))}
+          value={sucursalId?.toString() || ''}
+          onChange={(value) => {
+            const id = value ? parseInt(value) : null
+            setSucursalId(id)
+            const sucursalData = sucursales.find(s => s.ID === id)
+            setSucursal(sucursalData?.Sucursales_mh || '')
+          }}
           placeholder="Seleccione una sucursal"
           required
           disabled={esCargaHistorial || soloLectura}

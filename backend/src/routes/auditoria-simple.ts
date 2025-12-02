@@ -19,13 +19,14 @@ router.get('/pendientes', auth, requireAuditor, async (req, res) => {
     const [rows] = await pool.query(`
       SELECT 
         p.idPresupuestos, p.version, p.estado,
-        p.Nombre_Apellido, p.DNI, p.Sucursal, p.idobra_social,
+        p.Nombre_Apellido, p.DNI, p.sucursal_id, ps.Sucursales_mh as Sucursal, p.idobra_social,
         p.costo_total, p.rentabilidad, p.dificil_acceso,
         p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
         DATEDIFF(NOW(), p.created_at) as dias_pendiente
       FROM presupuestos p
       LEFT JOIN usuarios u ON p.usuario_id = u.id
       LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID
+      LEFT JOIN sucursales_mh ps ON p.sucursal_id = ps.ID
       WHERE p.estado IN ('pendiente', 'en_revision') 
       AND p.es_ultima_version = 1
       ORDER BY p.created_at ASC

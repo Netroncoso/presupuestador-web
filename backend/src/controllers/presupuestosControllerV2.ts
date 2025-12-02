@@ -60,12 +60,13 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado,
-      p.Nombre_Apellido, p.DNI, p.Sucursal, p.idobra_social, 
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.idobra_social, 
       p.total_insumos, p.total_prestaciones, p.costo_total, 
       p.total_facturar, p.rentabilidad, p.rentabilidad_con_plazo, 
       p.created_at, u.username as usuario_creador
     FROM presupuestos p 
     LEFT JOIN usuarios u ON p.usuario_id = u.id 
+    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
     ${whereClause}
     ORDER BY p.created_at DESC 
     LIMIT ? OFFSET ?
@@ -76,14 +77,14 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
 
 // Crear presupuesto (versión 1)
 export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
-  const { nombre, dni, sucursal, dificil_acceso, porcentaje_insumos } = req.body;
+  const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos } = req.body;
   const usuario_id = req.user?.id;
   
   const [result] = await pool.query<any>(`
     INSERT INTO presupuestos 
-    (Nombre_Apellido, DNI, Sucursal, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+    (Nombre_Apellido, DNI, sucursal_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
     VALUES (?,?,?,?,?,?, 1, 1, 'borrador')
-  `, [nombre.trim(), dni, sucursal, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id]);
+  `, [nombre.trim(), dni, sucursal_id, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id]);
   
   res.status(201).json({ id: result.insertId, version: 1 });
 });
@@ -233,8 +234,8 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
   
   // Obtener porcentaje actual de la sucursal para recalcular insumos
   const [sucursal] = await pool.query<any[]>(
-    'SELECT suc_porcentaje_insumos FROM sucursales_mh WHERE Sucursales_mh = ?',
-    [original.Sucursal]
+    'SELECT suc_porcentaje_insumos FROM sucursales_mh WHERE ID = ?',
+    [original.sucursal_id]
   );
   
   const porcentajeActual = sucursal[0]?.suc_porcentaje_insumos || 0;
@@ -242,13 +243,13 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
   const [resultPresupuesto] = await pool.query<any>(`
     INSERT INTO presupuestos 
     (version, presupuesto_padre, es_ultima_version, estado, usuario_id,
-     Nombre_Apellido, DNI, Sucursal, dificil_acceso, idobra_social,
+     Nombre_Apellido, DNI, sucursal_id, dificil_acceso, idobra_social,
      porcentaje_insumos, total_insumos, total_prestaciones, costo_total, total_facturar, 
      rentabilidad, rentabilidad_con_plazo)
     VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     nuevaVersion, presupuestoPadreId, usuario_id,
-    original.Nombre_Apellido, original.DNI, original.Sucursal,
+    original.Nombre_Apellido, original.DNI, original.sucursal_id,
     original.dificil_acceso, original.idobra_social,
     porcentajeActual,
     original.total_insumos, original.total_prestaciones,
@@ -371,7 +372,7 @@ export const obtenerPendientes = asyncHandler(async (req: Request, res: Response
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado,
-      p.Nombre_Apellido, p.DNI, p.Sucursal, 
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, ps.Sucursales_mh as Sucursal, 
       p.costo_total, p.rentabilidad, p.dificil_acceso,
       p.total_facturar, p.rentabilidad_con_plazo,
       p.created_at, u.username as creador,
@@ -381,6 +382,7 @@ export const obtenerPendientes = asyncHandler(async (req: Request, res: Response
     FROM presupuestos p
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID
+    LEFT JOIN sucursales_mh ps ON p.sucursal_id = ps.ID
     LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
     WHERE p.estado IN ('pendiente', 'en_revision') 
     AND p.es_ultima_version = 1
@@ -411,6 +413,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.*, 
+      s.Sucursales_mh as Sucursal,
       f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
       fa.nombre as acuerdo_nombre,
       u.username as usuario_creador,
@@ -419,6 +422,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
       COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as calc_total_prestaciones,
       COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar
     FROM presupuestos p 
+    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
     LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
     LEFT JOIN usuarios u ON p.usuario_id = u.id
