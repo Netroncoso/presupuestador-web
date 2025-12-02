@@ -354,11 +354,11 @@ export default function UserDashboard() {
         </Group>
       </Group>
 
-      <Group align="stretch" gap="md">
-        <Paper p="md" radius="md" withBorder shadow="xs" style={{ backgroundColor: '#c5e4b6', flex: 1 }}>
-          <Group align="stretch" gap="md">
-            <Card shadow="xs" padding="md" radius="md" withBorder style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {presupuestoId && (
+      {presupuestoId && (
+        <Group align="stretch" gap="md">
+          <Paper p="md" radius="md" withBorder shadow="xs" style={{ backgroundColor: '#c5e4b6', flex: 1 }}>
+            <Group align="stretch" gap="md">
+              <Card shadow="xs" padding="md" radius="md" withBorder style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Flex direction="column" gap={4} mb="md">
                   <Group gap="xs">
                     <DocumentTextIcon style={ICON_SIZE} />
@@ -370,9 +370,8 @@ export default function UserDashboard() {
                     </Text>
                   )}
                 </Flex>
-              )}
-              
-              <SimpleGrid cols={3} mt="lg" spacing="lg" style={{ flex: 1, }}>
+                
+                <SimpleGrid cols={3} mt="lg" spacing="lg" style={{ flex: 1 }}>
                 <Flex direction="column" gap="xs">
                   <Flex justify="space-between">
                     <Text fw={500} size="sm">Insumos:</Text>
@@ -420,10 +419,9 @@ export default function UserDashboard() {
                     </Group>
                   </Flex>
                 </Flex>
-              </SimpleGrid>
-            </Card>
+                </SimpleGrid>
+              </Card>
 
-            {presupuestoId && (
               <Card shadow="xs" padding="md" radius="md" withBorder style={{ width: '200px' }}>
                 <Flex direction="column" gap="xs">
                   <Button 
@@ -458,24 +456,24 @@ export default function UserDashboard() {
                   </Button>
                 </Flex>
               </Card>
-            )}
-          </Group>
-        </Paper>
+            </Group>
+          </Paper>
 
-        {alertas.length > 0 && (
+          {alertas.length > 0 && (
           <Paper  p="xs" radius="md"  style={{ width: '350px', alignSelf: 'stretch' }}>
             <Group gap="xs" mb="sm">
               <ShieldExclamationIcon color="red" style={ICON_SIZE} />
               <Text fw={500} size="sm" c="red">Alertas ({alertas.length})</Text>
             </Group>
-            <ScrollArea h={110} type="auto">
+            <ScrollArea h={115} type="auto">
               <Flex direction="column" >
                 {alertas}
               </Flex>
             </ScrollArea>
           </Paper>
-        )}
-      </Group>  
+          )}
+        </Group>
+      )}  
 
       <Tabs value={activeTab} onChange={setActiveTab} color="green" mt="lg" radius="md">
         <Tabs.List grow>

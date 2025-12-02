@@ -38,8 +38,11 @@ npm run dev
 
 ### Migraciones
 ```bash
-# Ejecutar migración de valores históricos
+# Migración de valores históricos (si no está aplicada)
 mysql -u root -p presupuestador < backend/migrations/create_prestador_servicio_valores.sql
+
+# Migración de tipos de datos y FKs (COMPLETADA)
+# Ver: backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md
 ```
 
 ## 🔑 Variables de Entorno
@@ -258,6 +261,13 @@ WHERE CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31');
 - ✅ Mantenimiento de costos negociados originales (valor_asignado)
 - ✅ Recalculo de totales en modo edición, congelados en modo solo lectura
 
+### Mejoras de Base de Datos (v2.1)
+- ✅ Migración `Sucursal` (VARCHAR) → `sucursal_id` (INT) con FK
+- ✅ Tipos de datos corregidos (DECIMAL para montos, VARCHAR para DNI)
+- ✅ Foreign Keys agregadas para integridad referencial
+- ✅ Primary Keys limpiadas (sin PKs compuestas innecesarias)
+- ✅ Normalización de datos (eliminación de duplicación)
+
 ## 🤝 Contribuir
 
 1. Fork el proyecto
@@ -280,6 +290,20 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 2.0  
+**Versión:** 2.1  
 **Última actualización:** Diciembre 2024  
 **Estado:** ✅ Producción
+
+## 📝 Historial de Versiones
+
+### v2.1 (Diciembre 2024)
+- Migración de base de datos: Sucursal → sucursal_id
+- Corrección de tipos de datos (DECIMAL, VARCHAR)
+- Mejoras de integridad referencial (FKs)
+- Normalización de estructura de BD
+
+### v2.0 (Diciembre 2024)
+- Sistema de valores históricos (timelapse)
+- Versionado de presupuestos
+- Notificaciones en tiempo real (SSE)
+- Auditoría automatizada

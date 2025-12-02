@@ -397,10 +397,18 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
   const { dni } = req.params;
   
   const [rows] = await pool.query<any[]>(`
-    SELECT idPresupuestos, Nombre_Apellido, DNI, Sucursal, idobra_social, created_at 
-    FROM presupuestos 
-    WHERE DNI = ? AND es_ultima_version = 1 
-    ORDER BY created_at DESC LIMIT 1
+    SELECT 
+      p.idPresupuestos, 
+      p.Nombre_Apellido, 
+      p.DNI, 
+      p.sucursal_id,
+      s.Sucursales_mh as Sucursal, 
+      p.idobra_social, 
+      p.created_at 
+    FROM presupuestos p
+    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
+    WHERE p.DNI = ? AND p.es_ultima_version = 1 
+    ORDER BY p.created_at DESC LIMIT 1
   `, [dni]);
 
   res.json(rows.length > 0 ? { exists: true, presupuesto: rows[0] } : { exists: false });
