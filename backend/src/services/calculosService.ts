@@ -23,6 +23,7 @@ export class CalculosService {
     rentabilidad: number;
     rentabilidad_con_plazo: number;
     costo_total: number;
+    total_facturar: number;
     dificil_acceso: string;
   }): string {
     const reglas = [];
@@ -36,12 +37,13 @@ export class CalculosService {
       reglas.push(`Costo total superior a $${auditoria.costoMaximo.toLocaleString()}`);
     }
 
-    if (presupuesto.dificil_acceso === 'SI') {
-      reglas.push('Marcado como difícil acceso');
-    }
-
     if (presupuesto.rentabilidad_con_plazo > auditoria.rentabilidadConPlazoMaxima) {
       reglas.push(`Rentabilidad con plazo superior a ${auditoria.rentabilidadConPlazoMaxima}%`);
+    }
+
+    const utilidad = presupuesto.total_facturar - presupuesto.costo_total;
+    if (utilidad > auditoria.utilidadMinima) {
+      reglas.push(`Utilidad superior a $${auditoria.utilidadMinima.toLocaleString()}`);
     }
 
     return reglas.length > 0 ? 'pendiente' : 'borrador';

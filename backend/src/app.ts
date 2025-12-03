@@ -18,6 +18,9 @@ import adminServiciosRoutes from './routes/admin/adminServicios';
 import adminServiciosCrudRoutes from './routes/admin/adminServiciosCrud';
 import adminSucursalesRoutes from './routes/admin/adminSucursales';
 import adminUsuariosRoutes from './routes/adminUsuarios';
+import configuracionRoutes from './routes/configuracion';
+import alertasServiciosRoutes from './routes/alertasServicios';
+import tiposUnidadRoutes from './routes/tiposUnidad';
 import sseRoutes from './routes/sse';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
@@ -72,6 +75,9 @@ app.use('/api/admin/servicios', adminServiciosRoutes);
 app.use('/api/admin/servicios-crud', adminServiciosCrudRoutes);
 app.use('/api/admin/sucursales', adminSucursalesRoutes);
 app.use('/api/admin', adminUsuariosRoutes);
+app.use('/api/configuracion', configuracionRoutes);
+app.use('/api/alertas-servicios', alertasServiciosRoutes);
+app.use('/api/tipos-unidad', tiposUnidadRoutes);
 
 // Global error handler
 app.use(errorHandler);

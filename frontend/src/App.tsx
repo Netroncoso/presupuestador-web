@@ -52,6 +52,11 @@ export default function App() {
                 fontWeight: 600
               }
             }
+          },
+          Select: {
+            defaultProps: {
+              checkIconPosition: 'right'
+            }
           }
         }
       }}

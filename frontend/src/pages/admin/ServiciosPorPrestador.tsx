@@ -218,7 +218,7 @@ export default function ServiciosPorPrestador() {
                 .map((servicio) => (
                 <Table.Tr key={servicio.id_servicio}>
                   <Table.Td>{formatName(servicio.nombre)}</Table.Td>
-                  <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || 'horas'}</Table.Td>
+                  <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || '-'}</Table.Td>
                   <Table.Td>
                     <Group gap="sm" align="center">
                       <Switch

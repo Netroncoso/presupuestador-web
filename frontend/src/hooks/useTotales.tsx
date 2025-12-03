@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FinanciadorInfo, Prestacion } from '../types';
 import {
   calcularCostoTotal,
@@ -41,15 +41,17 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     [costoTotal, totalFacturar]
   );
 
-  const utilidadConPlazo = useMemo(() => 
-    calcularUtilidadConPlazo(totalFacturar, costoTotal, financiadorInfo),
-    [totalFacturar, costoTotal, financiadorInfo]
-  );
+  const [utilidadConPlazo, setUtilidadConPlazo] = useState(0);
 
-  const margenConPlazo = useMemo(() => 
-    calcularMargen(utilidadConPlazo, totalFacturar),
-    [utilidadConPlazo, totalFacturar]
-  );
+  useEffect(() => {
+    calcularUtilidadConPlazo(totalFacturar, costoTotal, financiadorInfo)
+      .then(setUtilidadConPlazo);
+  }, [totalFacturar, costoTotal, financiadorInfo]);
+
+  const margenConPlazo = useMemo(() => {
+    if (utilidadConPlazo === 0 && totalFacturar === 0) return 0;
+    return calcularMargen(utilidadConPlazo, totalFacturar);
+  }, [utilidadConPlazo, totalFacturar]);
 
   const rentabilidadConPlazo = useMemo(() => {
     if (totalesDesdeDB) {

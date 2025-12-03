@@ -173,7 +173,7 @@ export default function GestionInsumos() {
                 />
               </Table.Td>
               <Table.Td>{formatProductName(insumo.producto)}</Table.Td>
-              <Table.Td>${insumo.costo.toFixed(2)}</Table.Td>
+              <Table.Td>${Number(insumo.costo).toFixed(2)}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <ActionIcon variant="transparent" onClick={() => handleEdit(insumo)}>

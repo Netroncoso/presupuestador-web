@@ -7,18 +7,21 @@ interface Props {
 }
 
 export const PrestacionExcedidaAlert = ({ prestacion }: Props) => {
+  const mensaje = (prestacion as any).mensaje_alerta || 'Cantidad superior a la recomendada.';
+  const color = (prestacion as any).color_alerta || 'orange';
+  
   return (
     <Alert
       icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />}
       title="⚠️ CANTIDAD ELEVADA"
-      color="orange"
+      color={color}
       radius="md"
       mb="xs"
     >
       <Text size="sm">
-        <strong>{prestacion.prestacion}: {prestacion.cantidad} {prestacion.tipo_unidad}</strong> (sugerido: {prestacion.cant_total}) - 
-        Cantidad superior a la recomendada.
+        <strong>{prestacion.prestacion}: {prestacion.cantidad} {prestacion.tipo_unidad}</strong>
       </Text>
+      <Text size="sm" mt="xs">{mensaje}</Text>
     </Alert>
   );
 };

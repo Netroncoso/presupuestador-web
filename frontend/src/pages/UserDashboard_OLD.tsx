@@ -400,8 +400,8 @@ export default function UserDashboard() {
         </Group>
         
 
-        <Group grow p="xs">
-          <Card shadow="xs" padding="md" radius="md" withBorder>
+        <Group grow p="md" >
+          <Card shadow="xs"  radius="md" withBorder>
             <Flex direction="column" gap="xs">
               <Flex justify="space-between">
                 <Text fw={500}>Insumos:</Text>
@@ -414,7 +414,7 @@ export default function UserDashboard() {
             </Flex>
           </Card>
 
-          <Card shadow="xs" padding="md" radius="md" withBorder>
+          <Card shadow="xs"  radius="md" withBorder>
             <Flex direction="column" gap="xs">
               <Flex justify="space-between">
                 <Text fw={500}>Costo Total:</Text>
@@ -427,7 +427,7 @@ export default function UserDashboard() {
             </Flex>
           </Card>
 
-          <Card shadow="xs" padding="md" radius="md" withBorder>
+          <Card shadow="xs"  radius="md" withBorder>
             <Flex direction="column" gap="xs">
               <Flex justify="space-between">
                 <Text fw={500}>Utilidad:</Text>
@@ -442,7 +442,7 @@ export default function UserDashboard() {
                 </Text>
               </Flex>
               {financiadorInfo?.dias_cobranza_real && (
-                <Flex justify="space-between">
+                <Flex >
                   <Text fw={600}>Con Plazo:</Text>
                   <Text fw={600} c={rentabilidadConPlazo >= 0 ? "teal" : "red"}>
                     {rentabilidadConPlazo.toFixed(2)}%

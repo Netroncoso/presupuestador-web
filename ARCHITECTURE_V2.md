@@ -1,10 +1,10 @@
-# Arquitectura del Sistema - Presupuestador Web v2.1
+# Arquitectura del Sistema - Presupuestador Web v2.2
 
 ## 📐 Visión General
 
 Sistema web de gestión de presupuestos médicos con arquitectura cliente-servidor, versionado de datos, valores históricos, auditoría automatizada y notificaciones en tiempo real.
 
-**Versión 2.1:** Refactoring completo con separación de responsabilidades, optimización de queries N+1, y configuración centralizada.
+**Versión 2.2:** Refactoring completo con separación de responsabilidades, optimización de queries N+1, configuración centralizada y sistema de alertas configurables.
 
 ## 🏗️ Stack Tecnológico
 
@@ -100,26 +100,33 @@ export class PresupuestoRepository {
 
 ### Configuración Centralizada
 
-**`config/businessRules.ts`** - Elimina valores hardcodeados
+**`config/businessRules.ts`** - Carga dinámica desde BD
 
 ```typescript
-export const BusinessRules = {
+// Carga desde tabla configuracion_sistema con cache de 1 minuto
+export async function getBusinessRules() {
+  if (Date.now() - lastFetch > CACHE_TTL) {
+    await loadRulesFromDB(); // SELECT * FROM configuracion_sistema
+  }
+  return cachedRules;
+}
+
+// Valores por defecto (fallback si falla BD)
+const DEFAULT_RULES = {
   auditoria: {
     rentabilidadMinima: 15,      // %
     costoMaximo: 150000,          // $
     rentabilidadConPlazoMaxima: 25, // %
+    utilidadMinima: 50000,        // $
   },
   financiero: {
     diasCobranzaDefault: 30,      // días
     tasaMensualDefault: 2,        // %
   },
-  paginacion: {
-    limitDefault: 100,
-    offsetDefault: 0,
-  },
-  estados: {
-    validos: ['pendiente', 'en_revision', 'aprobado', 'rechazado', 'borrador'],
-    requierenNotificacion: ['aprobado', 'rechazado'],
+  alertas: {                      // ⭐ NUEVO en v2.2
+    rentabilidad: { desaprobado: 10, mejorar: 15, ... },
+    monto: { elevado: 100000, critico: 150000 },
+    financiador: { cobranzaLenta: 45, cobranzaExtendida: 60, tasaAlta: 5 },
   },
 };
 
@@ -388,17 +395,28 @@ mysql -u root -p presupuestador < backend/migrations/create_prestador_servicio_v
 - [Documentación de API](./backend/RUTAS_API.md)
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md)
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md)
+- [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) ⭐ NUEVO
 - [Análisis de Código Backend](./ANALISIS_CODIGO_BACKEND.md)
 - [Optimización N+1](./backend/OPTIMIZACION_N+1.md)
 - [Migración Sucursal](./backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md)
+- [Auditoría Tipos Unidad](./AUDITORIA_TIPOS_UNIDAD.md)
 
 ---
 
-**Versión:** 2.1  
+**Versión:** 2.2  
 **Última actualización:** Diciembre 2024  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v2.2 (Diciembre 2024)
+- ✅ Sistema de alertas configurables (11 parámetros editables)
+- ✅ Tabla maestra `tipos_unidad` con normalización
+- ✅ Gestión de tipos de unidad desde UI
+- ✅ Cache de configuración (1 minuto)
+- ✅ Umbrales dinámicos desde BD
+- ✅ Frontend carga alertas con fallback
+- ✅ Eliminación de constantes hardcodeadas
 
 ### v2.1 (Diciembre 2024)
 - ✅ Refactoring completo: Controllers → Services → Repositories

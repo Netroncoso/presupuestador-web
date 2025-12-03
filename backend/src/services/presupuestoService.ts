@@ -52,6 +52,7 @@ export class PresupuestoService {
       rentabilidad,
       rentabilidad_con_plazo: rentabilidadConPlazo,
       costo_total: costoTotal,
+      total_facturar: totalFacturar,
       dificil_acceso: presupuesto.dificil_acceso
     });
 

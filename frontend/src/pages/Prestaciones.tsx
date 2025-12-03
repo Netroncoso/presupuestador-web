@@ -289,7 +289,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       cantidad: cantidadNum,
       valor_asignado: valorNum,
       valor_facturar: Number(prestacionData.valor_facturar),
-      tipo_unidad: prestacionData.tipo_unidad || 'horas',
+      tipo_unidad: prestacionData.tipo_unidad,
       cant_total: prestacionData.cant_total
     }
 
@@ -463,7 +463,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                               <span>{p.nombre.charAt(0).toUpperCase() + p.nombre.slice(1).toLowerCase()}</span>
                             </Group>
                           </Table.Td>
-                          <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || 'horas'}</Table.Td>
+                          <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || '-'}</Table.Td>
                           <Table.Td>${Number(p.valor_facturar || 0).toFixed(2)}</Table.Td>
                           <Table.Td>{p.cant_total || 0}</Table.Td>
                         </Table.Tr> 

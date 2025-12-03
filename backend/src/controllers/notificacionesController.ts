@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { broadcastNotificationUpdate } from './sseController';
+import { Notificaciones, MutationResult } from '../types/database';
 
 // Obtener notificaciones del usuario
 export const obtenerNotificaciones = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
@@ -35,7 +36,7 @@ export const obtenerNotificaciones = asyncHandler(async (req: Request & { user?:
   
   params.push(limit, offset);
   
-  const [notificaciones] = await pool.query<any[]>(`
+  const [notificaciones] = await pool.query<Notificaciones[]>(`
     SELECT 
       n.id, n.tipo, n.mensaje, n.estado, n.creado_en,
       n.presupuesto_id, n.version_presupuesto,
@@ -56,7 +57,7 @@ export const marcarComoLeida = asyncHandler(async (req: Request & { user?: any }
   const id = parseInt(req.params.id);
   const usuario_id = req.user?.id;
   
-  const [result] = await pool.query<any>(
+  const [result] = await pool.query<MutationResult>(
     'UPDATE notificaciones SET estado = "leido" WHERE id = ? AND usuario_id = ?',
     [id, usuario_id]
   );
@@ -75,7 +76,7 @@ export const marcarComoLeida = asyncHandler(async (req: Request & { user?: any }
 export const contarNoLeidas = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const usuario_id = req.user?.id;
   
-  const [result] = await pool.query<any[]>(
+  const [result] = await pool.query<Notificaciones[]>(
     'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
     [usuario_id]
   );

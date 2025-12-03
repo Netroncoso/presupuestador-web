@@ -3,6 +3,7 @@ import { pool } from '../db';
 import { logger } from '../utils/logger';
 import { sendSSEEvent, sendHeartbeat } from '../middleware/sseCleanup';
 import jwt from 'jsonwebtoken';
+import { Notificaciones, Presupuestos } from '../types/database';
 
 interface SSEConnection {
   res: Response;
@@ -138,12 +139,12 @@ const sendInitialData = async (res: Response, userId: number, userRole: string) 
 };
 
 const getNotificationData = async (userId: number) => {
-  const [countResult] = await pool.query<any[]>(
+  const [countResult] = await pool.query<Notificaciones[]>(
     'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
     [userId]
   );
   
-  const [notificationsList] = await pool.query<any[]>(`
+  const [notificationsList] = await pool.query<Notificaciones[]>(`
     SELECT n.id, n.tipo, n.mensaje, n.estado, n.creado_en, n.presupuesto_id, 
            n.version_presupuesto, p.Nombre_Apellido as paciente, p.DNI as dni_paciente
     FROM notificaciones n
@@ -160,7 +161,7 @@ const getNotificationData = async (userId: number) => {
 };
 
 const getPresupuestosData = async () => {
-  const [pendientes] = await pool.query<any[]>(`
+  const [pendientes] = await pool.query<Presupuestos[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado, p.Nombre_Apellido, p.DNI, 
       p.sucursal_id, ps.Sucursales_mh as Sucursal, p.costo_total, p.rentabilidad, p.dificil_acceso, 

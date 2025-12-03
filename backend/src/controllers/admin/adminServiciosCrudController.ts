@@ -24,7 +24,7 @@ export const createServicio = async (req: Request, res: Response) => {
 
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO servicios (nombre, tipo_unidad, max_unidades_sugerido) VALUES (?, ?, ?)',
-      [nombre, tipo_unidad || 'horas', max_unidades_sugerido || null]
+      [nombre, tipo_unidad, max_unidades_sugerido || null]
     );
 
     res.status(201).json({
@@ -37,6 +37,9 @@ export const createServicio = async (req: Request, res: Response) => {
   } catch (err: any) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'El servicio ya existe' });
+    }
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({ error: 'Tipo de unidad no válido' });
     }
     console.error('Error creating servicio:', err);
     res.status(500).json({ error: 'Error al crear servicio' });
@@ -54,7 +57,7 @@ export const updateServicio = async (req: Request, res: Response) => {
 
     const [result] = await pool.query<ResultSetHeader>(
       'UPDATE servicios SET nombre = ?, tipo_unidad = ?, max_unidades_sugerido = ? WHERE id_servicio = ?',
-      [nombre, tipo_unidad || 'horas', max_unidades_sugerido || null, id]
+      [nombre, tipo_unidad, max_unidades_sugerido || null, id]
     );
 
     if (result.affectedRows === 0) {
@@ -65,6 +68,9 @@ export const updateServicio = async (req: Request, res: Response) => {
   } catch (err: any) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ error: 'El servicio ya existe' });
+    }
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(400).json({ error: 'Tipo de unidad no válido' });
     }
     console.error('Error updating servicio:', err);
     res.status(500).json({ error: 'Error al actualizar servicio' });

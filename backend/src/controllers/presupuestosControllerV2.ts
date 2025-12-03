@@ -5,6 +5,7 @@ import { PresupuestoService } from '../services/presupuestoService';
 import { VersioningService } from '../services/versioningService';
 import { AuditoriaService } from '../services/auditoriaService';
 import { BusinessRules } from '../config/businessRules';
+import { PresupuestoCompleto, PresupuestoPrestacionCompleto, PresupuestoInsumos, MutationResult } from '../types/database';
 
 const presupuestoService = new PresupuestoService();
 const versioningService = new VersioningService();
@@ -56,7 +57,7 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
   const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos } = req.body;
   const usuario_id = req.user?.id;
   
-  const [result] = await pool.query<any>(`
+  const [result] = await pool.query<MutationResult>(`
     INSERT INTO presupuestos 
     (Nombre_Apellido, DNI, sucursal_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
     VALUES (?,?,?,?,?,?, ?, 1, ?)

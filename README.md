@@ -69,6 +69,7 @@ VITE_API_URL=http://localhost:3000
 - [API REST](./backend/RUTAS_API.md) - Documentación de endpoints
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md) - SSE y notificaciones en tiempo real
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos
+- [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) - Sistema de umbrales dinámicos
 
 ## 🏗️ Arquitectura
 
@@ -130,8 +131,10 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 
 1. **Rentabilidad < 15%** - Rentabilidad muy baja
 2. **Costo Total > $150,000** - Monto alto
-3. **Difícil Acceso = 'SI'** - Casos especiales
-4. **Rentabilidad con Plazo > 25%** - Posible sobreprecio
+3. **Rentabilidad con Plazo > 25%** - Posible sobreprecio
+4. **Utilidad > $50,000** - Alta utilidad
+
+**Nota**: Todos los umbrales son configurables por el super admin desde Panel Admin > Reglas de Negocio.
 
 ## 🔄 Sistema de Versiones
 
@@ -268,6 +271,14 @@ WHERE CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31');
 - ✅ Primary Keys limpiadas (sin PKs compuestas innecesarias)
 - ✅ Normalización de datos (eliminación de duplicación)
 
+### Sistema de Alertas Configurables (v2.2)
+- ✅ Umbrales de alertas configurables desde BD
+- ✅ 11 parámetros editables (rentabilidad, monto, financiador)
+- ✅ Cache de 1 minuto para optimizar performance
+- ✅ Tabla maestra `tipos_unidad` con FKs
+- ✅ Gestión de tipos de unidad desde UI
+- ✅ Alertas por tipo_unidad con mensaje y color personalizables
+
 ## 🤝 Contribuir
 
 1. Fork el proyecto
@@ -290,11 +301,18 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 2.1  
+**Versión:** 2.2  
 **Última actualización:** Diciembre 2024  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v2.2 (Diciembre 2024)
+- Sistema de alertas configurables (umbrales dinámicos)
+- Tabla maestra tipos_unidad con normalización
+- Gestión de tipos de unidad desde UI
+- 11 parámetros de alertas editables
+- Cache optimizado para configuración
 
 ### v2.1 (Diciembre 2024)
 - Migración de base de datos: Sucursal → sucursal_id

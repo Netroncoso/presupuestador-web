@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput } from '@mantine/core';
+import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput, Text } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -13,6 +13,7 @@ interface Servicio {
 
 export default function GestionServicios() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [tiposUnidad, setTiposUnidad] = useState<any[]>([]);
   const [filtro, setFiltro] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -20,9 +21,11 @@ export default function GestionServicios() {
   const [deletingServicio, setDeletingServicio] = useState<Servicio | null>(null);
   const [formData, setFormData] = useState({ 
     nombre: '', 
-    tipo_unidad: 'horas'
+    tipo_unidad: ''
   });
   const [loading, setLoading] = useState(false);
+  const [tiposModalOpen, setTiposModalOpen] = useState(false);
+  const [nuevoTipo, setNuevoTipo] = useState({ nombre: '', descripcion: '' });
 
   const formatName = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -34,7 +37,17 @@ export default function GestionServicios() {
 
   useEffect(() => {
     cargarServicios();
+    cargarTiposUnidad();
   }, []);
+
+  const cargarTiposUnidad = async () => {
+    try {
+      const { data } = await api.get('/tipos-unidad');
+      setTiposUnidad(data);
+    } catch (error) {
+      console.error('Error cargando tipos de unidad:', error);
+    }
+  };
 
   const cargarServicios = async () => {
     try {
@@ -96,7 +109,7 @@ export default function GestionServicios() {
     setEditingServicio(servicio);
     setFormData({ 
       nombre: servicio.nombre,
-      tipo_unidad: servicio.tipo_unidad || 'horas'
+      tipo_unidad: servicio.tipo_unidad || ''
     });
     setModalOpen(true);
   };
@@ -135,7 +148,7 @@ export default function GestionServicios() {
     setEditingServicio(null);
     setFormData({ 
       nombre: '', 
-      tipo_unidad: 'horas'
+      tipo_unidad: ''
     });
     setModalOpen(true);
   };
@@ -157,9 +170,14 @@ export default function GestionServicios() {
           }
           style={{ flex: 1 }}
         />
-        <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
-          Nuevo Servicio
-        </Button>
+        <Group gap="xs">
+          <Button variant="outline" onClick={() => setTiposModalOpen(true)}>
+            Gestionar Tipos
+          </Button>
+          <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
+            Nuevo Servicio
+          </Button>
+        </Group>
       </Group>
 
       <AdminTable isEmpty={serviciosFiltrados.length === 0} emptyMessage="No se encontraron servicios">
@@ -174,7 +192,7 @@ export default function GestionServicios() {
           {serviciosFiltrados.map((servicio) => (
             <Table.Tr key={servicio.id_servicio}>
               <Table.Td>{formatName(servicio.nombre)}</Table.Td>
-              <Table.Td style={{ textTransform: 'capitalize' }}>{servicio.tipo_unidad || 'horas'}</Table.Td>
+              <Table.Td style={{ textTransform: 'capitalize' }}>{servicio.tipo_unidad || '-'}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
@@ -206,14 +224,11 @@ export default function GestionServicios() {
           <Select
             label="Tipo de Unidad"
             value={formData.tipo_unidad}
-            onChange={(value) => setFormData({ ...formData, tipo_unidad: value || 'horas' })}
-            data={[
-              { value: 'horas', label: 'Horas' },
-              { value: 'sesiones', label: 'Sesiones' },
-              { value: 'consultas', label: 'Consultas' },
-              { value: 'días', label: 'Días' },
-              { value: 'unidades', label: 'Unidades' }
-            ]}
+            onChange={(value) => setFormData({ ...formData, tipo_unidad: value || '' })}
+            data={tiposUnidad.map(t => ({ 
+              value: t.nombre, 
+              label: t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1) 
+            }))}
             required
           />
 
@@ -248,6 +263,98 @@ export default function GestionServicios() {
             </Button>
             <Button color="red" onClick={confirmDelete} loading={loading}>
               Confirmar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal Gestionar Tipos */}
+      <Modal
+        opened={tiposModalOpen}
+        onClose={() => {
+          setTiposModalOpen(false);
+          setNuevoTipo({ nombre: '', descripcion: '' });
+          cargarTiposUnidad();
+        }}
+        title="Gestionar Tipos de Unidad"
+        size="lg"
+      >
+        <Stack gap="md">
+          <Table striped highlightOnHover>
+            <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+              <Table.Tr>
+                <Table.Th>Tipo</Table.Th>
+                <Table.Th>Descripción</Table.Th>
+                <Table.Th style={{ width: '80px' }}>Estado</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {tiposUnidad.map((tipo) => (
+                <Table.Tr key={tipo.id}>
+                  <Table.Td style={{ textTransform: 'capitalize', fontWeight: 500 }}>{tipo.nombre}</Table.Td>
+                  <Table.Td>{tipo.descripcion}</Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c={tipo.activo ? 'green' : 'gray'}>
+                      {tipo.activo ? 'Activo' : 'Inactivo'}
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+
+          <Stack gap="sm" style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
+            <Text size="sm" fw={500}>Agregar Nuevo Tipo</Text>
+            <Group grow>
+              <TextInput
+                placeholder="Nombre (ej: turnos)"
+                value={nuevoTipo.nombre}
+                onChange={(e) => setNuevoTipo({ ...nuevoTipo, nombre: e.target.value.toLowerCase() })}
+              />
+              <TextInput
+                placeholder="Descripción"
+                value={nuevoTipo.descripcion}
+                onChange={(e) => setNuevoTipo({ ...nuevoTipo, descripcion: e.target.value })}
+              />
+            </Group>
+            <Group justify="flex-end">
+              <Button
+                onClick={async () => {
+                  if (!nuevoTipo.nombre) {
+                    notifications.show({
+                      title: 'Error',
+                      message: 'El nombre es requerido',
+                      color: 'red'
+                    });
+                    return;
+                  }
+                  try {
+                    await api.post('/tipos-unidad', nuevoTipo);
+                    notifications.show({
+                      title: 'Éxito',
+                      message: 'Tipo de unidad creado correctamente',
+                      color: 'green'
+                    });
+                    setNuevoTipo({ nombre: '', descripcion: '' });
+                    cargarTiposUnidad();
+                  } catch (error: any) {
+                    notifications.show({
+                      title: 'Error',
+                      message: error.message || 'Error al crear tipo',
+                      color: 'red'
+                    });
+                  }
+                }}
+                loading={loading}
+              >
+                Agregar Tipo
+              </Button>
+            </Group>
+          </Stack>
+
+          <Group justify="flex-end" style={{ borderTop: '1px solid #dee2e6', paddingTop: '1rem' }}>
+            <Button variant="outline" onClick={() => setTiposModalOpen(false)}>
+              Cerrar
             </Button>
           </Group>
         </Stack>
