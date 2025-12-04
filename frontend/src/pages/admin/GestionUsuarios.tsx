@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlusIcon} from '@heroicons/react/24/solid';
-import { Table, Button, TextInput, Select, Modal, Group, Text, ActionIcon, Badge, Switch } from '@mantine/core';
+import { Table, Button, TextInput, Select, Modal, Group, Text, ActionIcon, Switch } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Usuario, Sucursal } from '../../types';
 
@@ -153,9 +153,9 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
               <Table.Tr key={usuario.id}>
                 <Table.Td>{usuario.username}</Table.Td>
                 <Table.Td>
-                  <Badge variant="dot" color={usuario.rol === 'admin' ? 'red' : 'blue'}>
+                  <Text size="sm" c={usuario.rol === 'admin' ? 'red' : 'blue'}>
                     {usuario.rol}
-                  </Badge>
+                  </Text>
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm">{usuario.sucursal_nombre || 'Sin asignar'}</Text>

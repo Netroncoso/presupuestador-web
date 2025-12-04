@@ -126,7 +126,8 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         />
       </Group>
 
-      <Table striped="odd" highlightOnHover stickyHeader>
+      <Table.ScrollContainer minWidth={1000}>
+        <Table striped="odd" highlightOnHover stickyHeader>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>ID</Table.Th>
@@ -190,6 +191,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           )}
         </Table.Tbody>
       </Table>
+      </Table.ScrollContainer>
     </Paper>
   );
 }

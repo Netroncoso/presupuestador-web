@@ -103,7 +103,7 @@ export default function GestionSucursales() {
         }
       />
 
-      <AdminTable isEmpty={sucursalesFiltradas.length === 0} emptyMessage="No se encontraron sucursales">
+      <AdminTable isEmpty={sucursalesFiltradas.length === 0} emptyMessage="No se encontraron sucursales" minWidth={700}>
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
           <Table.Tr>
             <Table.Th>Sucursal</Table.Th>

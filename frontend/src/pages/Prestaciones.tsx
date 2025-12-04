@@ -27,6 +27,7 @@ interface PrestacionDisponible {
 interface Financiador {
   idobra_social: string
   Financiador: string
+  activo: number
 }
 
 interface Props {
@@ -71,7 +72,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const financiadoresOptions = useMemo(() => 
     financiadores.map(p => ({
       value: String(p.idobra_social),
-      label: p.Financiador
+      label: p.activo === 1 ? p.Financiador : `${p.Financiador} (Comunicarse con cobranza)`,
+      disabled: p.activo !== 1
     })),
     [financiadores]
   )
@@ -423,7 +425,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             <Grid.Col span={6}>
               <Paper p="md" withBorder>
                 <Title order={4} mb="md">Prestaciones Disponibles</Title>
-                <Table.ScrollContainer mt="xs" minWidth={500} h={400}>
+                <Table.ScrollContainer mt="xs" minWidth={700} h={400}>
                   <Table striped="odd" highlightOnHover stickyHeader>
                     <Table.Thead>
                       <Table.Tr>
@@ -520,7 +522,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           
           <Paper p="md" withBorder>
             <Title order={4} mb="md">Prestaciones Seleccionadas</Title>
-              <Table striped="odd" highlightOnHover stickyHeader >
+              <Table.ScrollContainer minWidth={1000}>
+                <Table striped="odd" highlightOnHover stickyHeader >
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{textAlign: 'left' }}>Prestación</Table.Th>
@@ -633,6 +636,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                   })}
                 </Table.Tbody>
               </Table>
+              </Table.ScrollContainer>
             {prestacionesSeleccionadas.length === 0 && (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
                 No hay prestaciones seleccionadas

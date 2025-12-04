@@ -4,7 +4,7 @@ import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 
 export const getPrestadores = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query('SELECT idobra_social, Financiador FROM financiador WHERE activo = 1');
+  const [rows] = await pool.query('SELECT idobra_social, Financiador, activo FROM financiador ORDER BY activo DESC, Financiador');
   res.json(rows);
 });
 

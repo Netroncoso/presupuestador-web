@@ -130,7 +130,7 @@ export default function GestionAlertasServicios() {
         </Button>
       </Group>
 
-      <AdminTable isEmpty={alertas.length === 0} emptyMessage="No hay alertas configuradas">
+      <AdminTable isEmpty={alertas.length === 0} emptyMessage="No hay alertas configuradas" minWidth={900}>
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
           <Table.Tr>
             <Table.Th>Tipo de Unidad</Table.Th>
@@ -149,13 +149,14 @@ export default function GestionAlertasServicios() {
               <Table.Td style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {alerta.mensaje_alerta}
               </Table.Td>
-              <Table.Td>
-                <div style={{ 
-                  width: '60px', 
+              <Table.Td  >
+                <div style={{
+                  marginLeft: '0px', 
+                  width: '20px', 
                   height: '20px', 
                   backgroundColor: alerta.color_alerta, 
-                  borderRadius: '4px',
-                  border: '1px solid #ccc'
+                  borderRadius: '100px',
+                  border: 'none'
                 }} />
               </Table.Td>
               <Table.Td>

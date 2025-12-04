@@ -3,6 +3,9 @@ import { Container, Title, Group, Button, Text, Tabs, ActionIcon } from '@mantin
 import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
+
+const ICON_SIZE = { width: 20, height: 20 };
+
 import GestionInsumos from './admin/GestionInsumos';
 import GestionPrestadores from './admin/GestionPrestadores';
 import ServiciosPorPrestador from './admin/ServiciosPorPrestador';
@@ -21,7 +24,7 @@ export default function AdminDashboard() {
       <Group style={{ justifyContent: 'space-between', marginBottom: 16 }}>
         <Title fw={500} order={2} c="red">Panel de Administración</Title>
         <Group gap="xs" align='baseline' justify='space-evenly'>
-          <UserCircleIcon style={{ width: 20, height: 20 }} />
+          <UserCircleIcon style={ICON_SIZE} />
           <Text size="sm" tt="capitalize">{user?.username}</Text>
           {user?.username === 'admin' && (
             <ActionIcon   
@@ -29,11 +32,11 @@ export default function AdminDashboard() {
               size="md" 
               onClick={() => setUsuariosModalOpen(true)}
               title="Gestión de Usuarios">
-              <UserPlusIcon style={{ width: 20, height: 20, color: 'gray' }} />
+              <UserPlusIcon style={{ ...ICON_SIZE, color: 'gray' }} />
             </ActionIcon>
           )}
           <Button ml="md" variant="outline" color="red" size="xs" onClick={logout}>
-            <ArrowRightStartOnRectangleIcon style={{ width: 20, height: 20, marginRight: 4 }} />Salir</Button>
+            <ArrowRightStartOnRectangleIcon style={{ ...ICON_SIZE, marginRight: 4 }} />Salir</Button>
         </Group>
       </Group>
 
@@ -41,38 +44,38 @@ export default function AdminDashboard() {
         <Tabs.List>
           <Tabs.Tab value="insumos">
             <Group gap="xs">
-              <BeakerIcon style={{ width: 20, height: 20 }} />
+              <BeakerIcon style={ICON_SIZE} />
               Gestión de Insumos
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="prestadores">
             <Group gap="xs">
-              <BanknotesIcon style={{ width: 20, height: 20 }} />
+              <BanknotesIcon style={ICON_SIZE} />
               Gestión de Financiador
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="servicios-prestador">
             <Group gap="xs">
-              <BriefcaseIcon style={{ width: 20, height: 20 }} />
+              <BriefcaseIcon style={ICON_SIZE} />
               Servicios por Financiador
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="servicios">
             <Group gap="xs">
-              <NewspaperIcon style={{ width: 20, height: 20 }} />
+              <NewspaperIcon style={ICON_SIZE} />
               Gestión de Servicios
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="sucursales">
             <Group gap="xs">
-              <BuildingStorefrontIcon style={{ width: 20, height: 20 }} />
+              <BuildingStorefrontIcon style={ICON_SIZE} />
               Gestión de Sucursales
             </Group>
           </Tabs.Tab>
           {user?.username === 'admin' && (
             <Tabs.Tab value="reglas">
               <Group gap="xs">
-                <CurrencyDollarIcon style={{ width: 20, height: 20 }} />
+                <CurrencyDollarIcon style={ICON_SIZE} />
                 Reglas de Negocio
               </Group>
             </Tabs.Tab>
@@ -80,7 +83,7 @@ export default function AdminDashboard() {
           {user?.username === 'admin' && (
             <Tabs.Tab value="alertas">
               <Group gap="xs">
-                <BellAlertIcon style={{ width: 20, height: 20 }} />
+                <BellAlertIcon style={ICON_SIZE} />
                 Alertas de Servicios
               </Group>
             </Tabs.Tab>

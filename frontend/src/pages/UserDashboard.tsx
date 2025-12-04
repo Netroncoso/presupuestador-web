@@ -371,7 +371,7 @@ export default function UserDashboard() {
                   )}
                 </Flex>
                 
-                <SimpleGrid cols={3} mt="lg" spacing="md" style={{ flex: 1 }}>
+                <SimpleGrid cols={2} mt="lg" spacing="md" style={{ flex: 1 }}>
                 <Flex direction="column" gap="xs">
                   <Flex justify="space-between">
                     <Text fw={500} size="sm">Insumos:</Text>
@@ -394,15 +394,15 @@ export default function UserDashboard() {
                   </Flex>
                 </Flex>
 
-                <Flex direction="column" gap="xs">
+                <Flex direction="column" gap="xs" style={{ gridColumn: 'span 2' }}>
                   <Flex justify="space-between">
                     <Text fw={500} size="sm">Utilidad:</Text>
                     <Text fw={500} size="sm" c={totalFacturar - costoTotal >= 0 ? "green" : "red"}>
                       {formatCurrency(totalFacturar - costoTotal)}
                     </Text>
                   </Flex>
-                  <Flex justify="left" gap="xs">
-                    <Text fw={600} size="sm">Rentabilidad:</Text>
+                  <Flex justify="space-between">
+                    <Text fw={600} size="sm">ROE:</Text>
                     <Group gap={4}>
                       <Text fw={600} size="sm" c={rentabilidad >= 0 ? "green" : "red"}>
                         {rentabilidad.toFixed(2)}%
@@ -422,34 +422,37 @@ export default function UserDashboard() {
                 </SimpleGrid>
               </Card>
 
-              <Card shadow="xs" padding="md" radius="md" withBorder style={{ width: '200px' }}>
-                <Flex direction="column" gap="xs">
+              <Card shadow="xs" padding="md" radius="md" withBorder style={{ width: '20%' }}>
+                <Flex direction="column" gap="lg" > 
                   <Button 
                     onClick={handleFinalizarPresupuesto} 
                     loading={guardandoTotales} 
-                    size="sm" 
+                    size="xs" 
                     color="green" 
                     fullWidth
+                    justify="center"
                     leftSection={<ArchiveBoxArrowDownIcon style={ICON_SIZE} />}
                   >
                     Finalizar
                   </Button>
                   <Button 
                     onClick={abrirModalAuditoria} 
-                    size="sm" 
+                    size="xs" 
                     variant="outline" 
                     color="orange"
                     fullWidth
+                    justify="center"
                     leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
                   >
                     Auditoría
                   </Button>
                   <Button 
                     onClick={handleDescargarPDF} 
-                    size="sm" 
+                    size="xs" 
                     variant="outline" 
                     color="green"
                     fullWidth
+                    justify="center"
                     leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
                   >
                     PDF
@@ -460,7 +463,7 @@ export default function UserDashboard() {
           </Paper>
 
           {alertas.length > 0 && (
-          <Paper  p="xs" radius="md"  style={{ width: '350px', alignSelf: 'stretch' }}>
+          <Paper  p="xs" radius="md"  style={{ width: '40%', alignSelf: 'stretch' }}>
             <Group gap="xs" mb="sm">
               <ShieldExclamationIcon color="red" style={ICON_SIZE} />
               <Text fw={500} size="sm" c="red">Alertas ({alertas.length})</Text>

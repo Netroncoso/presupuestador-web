@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextInput, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, Select } from '@mantine/core';
+import { TextInput, Table, Group, Stack, Modal, Switch, Text, ActionIcon, Button, Select } from '@mantine/core';
 import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -167,7 +167,7 @@ export default function GestionPrestadores() {
         />
       </Group>
 
-      <AdminTable isEmpty={financiadoresFiltrados.length === 0} emptyMessage="No se encontraron financiadores">
+      <AdminTable isEmpty={financiadoresFiltrados.length === 0} emptyMessage="No se encontraron financiadores" minWidth={1000}>
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
           <Table.Tr>
             <Table.Th>Financiador</Table.Th>
@@ -190,13 +190,9 @@ export default function GestionPrestadores() {
                     onChange={() => toggleActivo(financiador)}
                     size="sm"
                   />
-                  <Badge 
-                    color={financiador.activo === 1 ? 'green' : 'red'} 
-                    variant="dot"
-                    size="md"
-                  >
+                  <Text size="sm" c={financiador.activo === 1 ? 'green' : 'gray'}>
                     {financiador.activo === 1 ? 'Activo' : 'Inactivo'}
-                  </Badge>
+                  </Text>
                 </Group>
               </Table.Td>
               <Table.Td>{(financiador.tasa_mensual || 0)}%</Table.Td>

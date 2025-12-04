@@ -180,7 +180,7 @@ export default function GestionServicios() {
         </Group>
       </Group>
 
-      <AdminTable isEmpty={serviciosFiltrados.length === 0} emptyMessage="No se encontraron servicios">
+      <AdminTable isEmpty={serviciosFiltrados.length === 0} emptyMessage="No se encontraron servicios" minWidth={600}>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Servicio</Table.Th>

@@ -189,7 +189,10 @@ export default function GestionReglasNegocio() {
                     min={0}
                     step={config.unidad === '$' ? 1000 : 1}
                     decimalScale={config.unidad === '$' ? 0 : 2}
-                    suffix={` ${config.unidad}`}
+                    prefix={config.unidad === '$' ? '$ ' : ''}
+                    suffix={config.unidad !== '$' ? ` ${config.unidad}` : ''}
+                    thousandSeparator="."
+                    decimalSeparator=","
                     w={200}
                   />
                 </Group>

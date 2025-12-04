@@ -193,7 +193,8 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
            'No hay notificaciones'}
         </Text>
       ) : (
-        <Table striped="odd" highlightOnHover stickyHeader>
+        <Table.ScrollContainer minWidth={900}>
+          <Table striped="odd" highlightOnHover stickyHeader>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Estado</Table.Th>
@@ -289,6 +290,7 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
             ))}
           </Table.Tbody>
         </Table>
+        </Table.ScrollContainer>
       )}
 
       <Modal 

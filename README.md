@@ -39,7 +39,10 @@ npm run dev
 ### Migraciones
 ```bash
 # Migración de valores históricos (si no está aplicada)
-mysql -u root -p presupuestador < backend/migrations/create_prestador_servicio_valores.sql
+mysql -u root -p mh_1 < backend/migrations/create_prestador_servicio_valores.sql
+
+# Migración de índices de performance
+mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
 # Migración de tipos de datos y FKs (COMPLETADA)
 # Ver: backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md
@@ -52,10 +55,12 @@ mysql -u root -p presupuestador < backend/migrations/create_prestador_servicio_v
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=tu_password
-DB_NAME=presupuestador
+DB_NAME=mh_1
 PORT=3000
 JWT_SECRET=tu_secret_key
 ```
+
+**Nota**: El nombre de la base de datos es `mh_1`. Reemplazar en todos los comandos SQL donde aparezca `presupuestador`.
 
 ### Frontend (.env)
 ```env
@@ -196,16 +201,19 @@ npm test
 
 ### Limpiar Presupuestos de Prueba
 ```bash
-mysql -u root -p presupuestador < backend/LIMPIAR_PRESUPUESTOS_PRUEBA.sql
+mysql -u root -p mh_1 < backend/LIMPIAR_PRESUPUESTOS_PRUEBA.sql
 ```
 
 ### Ejecutar Migraciones
 ```bash
 # Migración de valores históricos
-mysql -u root -p presupuestador < backend/migrations/create_prestador_servicio_valores.sql
+mysql -u root -p mh_1 < backend/migrations/create_prestador_servicio_valores.sql
+
+# Migración de índices de performance
+mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
 # Otras migraciones
-mysql -u root -p presupuestador < backend/migrations/[archivo].sql
+mysql -u root -p mh_1 < backend/migrations/[archivo].sql
 ```
 
 ### Verificar Valores Históricos

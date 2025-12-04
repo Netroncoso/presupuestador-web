@@ -154,7 +154,7 @@ export default function GestionInsumos() {
         </Button>
       </Group>
 
-      <AdminTable isEmpty={insumosFiltrados.length === 0} emptyMessage="No se encontraron insumos">
+      <AdminTable isEmpty={insumosFiltrados.length === 0} emptyMessage="No se encontraron insumos" minWidth={600}>
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
           <Table.Tr>
             <Table.Th style={{ width: '50px' }}>Sel.</Table.Th>
@@ -173,7 +173,7 @@ export default function GestionInsumos() {
                 />
               </Table.Td>
               <Table.Td>{formatProductName(insumo.producto)}</Table.Td>
-              <Table.Td>${Number(insumo.costo).toFixed(2)}</Table.Td>
+              <Table.Td>$ {Number(insumo.costo).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <ActionIcon variant="transparent" onClick={() => handleEdit(insumo)}>
@@ -208,9 +208,12 @@ export default function GestionInsumos() {
             onChange={(value) => setFormData({ ...formData, costo: Number(value) || 0 })}
             min={0}
             step={0.01}
+            prefix="$ "
+            thousandSeparator="."
+            decimalSeparator=","
+            decimalScale={2}
             required
             hideControls
-
           />
           <Group style={{ justifyContent: 'flex-end' }}>
             <Button variant="outline" onClick={() => setModalOpen(false)}>

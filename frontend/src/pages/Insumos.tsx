@@ -159,7 +159,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
               placeholder="Buscar Insumo..." 
               disabled={soloLectura}
             />
-            <Table.ScrollContainer mt="xs" minWidth={500} maxHeight={300} >
+            <Table.ScrollContainer mt="xs" minWidth={600} maxHeight={300} >
               <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>
                   <Table.Tr>
@@ -234,7 +234,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
       <Paper p="md" withBorder>
         <Title order={4} mb="md">Insumos Seleccionados</Title>
 
-          <Table striped="odd" highlightOnHover stickyHeader >
+          <Table.ScrollContainer minWidth={900}>
+            <Table striped="odd" highlightOnHover stickyHeader >
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Insumo</Table.Th>
@@ -322,6 +323,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
               })}
             </Table.Tbody>
           </Table>
+          </Table.ScrollContainer>
 
         {insumosSeleccionados.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
