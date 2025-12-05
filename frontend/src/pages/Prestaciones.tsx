@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip } from '@mantine/core'
+import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip, Modal } from '@mantine/core'
 import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { getPrestadores, getPrestacionesPorPrestador } from '../api/api'
@@ -43,7 +43,6 @@ interface Props {
 export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false }: Props) {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string | null>(null)
-  const [financiadorConfirmado, setFinanciadorConfirmado] = useState(false)
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
   const [cantidad, setCantidad] = useState('1')
@@ -53,6 +52,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
   const [nuevaCantidad, setNuevaCantidad] = useState(1)
   const [nuevoValor, setNuevoValor] = useState(0)
+  const [modalConfirmacionAbierto, setModalConfirmacionAbierto] = useState(false)
+  const [nuevoFinanciadorPendiente, setNuevoFinanciadorPendiente] = useState<string | null>(null)
 
   const totalCosto = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
@@ -90,7 +91,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     if (presupuestoId && financiadorId) {
       const financiadorIdStr = String(financiadorId)
       setFinanciadorSeleccionado(financiadorIdStr)
-      setFinanciadorConfirmado(true)
       
       // Si es solo lectura, cargar valores históricos según fecha del presupuesto
       if (soloLectura) {
@@ -114,7 +114,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       }).catch((err: any) => console.error('Error loading financiador info:', err))
     } else if (!presupuestoId) {
       setFinanciadorSeleccionado(null)
-      setFinanciadorConfirmado(false)
       setPrestacionesDisponibles([])
       setPrestacionSeleccionada(null)
       setCantidad('1')
@@ -153,8 +152,41 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   }
 
   const handleFinanciadorChange = async (value: string | null) => {
+    // Si hay prestaciones y cambia el financiador, mostrar modal de confirmación
+    if (value !== financiadorSeleccionado && prestacionesSeleccionadas.length > 0) {
+      setNuevoFinanciadorPendiente(value)
+      setModalConfirmacionAbierto(true)
+      return
+    }
+    
+    // Si no hay prestaciones, cambiar directamente
+    await aplicarCambioFinanciador(value)
+  }
+
+  const aplicarCambioFinanciador = async (value: string | null) => {
+    // Limpiar prestaciones si cambia el financiador
+    if (value !== financiadorSeleccionado && prestacionesSeleccionadas.length > 0) {
+      // Eliminar prestaciones de BD si hay presupuestoId
+      if (presupuestoId) {
+        try {
+          for (const prestacion of prestacionesSeleccionadas) {
+            await api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
+              data: { id_servicio: prestacion.id_servicio }
+            })
+          }
+        } catch (error) {
+          console.error('Error eliminando prestaciones:', error)
+        }
+      }
+      setPrestacionesSeleccionadas([])
+      notifications.show({
+        title: 'Prestaciones Eliminadas',
+        message: 'Las prestaciones anteriores fueron eliminadas al cambiar el financiador',
+        color: 'orange'
+      })
+    }
+    
     setFinanciadorSeleccionado(value)
-    setFinanciadorConfirmado(false)
     setPrestacionesDisponibles([])
     setPrestacionSeleccionada(null)
     setCantidad('1')
@@ -166,11 +198,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         try {
           await api.put(`/presupuestos/${presupuestoId}/prestador`, {
             idobra_social: value
-          });
+          })
         } catch (error) {
-          console.error('Error guardando financiador:', error);
+          console.error('Error guardando financiador:', error)
         }
       }
+      
+      // Cargar prestaciones disponibles
+      await cargarPrestacionesPorFinanciador(value)
       
       // Cargar info del financiador
       if (onFinanciadorChange) {
@@ -190,48 +225,18 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     }
   }
 
-  const confirmarFinanciador = async () => {
-    if (!financiadorSeleccionado || !presupuestoId) return;
-    
-    try {
-      await api.put(`/presupuestos/${presupuestoId}/prestador`, {
-        idobra_social: financiadorSeleccionado
-      });
-      
-      setFinanciadorConfirmado(true)
-      await cargarPrestacionesPorFinanciador(financiadorSeleccionado)
-      
-      // Load financiador info
-      const infoRes = await api.get(`/prestaciones/prestador/${financiadorSeleccionado}/info`)
-      setFinanciadorInfo(infoRes.data)
-      
-      notifications.show({
-        title: 'Financiador Confirmado',
-        message: 'Financiador asignado al presupuesto',
-        color: 'green'
-      })
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al confirmar financiador',
-        color: 'red'
-      })
-    }
+  const confirmarCambioFinanciador = async () => {
+    await aplicarCambioFinanciador(nuevoFinanciadorPendiente)
+    setModalConfirmacionAbierto(false)
+    setNuevoFinanciadorPendiente(null)
   }
 
-  const modificarFinanciador = () => {
-    setFinanciadorConfirmado(false)
-    setPrestacionesDisponibles([])
-    setPrestacionSeleccionada(null)
-    setCantidad('1')
-    setValorAsignado('')
-    setFinanciadorInfo({})
-    notifications.show({
-      title: 'Financiador Desbloqueado',
-      message: 'Puede seleccionar un nuevo financiador',
-      color: 'blue'
-    })
+  const cancelarCambioFinanciador = () => {
+    setModalConfirmacionAbierto(false)
+    setNuevoFinanciadorPendiente(null)
   }
+
+
 
   const valoresDisponibles = useMemo(() => {
     if (!prestacionSeleccionadaData?.valor_sugerido) return []
@@ -376,67 +381,68 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           <Text size="sm" c="blue" fw={500} ta="center">Modo solo lectura - No se pueden realizar modificaciones</Text>
         </Paper>
       )}
-      <Paper p="md" withBorder shadow="sm" style={{ opacity: soloLectura ? 0.8 : 1 }}>
-        <Title order={4} mb="md">Selección de Financiador</Title>
-        <Flex direction={'column'}>
-          <Group  grow align="baseline" mb={20} > 
-          <Select
-            placeholder="Seleccione un financiador"
-            data={financiadoresOptions}
-            value={financiadorSeleccionado}
-            onChange={handleFinanciadorChange}
-            searchable
-            disabled={financiadorConfirmado || soloLectura}
-            checkIconPosition="right"
-          />
-            <Button bottom={0}
-              onClick={confirmarFinanciador} 
-              disabled={!financiadorSeleccionado || financiadorConfirmado || soloLectura}
-              color={financiadorConfirmado ? 'green' : 'blue'}
-            >
-              {financiadorConfirmado ? 'Financiador Confirmado' : 'Confirmar'}
-            </Button>
-            {financiadorConfirmado && !soloLectura && (
-              <Button  
-                onClick={modificarFinanciador}
-                variant="outline"
-                color="orange"
-                size="sm"
-              >
-                Modificar
-              </Button>
-            )}
-          </Group>
-          {financiadorConfirmado && financiadorInfo && (
-            <Group grow mt="md">
-              <Badge variant="dot" color="blue">Tasa Mensual: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
-              <Badge variant="dot" color="orange">Días Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}</Badge>
-              <Badge variant="dot" color="green">Días Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}</Badge>
-            <Badge variant="dot" color="teal">{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo Asignado'}</Badge>
-            </Group>
-          )}
-        </Flex>
-      </Paper>
+      <Modal
+        opened={modalConfirmacionAbierto}
+        onClose={cancelarCambioFinanciador}
+        title="Confirmar Cambio de Financiador"
+        centered
+      >
+        <Text size="sm" mb="md">
+          Al cambiar el financiador se eliminarán todas las prestaciones seleccionadas ({prestacionesSeleccionadas.length}).
+        </Text>
+        <Text size="sm" fw={500} mb="lg">
+          ¿Desea continuar?
+        </Text>
+        <Group justify="flex-end" gap="sm">
+          <Button variant="outline" onClick={cancelarCambioFinanciador}>
+            Cancelar
+          </Button>
+          <Button color="orange" onClick={confirmarCambioFinanciador}>
+            Confirmar Cambio
+          </Button>
+        </Group>
+      </Modal>
 
-      {financiadorConfirmado && prestacionesDisponibles.length > 0 && (
-        <Stack gap="md">
-          <Grid>
+      {financiadorSeleccionado && prestacionesDisponibles.length > 0 && (
+        <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
+          <Stack gap="xl">
+            <Stack gap="xs">
+              <Title order={5}>Financiador</Title>
+              <Select
+                placeholder="Seleccione un financiador"
+                data={financiadoresOptions}
+                value={financiadorSeleccionado}
+                onChange={handleFinanciadorChange}
+                searchable
+                disabled={soloLectura}
+                checkIconPosition="right"
+              />
+              {financiadorInfo && (
+                <Group gap="xs" wrap="wrap">
+                  <Badge variant="dot" color="blue" style={{ fontWeight: 500, fontSize: '10px' }}>Tasa: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
+                  <Badge variant="dot" color="orange" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}d</Badge>
+                  <Badge variant="dot" color="green" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}d</Badge>
+                  <Badge variant="dot" color="teal" style={{ fontWeight: 500, fontSize: '10px' }}>{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo'}</Badge>
+                </Group>
+              )}
+            </Stack>
 
-            <Grid.Col span={6}>
-              <Paper p="md" withBorder>
-                <Title order={4} mb="md">Prestaciones Disponibles</Title>
-                <Table.ScrollContainer mt="xs" minWidth={700} h={400}>
+            <Grid>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Title order={5}>Prestaciones Disponibles</Title>
+                  <Table.ScrollContainer minWidth={700} h={400}>
                   <Table striped="odd" highlightOnHover stickyHeader>
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>Prestación</Table.Th>
-                        <Table.Th style={{ width: '80px' }}>Tipo</Table.Th>
-                        <Table.Th>
+                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Prestación</Table.Th>
+                        <Table.Th style={{ width: '80px', fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
+                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                           <Tooltip label="Valor a facturar por unidad de servicio">
                             <span>Valor a Facturar</span>
                           </Tooltip>
                         </Table.Th>
-                        <Table.Th>
+                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                           <Tooltip label="Cantidad sugerida inicial para el presupuesto">
                             <span>Cant. Sugerida</span>
                           </Tooltip>
@@ -473,15 +479,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     </Table.Tbody>
                   </Table>
                 </Table.ScrollContainer>
-              </Paper>
-            </Grid.Col>
-            
-            <Grid.Col span={6}>
-              <Paper p="md" withBorder style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: (prestacionSeleccionada && !soloLectura) ? 1 : 0.6 }}>
-                <Title order={4} mb="md">Agregar al Presupuesto</Title>
-                <Stack gap="sm">
+                </Stack>
+              </Grid.Col>
+              
+              <Grid.Col span={6}>
+                <Stack gap="xs" style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: (prestacionSeleccionada && !soloLectura) ? 1 : 0.6, padding: '1rem', borderRadius: '8px' }}>
+                  <Title order={5}>Agregar al Presupuesto</Title>
                   <TextInput
-                    label="Prestación"
+                    label={<Text size="sm" fw={400}>Prestación</Text>}
                     value={prestacionSeleccionadaData?.nombre || ''}
                     placeholder={prestacionSeleccionada ? '' : 'Seleccione una prestación de la tabla'}
                     readOnly
@@ -489,7 +494,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     disabled={!prestacionSeleccionada}
                   />
                   <TextInput
-                    label="Cantidad"
+                    label={<Text size="sm" fw={400}>Cantidad</Text>}
                     value={cantidad}
                     onChange={(e) => setCantidad(e.target.value)}
                     type="number"
@@ -499,7 +504,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     description={prestacionSeleccionadaData ? `Total Mensual ${prestacionSeleccionadaData.cant_total || 1}` : 'Seleccione prestación'}
                   />
                   <Select
-                    label="Valor"
+                    label={<Text size="sm" fw={400}>Valor</Text>}
                     placeholder="Seleccione un valor"
                     data={valoresDisponibles}
                     value={valorAsignado}
@@ -516,39 +521,38 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     }}>Cancelar</Button>
                   </Group>
                 </Stack>
-              </Paper>
-            </Grid.Col>
-          </Grid>
-          
-          <Paper p="md" withBorder>
-            <Title order={4} mb="md">Prestaciones Seleccionadas</Title>
+              </Grid.Col>
+            </Grid>
+
+            <Stack gap="xs">
+              <Title order={5}>Prestaciones Seleccionadas</Title>
               <Table.ScrollContainer minWidth={1000}>
                 <Table striped="odd" highlightOnHover stickyHeader >
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{textAlign: 'left' }}>Prestación</Table.Th>
-                    <Table.Th>Cantidad</Table.Th>
-                    <Table.Th>
+                    <Table.Th style={{textAlign: 'left', fontWeight: 500, fontSize: '13px' }}>Prestación</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                       <Tooltip label="Valor asignado negociado con el prestador">
                         <span>Costo Unit.</span>
                       </Tooltip>
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                       <Tooltip label="Valor unitario a facturar al financiador">
                         <span>Precio a Facturar</span>
                       </Tooltip>
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                       <Tooltip label="Valor asignado × cantidad">
                         <span>Subtotal Costo</span>
                       </Tooltip>
                     </Table.Th>
-                    <Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                       <Tooltip label="Precio a facturar × cantidad">
                         <span>Subtotal Facturar</span>
                       </Tooltip>
                     </Table.Th>
-                    <Table.Th>Acciones</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -637,13 +641,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                 </Table.Tbody>
               </Table>
               </Table.ScrollContainer>
-            {prestacionesSeleccionadas.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                No hay prestaciones seleccionadas
-              </div>
-            )}
-          </Paper>
-        </Stack>
+              {prestacionesSeleccionadas.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  No hay prestaciones seleccionadas
+                </div>
+              )}
+            </Stack>
+          </Stack>
+        </Paper>
       )}
 
       {financiadorSeleccionado && prestacionesDisponibles.length === 0 && !loading && (

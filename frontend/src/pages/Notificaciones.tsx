@@ -197,13 +197,13 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
           <Table striped="odd" highlightOnHover stickyHeader>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Estado</Table.Th>
-              {!esAuditor && <Table.Th>Tipo</Table.Th>}
-              <Table.Th>Presupuesto</Table.Th>
-              <Table.Th>Paciente</Table.Th>
-              <Table.Th>Mensaje</Table.Th>
-              <Table.Th>Fecha</Table.Th>
-              <Table.Th>Acción</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Estado</Table.Th>
+              {!esAuditor && <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>}
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Presupuesto</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Mensaje</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -216,11 +216,9 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                 }}
               >
                 <Table.Td>
-                  {notif.estado === 'nuevo' ? (
-                    <Badge color="blue" variant="filled" size="sm">Nuevo</Badge>
-                  ) : (
-                    <Badge color="gray" variant="light" size="sm">Leído</Badge>
-                  )}
+                  <Text size="sm" c={notif.estado === 'nuevo' ? 'blue' : 'gray'} fw={500}>
+                    {notif.estado === 'nuevo' ? 'Nuevo' : 'Leído'}
+                  </Text>
                 </Table.Td>
                 {!esAuditor && (
                   <Table.Td>
@@ -230,10 +228,9 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                   </Table.Td>
                 )}
                 <Table.Td>
-                  <span style={{ fontSize: '14px' }}>#{notif.presupuesto_id}</span>
-                  <Badge variant="outline" size="xs" ml="xs">
-                    v{notif.version_presupuesto}
-                  </Badge>
+                  <Text size="sm" span>
+                    #{notif.presupuesto_id} <Text size="xs" c="dimmed" span>(v{notif.version_presupuesto})</Text>
+                  </Text>
                 </Table.Td>
                 <Table.Td>
                   <span style={{ fontSize: '14px' }}>{notif.paciente}</span><br/>

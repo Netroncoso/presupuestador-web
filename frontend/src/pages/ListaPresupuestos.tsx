@@ -130,15 +130,15 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         <Table striped="odd" highlightOnHover stickyHeader>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Paciente</Table.Th>
-            <Table.Th>DNI</Table.Th>
-            <Table.Th>Sucursal</Table.Th>
-            <Table.Th>Costo Total</Table.Th>
-            <Table.Th>Total Facturar</Table.Th>
-            <Table.Th>Rentabilidad</Table.Th>
-            <Table.Th>Fecha</Table.Th>
-            <Table.Th>Acción</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>ID</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>DNI</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Sucursal</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Total</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Total Facturar</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Rentabilidad</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -158,9 +158,9 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>${Number(p.costo_total || 0).toFixed(2)}</Table.Td>
                 <Table.Td>${Number(p.total_facturar || 0).toFixed(2)}</Table.Td>
                 <Table.Td>
-                  <Badge variant='dot' color={Number(p.rentabilidad) >= 40 ? 'green' : Number(p.rentabilidad) >= 35 ? 'yellow' : 'red'}>
+                  <Text size="sm" c={Number(p.rentabilidad) >= 40 ? 'green' : Number(p.rentabilidad) >= 35 ? 'yellow' : 'red'} fw={500}>
                     {Number(p.rentabilidad || 0).toFixed(2)}%
-                  </Badge>
+                  </Text>
                 </Table.Td>
                 <Table.Td>{new Date(p.created_at).toLocaleDateString()}</Table.Td>
                 <Table.Td>

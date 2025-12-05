@@ -135,16 +135,18 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   }
 
   return (
-    <Stack gap="md">
+    <Stack gap="lg" mb={25}>
       {soloLectura && (
         <Paper p="xs" withBorder style={{ backgroundColor: '#e7f5ff' }}>
           <Text size="sm" c="blue" fw={500} ta="center">Modo solo lectura - No se pueden realizar modificaciones</Text>
         </Paper>
       )}
-      <Grid>
-        <Grid.Col span={6}>
-          <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.6 : 1 }}>
-            <Title order={4} mb="md">Insumos Disponibles</Title>
+      <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
+        <Stack gap="xl">
+          <Grid>
+            <Grid.Col span={6}>
+              <Stack gap="xs">
+                <Title order={5}>Insumos Disponibles</Title>
             <TextInput 
               value={filtro} 
               onChange={(e) => setFiltro(e.target.value)} 
@@ -163,8 +165,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
               <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{ width: '70%', textAlign:"left"  }}>Insumo</Table.Th>
-                    <Table.Th style={{ width: '30%', textAlign: 'right' }}>Costo</Table.Th>
+                    <Table.Th style={{ width: '70%', textAlign:"left", fontWeight: 500, fontSize: '13px' }}>Insumo</Table.Th>
+                    <Table.Th style={{ width: '30%', textAlign: 'right', fontWeight: 500, fontSize: '13px' }}>Costo</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -194,73 +196,71 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                 </Table.Tbody>
               </Table>
             </Table.ScrollContainer>
-          </Paper>
-        </Grid.Col>
-        
-        <Grid.Col span={6}>
-          <Paper p="md" withBorder style={{ backgroundColor: insumoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: (insumoSeleccionado && !soloLectura) ? 1 : 0.6 }}>
-            <Title order={4} mb="md">Agregar al Presupuesto</Title>
-            <Stack gap="sm">
-              <TextInput
-                label="Insumo"
-                value={insumoSeleccionado ? insumoSeleccionado.producto : ''}
-                placeholder={insumoSeleccionado ? '' : 'Seleccione un insumo de la tabla'}
-                readOnly
-                size="sm"
-                disabled={!insumoSeleccionado}
-              />
-              <NumberInput
-                label="Cantidad"
-                value={cantidad}
-                onChange={(value) => setCantidad(Number(value) || 1)}
-                min={1}
-                size="sm"
-                disabled={!insumoSeleccionado || soloLectura}
-                description={insumoSeleccionado ? `Costo base: $${Number(insumoSeleccionado.costo).toFixed(2)}` : 'Seleccione insumo'}
-                hideControls
-              />
-              <Group>
-                <Button size="sm" onClick={agregarInsumo} disabled={!insumoSeleccionado || soloLectura}>Agregar</Button>
-                <Button size="sm" variant="outline" color="gray" disabled={!insumoSeleccionado || soloLectura} onClick={() => {
-                  setInsumoSeleccionado(null)
-                  setCantidad(1)
-                }}>Cancelar</Button>
-              </Group>
-            </Stack>
-          </Paper>
-        </Grid.Col>
-      </Grid>
-      
-      <Paper p="md" withBorder>
-        <Title order={4} mb="md">Insumos Seleccionados</Title>
+              </Stack>
+            </Grid.Col>
+            
+            <Grid.Col span={6}>
+              <Stack gap="xs" style={{ backgroundColor: insumoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: (insumoSeleccionado && !soloLectura) ? 1 : 0.6, padding: '1rem', borderRadius: '8px' }}>
+                <Title order={5}>Agregar al Presupuesto</Title>
+                <TextInput
+                  label={<Text size="sm" fw={400}>Insumo</Text>}
+                  value={insumoSeleccionado ? insumoSeleccionado.producto : ''}
+                  placeholder={insumoSeleccionado ? '' : 'Seleccione un insumo de la tabla'}
+                  readOnly
+                  size="sm"
+                  disabled={!insumoSeleccionado}
+                />
+                <NumberInput
+                  label={<Text size="sm" fw={400}>Cantidad</Text>}
+                  value={cantidad}
+                  onChange={(value) => setCantidad(Number(value) || 1)}
+                  min={1}
+                  size="sm"
+                  disabled={!insumoSeleccionado || soloLectura}
+                  description={insumoSeleccionado ? `Costo base: $${Number(insumoSeleccionado.costo).toFixed(2)}` : 'Seleccione insumo'}
+                  hideControls
+                />
+                <Group>
+                  <Button size="sm" onClick={agregarInsumo} disabled={!insumoSeleccionado || soloLectura}>Agregar</Button>
+                  <Button size="sm" variant="outline" color="gray" disabled={!insumoSeleccionado || soloLectura} onClick={() => {
+                    setInsumoSeleccionado(null)
+                    setCantidad(1)
+                  }}>Cancelar</Button>
+                </Group>
+              </Stack>
+            </Grid.Col>
+          </Grid>
+
+          <Stack gap="xs">
+            <Title order={5}>Insumos Seleccionados</Title>
 
           <Table.ScrollContainer minWidth={900}>
             <Table striped="odd" highlightOnHover stickyHeader >
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Insumo</Table.Th>
-                <Table.Th>Cantidad</Table.Th>
-                <Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Insumo</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                   <Tooltip label="Costo base del insumo">
                     <span>Costo Unit.</span>
                   </Tooltip>
                 </Table.Th>
-                <Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                   <Tooltip label="Costo base + margen de sucursal (logística y ganancia)">
                     <span>Precio a Facturar</span>
                   </Tooltip>
                 </Table.Th>
-                <Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                   <Tooltip label="Costo base × cantidad">
                     <span>Subtotal Costo</span>
                   </Tooltip>
                 </Table.Th>
-                <Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                   <Tooltip label="Precio a facturar × cantidad">
                     <span>Subtotal Facturar</span>
                   </Tooltip>
                 </Table.Th>
-                <Table.Th>Acciones</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -324,12 +324,13 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
             </Table.Tbody>
           </Table>
           </Table.ScrollContainer>
-
-        {insumosSeleccionados.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No hay insumos seleccionados
-          </div>
-        )}
+          {insumosSeleccionados.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+              No hay insumos seleccionados
+            </div>
+          )}
+          </Stack>
+        </Stack>
       </Paper>
     </Stack>
   )
