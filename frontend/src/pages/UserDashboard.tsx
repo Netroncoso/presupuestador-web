@@ -371,7 +371,7 @@ export default function UserDashboard() {
                   )}
                 </Flex>
                 
-                <SimpleGrid cols={2} mt="lg" spacing="md" style={{ flex: 1 }}>
+                <SimpleGrid cols={2} mt="xs" style={{ flex: 1 }}>
                 <Flex direction="column" gap="xs">
                   <Flex justify="space-between">
                     <Text fw={500} size="sm">Insumos:</Text>
@@ -395,14 +395,14 @@ export default function UserDashboard() {
                 </Flex>
 
                 <Flex direction="column" gap="xs" style={{ gridColumn: 'span 2' }}>
-                  <Flex justify="space-between">
+                  <Flex justify="initial">
                     <Text fw={500} size="sm">Utilidad:</Text>
                     <Text fw={500} size="sm" c={totalFacturar - costoTotal >= 0 ? "green" : "red"}>
                       {formatCurrency(totalFacturar - costoTotal)}
                     </Text>
                   </Flex>
-                  <Flex justify="space-between">
-                    <Text fw={600} size="sm">ROE:</Text>
+                  <Flex justify="flex-start">
+                    <Text fw={600} size="sm">Rentabilidad:</Text>
                     <Group gap={4}>
                       <Text fw={600} size="sm" c={rentabilidad >= 0 ? "green" : "red"}>
                         {rentabilidad.toFixed(2)}%

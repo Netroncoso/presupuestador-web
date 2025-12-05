@@ -17,39 +17,21 @@ const CONFIG = {
   },
   MEJORAR: {
     icon: ExclamationTriangleIcon,
-    title: 'MEJORAR VALORES, PEDIR AUTORIZACIÓN',
+    title: 'MEJORAR VALORES',
     color: 'orange',
-    mensaje: 'Se requiere autorización para proceder con esta rentabilidad.',
-  },
-  AUTORIZADO_MEJORA: {
-    icon: CheckCircleIcon,
-    title: 'AUTORIZADO, EN BÚSQUEDA DE MEJORA',
-    color: 'yellow',
-    mensaje: 'Presupuesto autorizado. Considera optimizar valores.',
-  },
-  AUTORIZADO: {
-    icon: CheckCircleIcon,
-    title: 'AUTORIZADO',
-    color: 'blue',
-    mensaje: 'Presupuesto dentro de parámetros aceptables.',
+    mensaje: 'Rentabilidad baja. Considera renegociar valores o revisar costos.',
   },
   FELICITACIONES: {
     icon: CheckBadgeIcon,
-    title: 'AUTORIZADO FELICITACIONES',
+    title: 'FELICITACIONES',
     color: 'green',
-    mensaje: 'Excelente rentabilidad alcanzada.',
-  },
-  SUPER_RENTABLE: {
-    icon: CheckBadgeIcon,
-    title: 'AUTORIZADO, PACIENTE SUPER RENTABLE!! FELICITACIONES',
-    color: 'teal',
-    mensaje: 'Resultado excepcional. ¡Felicitaciones!',
+    mensaje: 'Excelente rentabilidad alcanzada. ¡Buen trabajo!',
   },
   EXCEPCIONAL: {
     icon: CheckBadgeIcon,
     title: 'RENTABILIDAD EXCEPCIONAL',
     color: 'violet',
-    mensaje: '¡Resultado extraordinario! Caso de estudio.',
+    mensaje: '¡Resultado extraordinario! Márgenes óptimos.',
   },
 } as const;
 

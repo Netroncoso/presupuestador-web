@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Select, Table, Group, Stack, Modal, Switch, Badge, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput } from '@mantine/core';
+import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput, Text } from '@mantine/core';
 import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -226,13 +226,9 @@ export default function ServiciosPorPrestador() {
                         onChange={() => toggleActivo(servicio)}
                         size="sm"
                       />
-                      <Badge 
-                        color={servicio.activo === 1 ? 'green' : 'gray'} 
-                        variant="dot"
-                        size="sm"
-                      >
+                      <Text size="sm" c={servicio.activo === 1 ? 'green' : 'gray'}>
                         {servicio.activo === 1 ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      </Text>
                     </Group>
                   </Table.Td>
                   <Table.Td>{formatPeso(formatNumber(servicio.valor_facturar))}</Table.Td>
@@ -479,11 +475,9 @@ export default function ServiciosPorPrestador() {
                         <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
                         <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
                         <Table.Td>
-                          {!v.fecha_fin ? (
-                            <Badge color="green" variant="dot" size="sm">Vigente</Badge>
-                          ) : (
-                            <Badge color="gray" variant="dot" size="sm">Histórico</Badge>
-                          )}
+                          <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
+                            {!v.fecha_fin ? 'Vigente' : 'Histórico'}
+                          </Text>
                         </Table.Td>
                       </Table.Tr>
                     ))}

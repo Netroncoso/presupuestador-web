@@ -75,12 +75,10 @@ export default function GestionReglasNegocio() {
       'alerta.financiador.tasaAlta': '> 5% → TASA ALTA (amarillo)\nTasa de interés alta que reduce la rentabilidad con plazo.',
       'alerta.monto.critico': '>= $150,000 → MONTO CRÍTICO (rojo)\nRequiere gestión especial y aprobación adicional.',
       'alerta.monto.elevado': '>= $100,000 → MONTO ELEVADO (naranja)\nRequiere revisión y aviso a las áreas correspondientes.',
-      'alerta.rentabilidad.desaprobado': '< 10% → DESAPROBADO (rojo)\nRentabilidad muy baja o negativa. No viable.',
-      'alerta.rentabilidad.mejorar': '10-15% → MEJORAR (naranja)\nRentabilidad baja. Renegociar valores o revisar costos.',
-      'alerta.rentabilidad.autorizado': '15-20% → AUTORIZADO (amarillo)\nRentabilidad aceptable pero mejorable.',
-      'alerta.rentabilidad.felicitaciones': '20-25% → FELICITACIONES (verde)\nBuena rentabilidad. Cumple objetivos comerciales.',
-      'alerta.rentabilidad.superRentable': '25-35% → SUPER RENTABLE (azul)\nRentabilidad muy buena. Altamente rentable.',
-      'alerta.rentabilidad.excepcional': '>= 35% → EXCEPCIONAL (violeta)\nRentabilidad excepcional. Márgenes óptimos.',
+      'alerta.rentabilidad.desaprobado': '< 20% → DESAPROBADO (rojo)\nRentabilidad muy baja. No viable.',
+      'alerta.rentabilidad.mejorar': '20-30% → MEJORAR (naranja)\nRentabilidad baja. Renegociar valores o revisar costos.',
+      'alerta.rentabilidad.felicitaciones': '30-50% → FELICITACIONES (verde)\nExcelente rentabilidad. Cumple objetivos comerciales.',
+      'alerta.rentabilidad.excepcional': '>= 50% → EXCEPCIONAL (violeta)\nRentabilidad excepcional. Márgenes óptimos.',
     };
     return tooltips[clave] || '';
   };

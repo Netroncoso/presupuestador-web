@@ -4,10 +4,7 @@ import { ACUERDOS } from '../utils/constants';
 export type TipoAlertaRentabilidad =
   | 'DESAPROBADO'
   | 'MEJORAR'
-  | 'AUTORIZADO_MEJORA'
-  | 'AUTORIZADO'
   | 'FELICITACIONES'
-  | 'SUPER_RENTABLE'
   | 'EXCEPCIONAL';
 
 export type TipoAlertaMonto = 'ELEVADO' | 'CRITICO' | null;
@@ -48,12 +45,10 @@ const getAlertasConfig = async () => {
     cacheTimestamp = 0;
     // Valores por defecto si falla la carga
     return {
-      'alerta.rentabilidad.desaprobado': 10,
-      'alerta.rentabilidad.mejorar': 15,
-      'alerta.rentabilidad.autorizado': 20,
-      'alerta.rentabilidad.felicitaciones': 25,
-      'alerta.rentabilidad.superRentable': 30,
-      'alerta.rentabilidad.excepcional': 35,
+      'alerta.rentabilidad.desaprobado': 20,
+      'alerta.rentabilidad.mejorar': 30,
+      'alerta.rentabilidad.felicitaciones': 50,
+      'alerta.rentabilidad.excepcional': 50,
       'alerta.monto.elevado': 100000,
       'alerta.monto.critico': 150000,
       'alerta.financiador.cobranzaLenta': 45,
@@ -72,10 +67,7 @@ export const evaluarRentabilidad = async (
 
   if (rentabilidad < config['alerta.rentabilidad.desaprobado']) return 'DESAPROBADO';
   if (rentabilidad < config['alerta.rentabilidad.mejorar']) return 'MEJORAR';
-  if (rentabilidad < config['alerta.rentabilidad.autorizado']) return 'AUTORIZADO_MEJORA';
-  if (rentabilidad < config['alerta.rentabilidad.felicitaciones']) return 'AUTORIZADO';
-  if (rentabilidad < config['alerta.rentabilidad.superRentable']) return 'FELICITACIONES';
-  if (rentabilidad < config['alerta.rentabilidad.excepcional']) return 'SUPER_RENTABLE';
+  if (rentabilidad < config['alerta.rentabilidad.felicitaciones']) return 'FELICITACIONES';
   
   return 'EXCEPCIONAL';
 };
