@@ -315,6 +315,13 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ## 📝 Historial de Versiones
 
+### v2.3 (Enero 2025)
+- Simplificación de flujo de selección de financiador
+- Eliminación de botones Confirmar/Modificar
+- Select de financiador siempre editable en borradores
+- Warning automático al cambiar financiador
+- Limpieza automática de prestaciones al cambiar financiador
+
 ### v2.2 (Diciembre 2024)
 - Sistema de alertas configurables (umbrales dinámicos)
 - Tabla maestra tipos_unidad con normalización

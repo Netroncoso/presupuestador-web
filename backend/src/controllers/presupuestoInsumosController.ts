@@ -130,7 +130,7 @@ export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: 
   const [rows] = await pool.query<any[]>(`
     SELECT 
       pi.producto,
-      COALESCE(i.Precio, pi.costo) as costo,
+      COALESCE(i.costo, pi.costo) as costo,
       pi.cantidad,
       pi.id_insumo,
       p.porcentaje_insumos

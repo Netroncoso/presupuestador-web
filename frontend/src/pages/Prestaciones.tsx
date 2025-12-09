@@ -381,6 +381,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           <Text size="sm" c="blue" fw={500} ta="center">Modo solo lectura - No se pueden realizar modificaciones</Text>
         </Paper>
       )}
+
       <Modal
         opened={modalConfirmacionAbierto}
         onClose={cancelarCambioFinanciador}
@@ -403,30 +404,31 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         </Group>
       </Modal>
 
-      {financiadorSeleccionado && prestacionesDisponibles.length > 0 && (
-        <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
-          <Stack gap="xl">
-            <Stack gap="xs">
-              <Title order={5}>Financiador</Title>
-              <Select
-                placeholder="Seleccione un financiador"
-                data={financiadoresOptions}
-                value={financiadorSeleccionado}
-                onChange={handleFinanciadorChange}
-                searchable
-                disabled={soloLectura}
-                checkIconPosition="right"
-              />
-              {financiadorInfo && (
-                <Group gap="xs" wrap="wrap">
-                  <Badge variant="dot" color="blue" style={{ fontWeight: 500, fontSize: '10px' }}>Tasa: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
-                  <Badge variant="dot" color="orange" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}d</Badge>
-                  <Badge variant="dot" color="green" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}d</Badge>
-                  <Badge variant="dot" color="teal" style={{ fontWeight: 500, fontSize: '10px' }}>{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo'}</Badge>
-                </Group>
-              )}
-            </Stack>
+      <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
+        <Stack gap="xl">
+          <Stack gap="xs">
+            <Title order={5}>Financiador</Title>
+            <Select
+              placeholder="Seleccione un financiador"
+              data={financiadoresOptions}
+              value={financiadorSeleccionado}
+              onChange={handleFinanciadorChange}
+              searchable
+              disabled={soloLectura}
+              checkIconPosition="right"
+            />
+            {financiadorInfo && Object.keys(financiadorInfo).length > 0 && (
+              <Group gap="xs" wrap="wrap">
+                <Badge variant="dot" color="blue" style={{ fontWeight: 500, fontSize: '10px' }}>Tasa: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
+                <Badge variant="dot" color="orange" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}d</Badge>
+                <Badge variant="dot" color="green" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}d</Badge>
+                <Badge variant="dot" color="teal" style={{ fontWeight: 500, fontSize: '10px' }}>{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo'}</Badge>
+              </Group>
+            )}
+          </Stack>
 
+          {financiadorSeleccionado && prestacionesDisponibles.length > 0 && (
+            <>
             <Grid>
               <Grid.Col span={6}>
                 <Stack gap="xs">
@@ -647,17 +649,16 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                 </div>
               )}
             </Stack>
-          </Stack>
-        </Paper>
-      )}
+            </>
+          )}
 
-      {financiadorSeleccionado && prestacionesDisponibles.length === 0 && !loading && (
-        <Paper p="md" withBorder>
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            No hay prestaciones disponibles para este financiador
-          </div>
-        </Paper>
-      )}
+          {financiadorSeleccionado && prestacionesDisponibles.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+              No hay prestaciones disponibles para este financiador
+            </div>
+          )}
+        </Stack>
+      </Paper>
     </Stack>
   )
 }

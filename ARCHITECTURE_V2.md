@@ -1,10 +1,10 @@
-# Arquitectura del Sistema - Presupuestador Web v2.3
+# Arquitectura del Sistema - Presupuestador Web v2.4
 
 ## 📐 Visión General
 
 Sistema web de gestión de presupuestos médicos con arquitectura cliente-servidor, versionado de datos, valores históricos, auditoría automatizada y notificaciones en tiempo real.
 
-**Versión 2.3:** Refactoring completo con separación de responsabilidades, optimización de queries N+1, configuración centralizada, sistema de alertas configurables e índices de performance.
+**Versión 2.4:** Refactoring completo con separación de responsabilidades, optimización de queries N+1, configuración centralizada, sistema de alertas simplificado (4 niveles), UI responsive con scroll horizontal y componentes consistentes.
 
 ## 🏗️ Stack Tecnológico
 
@@ -123,8 +123,8 @@ const DEFAULT_RULES = {
     diasCobranzaDefault: 30,      // días
     tasaMensualDefault: 2,        // %
   },
-  alertas: {                      // ⭐ NUEVO en v2.2
-    rentabilidad: { desaprobado: 10, mejorar: 15, ... },
+  alertas: {                      // ⭐ SIMPLIFICADO en v2.4
+    rentabilidad: { desaprobado: 20, mejorar: 30, felicitaciones: 50, excepcional: 50 },
     monto: { elevado: 100000, critico: 150000 },
     financiador: { cobranzaLenta: 45, cobranzaExtendida: 60, tasaAlta: 5 },
   },
@@ -467,7 +467,7 @@ mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 - [Documentación de API](./backend/RUTAS_API.md)
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md)
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md)
-- [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) ⭐ NUEVO
+- [Sistema de Alertas](./SISTEMA_ALERTAS.md) ⭐ UNIFICADO v2.4
 - [Análisis de Código Backend](./ANALISIS_CODIGO_BACKEND.md)
 - [Optimización N+1](./backend/OPTIMIZACION_N+1.md)
 - [Migración Sucursal](./backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md)
@@ -475,11 +475,22 @@ mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
 ---
 
-**Versión:** 2.3  
+**Versión:** 2.4  
 **Última actualización:** Diciembre 2024  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v2.4 (Diciembre 2024)
+- ✅ Simplificación de alertas de rentabilidad (6 → 4 niveles)
+- ✅ Nuevos umbrales: 20%, 30%, 50% (más claros y fáciles de gestionar)
+- ✅ Componente AdminTable con scroll horizontal responsive
+- ✅ Eliminación de Badge en tablas admin (reemplazado por Text)
+- ✅ Consistencia visual en todas las tablas del sistema
+- ✅ Documentación unificada (SISTEMA_ALERTAS.md, SISTEMA_NOTIFICACIONES.md)
+- ✅ Normalización de nombres de financiadores (Title Case)
+- ✅ Financiadores inactivos con sufijo "(Comunicarse con cobranza)"
+- ✅ Limpieza de financiadores duplicados en BD
 
 ### v2.3 (Diciembre 2024)
 - ✅ 8 índices de performance agregados

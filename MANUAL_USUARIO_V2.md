@@ -135,8 +135,12 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
 
 1. Ir a pestaña **"Prestaciones"**
 2. Seleccionar **financiador** del dropdown
-3. El sistema guarda automáticamente
-4. Hacer clic en **"Confirmar"** para cargar prestaciones disponibles
+3. El sistema:
+   - Guarda automáticamente el financiador
+   - Carga prestaciones disponibles
+   - Muestra información del financiador
+
+**⚠️ Importante:** Si cambias el financiador después de agregar prestaciones, todas las prestaciones seleccionadas se eliminarán automáticamente.
 
 **Información del Financiador:**
 - Tasa Mensual
@@ -548,7 +552,7 @@ Hay un botón **"Descargar PDF"** en el dashboard que genera un PDF con todos lo
 
 ### ¿Puedo modificar el financiador después de agregarlo?
 
-Sí, hay un botón **"Modificar"** que desbloquea el selector de financiador. Ten en cuenta que esto eliminará las prestaciones agregadas.
+Sí, el selector de financiador siempre está disponible mientras el presupuesto sea un borrador. Al cambiar el financiador, el sistema eliminará automáticamente todas las prestaciones agregadas y mostrará una notificación.
 
 ### ¿Qué pasa si cierro el navegador sin finalizar?
 
@@ -577,5 +581,5 @@ No, el sistema garantiza que solo haya UN período vigente (fecha_fin = NULL) po
 Para asistencia adicional, contactar al equipo de desarrollo o administrador del sistema.
 
 **Última actualización:** Enero 2025  
-**Versión:** 2.0  
-**Incluye:** Sistema de Valores Históricos (Timelapse)
+**Versión:** 2.3  
+**Incluye:** Sistema de Valores Históricos (Timelapse) + Flujo Simplificado de Financiador
