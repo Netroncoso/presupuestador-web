@@ -59,25 +59,16 @@ export const createOrUpdateServicioPrestador = asyncHandler(async (req: Request,
         [prestadorServicioId]
       );
 
-      // Si no existe, crear registro inicial
-      if (valoresExist.length === 0) {
-        await connection.query(
-          'INSERT INTO prestador_servicio_valores (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio) VALUES (?, ?, ?, CURDATE())',
-          [prestadorServicioId, valor_sugerido || 0, valor_facturar || 0]
-        );
-      }
+      // No crear registros históricos desde edición rápida
+      // Los valores históricos se gestionan desde la sección dedicada
     } else {
       const [result] = await connection.query<ResultSetHeader>(
         'INSERT INTO prestador_servicio (idobra_social, id_servicio, valor_facturar, activo, cant_total, valor_sugerido) VALUES (?, ?, ?, ?, ?, ?)',
         [prestadorId, servicioId, valor_facturar, activo, cant_total, valor_sugerido]
       );
       prestadorServicioId = result.insertId;
-
-      // Crear registro inicial en valores históricos
-      await connection.query(
-        'INSERT INTO prestador_servicio_valores (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio) VALUES (?, ?, ?, CURDATE())',
-        [prestadorServicioId, valor_sugerido || 0, valor_facturar || 0]
-      );
+      // No crear registros históricos automáticamente
+      // Los valores se gestionan desde la sección dedicada del modal
     }
 
     await connection.commit();

@@ -22,6 +22,21 @@ export const FinanciadorAlerts = ({
 }: Props) => {
   return (
     <>
+      {(!diasCobranza || diasCobranza === 0) && (
+        <Alert
+          icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />}
+          title="Datos Incompletos del Financiador"
+          color="red"
+          radius="md"
+          mb="xs"
+        >
+          <Text size="sm">
+            Este financiador <strong>no tiene configurados los días de cobranza</strong>. 
+            Contacta al administrador para completar esta información crítica.
+          </Text>
+        </Alert>
+      )}
+
       {requiereAutorizacion && (
         <Alert
           icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />}

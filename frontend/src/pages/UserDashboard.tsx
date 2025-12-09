@@ -326,6 +326,19 @@ export default function UserDashboard() {
 
       setEnviandoAuditoria(true);
       try {
+        // 1. Finalizar presupuesto (guarda totales)
+        const totales = {
+          totalInsumos,
+          totalPrestaciones,
+          costoTotal,
+          totalFacturar,
+          rentabilidad,
+          rentabilidadConPlazo,
+        };
+        
+        await finalizarPresupuesto(totales);
+        
+        // 2. Forzar estado a "pendiente" con mensaje del modal
         await api.put(`/auditoria/pedir/${presupuestoId}`, {
           mensaje: mensaje || null,
         });
@@ -338,7 +351,14 @@ export default function UserDashboard() {
           position: "top-center",
           autoClose: false,
         });
+        
         cerrarModalAuditoria();
+        setRecargarHistorial((prev) => prev + 1);
+        
+        setTimeout(() => {
+          handleNuevoPresupuesto();
+        }, 2000);
+        
       } catch (error) {
         console.error("Error:", error);
         notifications.show({
@@ -352,7 +372,7 @@ export default function UserDashboard() {
         setEnviandoAuditoria(false);
       }
     },
-    [presupuestoId, cerrarModalAuditoria]
+    [presupuestoId, cerrarModalAuditoria, finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, handleNuevoPresupuesto]
   );
 
   const handleTodosItemsGuardados = useCallback(() => {

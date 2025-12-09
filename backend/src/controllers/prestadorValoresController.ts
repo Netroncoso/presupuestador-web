@@ -18,6 +18,7 @@ export const getValoresPrestadorServicio = asyncHandler(async (req: Request, res
       valor_facturar,
       fecha_inicio, 
       fecha_fin,
+      sucursal_id,
       created_at
      FROM prestador_servicio_valores 
      WHERE id_prestador_servicio = ? 
@@ -30,10 +31,10 @@ export const getValoresPrestadorServicio = asyncHandler(async (req: Request, res
 
 // Guardar nuevo valor con fecha_inicio
 export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, res: Response) => {
-  const prestadorServicioId = Number(req.params.id);
-  const { valor_asignado, valor_facturar, fecha_inicio } = req.body;
+  let prestadorServicioId = Number(req.params.id);
+  const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, id_servicio, idobra_social } = req.body;
 
-  if (!prestadorServicioId || !valor_asignado || !valor_facturar || !fecha_inicio) {
+  if (!valor_asignado || !valor_facturar || !fecha_inicio) {
     throw new AppError(400, "Datos incompletos: valor_asignado, valor_facturar y fecha_inicio requeridos");
   }
 
@@ -41,22 +42,47 @@ export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, r
   await connection.beginTransaction();
 
   try {
-    // Cerrar todos los períodos vigentes o que solapan con la nueva fecha
+    // Si no existe prestadorServicioId, crear registro en prestador_servicio
+    if (!prestadorServicioId || isNaN(prestadorServicioId)) {
+      if (!id_servicio || !idobra_social) {
+        throw new AppError(400, "id_servicio e idobra_social requeridos para crear servicio nuevo");
+      }
+
+      // Verificar si ya existe
+      const [existing] = await connection.query<RowDataPacket[]>(
+        'SELECT id_prestador_servicio FROM prestador_servicio WHERE id_servicio = ? AND idobra_social = ?',
+        [id_servicio, idobra_social]
+      );
+
+      if (existing.length > 0) {
+        prestadorServicioId = existing[0].id_prestador_servicio;
+      } else {
+        // Crear nuevo registro activo
+        const [result]: any = await connection.query(
+          'INSERT INTO prestador_servicio (id_servicio, idobra_social, activo, valor_facturar, valor_sugerido, cant_total) VALUES (?, ?, 1, 0, 0, 0)',
+          [id_servicio, idobra_social]
+        );
+        prestadorServicioId = result.insertId;
+      }
+    }
+
+    // Cerrar todos los períodos vigentes o que solapan con la nueva fecha para la misma sucursal
     await connection.query(
       `UPDATE prestador_servicio_valores 
        SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
        WHERE id_prestador_servicio = ? 
+         AND (sucursal_id = ? OR (sucursal_id IS NULL AND ? IS NULL))
          AND fecha_inicio < ?
          AND (fecha_fin IS NULL OR fecha_fin >= ?)`,
-      [fecha_inicio, prestadorServicioId, fecha_inicio, fecha_inicio]
+      [fecha_inicio, prestadorServicioId, sucursal_id, sucursal_id, fecha_inicio, fecha_inicio]
     );
 
     // Insertar nuevo período
     await connection.query(
       `INSERT INTO prestador_servicio_valores 
-       (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio) 
-       VALUES (?, ?, ?, ?)`,
-      [prestadorServicioId, valor_asignado, valor_facturar, fecha_inicio]
+       (id_prestador_servicio, valor_asignado, valor_facturar, fecha_inicio, sucursal_id) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [prestadorServicioId, valor_asignado, valor_facturar, fecha_inicio, sucursal_id]
     );
 
     await connection.commit();

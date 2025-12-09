@@ -16,6 +16,7 @@ interface Presupuesto {
   total_prestaciones: number;
   costo_total: number;
   total_facturar: number;
+  utilidad: number;
   rentabilidad: number;
   rentabilidad_con_plazo: number | null;
   created_at: string;
@@ -34,6 +35,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   const [filtroNombre, setFiltroNombre] = useState('');
   const [filtroRentabilidad, setFiltroRentabilidad] = useState('');
   const [filtroMonto, setFiltroMonto] = useState('');
+  const [filtroId, setFiltroId] = useState('');
 
   const cargarPresupuestos = useCallback(async () => {
     try {
@@ -52,6 +54,10 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
 
   const filtrados = useMemo(() => {
     let resultado = presupuestos;
+
+    if (filtroId) {
+      resultado = resultado.filter(p => String(p.idPresupuestos).includes(filtroId));
+    }
 
     if (filtroNombre) {
       const filtroLower = filtroNombre.toLowerCase();
@@ -76,7 +82,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     }
 
     return resultado;
-  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto]);
+  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto, filtroId]);
 
   if (loading) {
     return <Loader />;
@@ -85,6 +91,19 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   return (
     <Paper shadow="sm" p="md" radius="md" withBorder>
       <Group mb="md" grow>
+        <TextInput
+          placeholder="Buscar por ID"
+          value={filtroId}
+          onChange={(e) => setFiltroId(e.currentTarget.value)}
+          type="number"
+          rightSection={
+            filtroId ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroId('')}>
+                <XMarkIcon style={ICON_SIZE} />
+              </ActionIcon>
+            ) : null
+          }
+        />
         <TextInput
           placeholder="Buscar por nombre o DNI"
           leftSection={<MagnifyingGlassIcon style={ICON_SIZE} />}
@@ -136,6 +155,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Sucursal</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Total</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Total Facturar</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Utilidad</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Rentabilidad</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
@@ -157,6 +177,11 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>{p.Sucursal}</Table.Td>
                 <Table.Td>${Number(p.costo_total || 0).toFixed(2)}</Table.Td>
                 <Table.Td>${Number(p.total_facturar || 0).toFixed(2)}</Table.Td>
+                <Table.Td>
+                  <Text size="sm" c={p.utilidad >= 0 ? 'green' : 'red'} fw={500}>
+                    ${Number(p.utilidad || 0).toFixed(2)}
+                  </Text>
+                </Table.Td>
                 <Table.Td>
                   <Text size="sm" c={Number(p.rentabilidad) >= 40 ? 'green' : Number(p.rentabilidad) >= 35 ? 'yellow' : 'red'} fw={500}>
                     {Number(p.rentabilidad || 0).toFixed(2)}%

@@ -124,9 +124,13 @@ export async function getFinanciadorAcuerdos() {
   return res.data;
 }
 
-export async function getPrestacionesPorPrestador(id: string, fecha?: string) {
-  const url = fecha 
-    ? `/prestaciones/prestador/${id}?fecha=${fecha}`
+export async function getPrestacionesPorPrestador(id: string, fecha?: string, sucursalId?: number) {
+  const params = new URLSearchParams();
+  if (fecha) params.append('fecha', fecha);
+  if (sucursalId) params.append('sucursal_id', sucursalId.toString());
+  
+  const url = params.toString() 
+    ? `/prestaciones/prestador/${id}?${params.toString()}`
     : `/prestaciones/prestador/${id}`;
   const res = await api.get(url);
   return res.data;

@@ -138,7 +138,12 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const cargarPrestacionesPorFinanciador = async (financiadorId: string, fecha?: string) => {
     setLoading(true)
     try {
-      const data = await getPrestacionesPorPrestador(financiadorId, fecha)
+      let sucursalId: number | undefined;
+      if (presupuestoId) {
+        const presupuestoRes = await api.get(`/presupuestos/${presupuestoId}`);
+        sucursalId = presupuestoRes.data.sucursal_id;
+      }
+      const data = await getPrestacionesPorPrestador(financiadorId, fecha, sucursalId)
       setPrestacionesDisponibles(data)
     } catch (error) {
       notifications.show({

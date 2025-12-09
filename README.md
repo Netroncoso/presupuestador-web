@@ -41,6 +41,9 @@ npm run dev
 # Migración de valores históricos (si no está aplicada)
 mysql -u root -p mh_1 < backend/migrations/create_prestador_servicio_valores.sql
 
+# Migración de valores por sucursal (NUEVA)
+mysql -u root -p mh_1 < backend/migrations/add_sucursal_to_valores.sql
+
 # Migración de índices de performance
 mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
@@ -73,7 +76,7 @@ VITE_API_URL=http://localhost:3000
 - [Arquitectura del Sistema](./ARCHITECTURE_V2.md) - Diseño técnico y componentes
 - [API REST](./backend/RUTAS_API.md) - Documentación de endpoints
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md) - SSE y notificaciones en tiempo real
-- [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos
+- [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos y sucursales
 - [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) - Sistema de umbrales dinámicos
 
 ## 🏗️ Arquitectura
@@ -119,7 +122,7 @@ presupuestador-web/
 ### Administrador
 - Gestión de usuarios
 - Gestión de financiadores y prestaciones
-- **Gestión de valores históricos** (nuevo)
+- **Gestión de valores históricos por sucursal** (nuevo)
 - Acceso completo al sistema
 
 ## 📊 Flujo de Trabajo
@@ -154,9 +157,11 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 
 ### Características
 - Gestión de precios por períodos de vigencia
+- ⭐ **Valores diferenciados por sucursal** (general o específico)
 - Cierre automático de períodos al agregar nuevos valores
-- Consulta de valores vigentes por fecha
+- Consulta de valores vigentes por fecha y sucursal
 - Integración con presupuestos históricos
+- Prioridad: Valor específico > Valor general
 
 ### Comportamiento de Prestaciones
 | Escenario | `valor_asignado` | `valor_facturar` |
@@ -174,9 +179,18 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 
 ### Gestión (Admin)
 - Modal unificado con edición rápida
-- Agregar múltiples valores futuros
-- Tabla de histórico con indicador de vigencia
+- ⭐ **Selector de sucursal** ("Todas" o específica)
+- Agregar múltiples valores futuros (con sucursal por fila)
+- Tabla de histórico con columna "Sucursal"
 - Formato monetario argentino ($ 1.234,56)
+
+### Valores por Sucursal
+| Configuración | Comportamiento |
+|----------------|----------------|
+| **Valor general** (`sucursal_id = NULL`) | Aplica a todas las sucursales |
+| **Valor específico** (`sucursal_id = X`) | Solo para esa sucursal |
+| **General + Específico** | Específico tiene prioridad |
+| **Solo específicos** | Sucursales sin valor no ven el servicio |
 
 ## 📱 Notificaciones en Tiempo Real
 
@@ -226,6 +240,17 @@ ORDER BY fecha_inicio DESC;
 -- Ver valores vigentes hoy
 SELECT * FROM prestador_servicio_valores 
 WHERE CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31');
+
+-- Ver valores por sucursal
+SELECT 
+  COALESCE(s.Sucursales_mh, 'Todas') as sucursal,
+  v.valor_facturar,
+  v.fecha_inicio,
+  v.fecha_fin
+FROM prestador_servicio_valores v
+LEFT JOIN sucursales_mh s ON v.sucursal_id = s.ID
+WHERE v.id_prestador_servicio = 123
+ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC;
 ```
 
 ## 🐛 Troubleshooting
@@ -259,10 +284,14 @@ WHERE CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31');
 ### Sistema de Valores Históricos
 - ✅ Tabla `prestador_servicio_valores` con períodos de vigencia
 - ✅ Migración automática de valores actuales
-- ✅ Cierre automático de períodos
-- ✅ Consulta de valores por fecha
+- ✅ ⭐ **Columna `sucursal_id` para valores diferenciados**
+- ✅ Cierre automático de períodos (por sucursal)
+- ✅ Consulta de valores por fecha y sucursal
+- ✅ ⭐ **Prioridad: específico > general**
 - ✅ Modal de gestión con edición rápida
+- ✅ ⭐ **Selector de sucursal en formulario**
 - ✅ Múltiples valores futuros
+- ✅ ⭐ **Tabla histórico con columna "Sucursal"**
 - ✅ Formato monetario argentino
 
 ### Integración con Presupuestos
@@ -314,6 +343,14 @@ Para soporte técnico, contactar al equipo de desarrollo.
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v2.4 (Enero 2025)
+- ⭐ **Sistema de valores por sucursal**
+- Valores generales (todas) y específicos (por sucursal)
+- Prioridad automática: específico > general
+- Selector de sucursal en modal de admin
+- Columna "Sucursal" en tabla histórico
+- Usuario solo ve servicios con valores para su sucursal
 
 ### v2.3 (Enero 2025)
 - Simplificación de flujo de selección de financiador

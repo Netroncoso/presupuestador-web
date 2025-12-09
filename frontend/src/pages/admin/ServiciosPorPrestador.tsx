@@ -21,6 +21,12 @@ interface ServicioPrestador {
   tipo_unidad?: string;
 }
 
+interface Sucursal {
+  ID: number;
+  Sucursales_mh: string;
+  suc_porcentaje_insumos: number;
+}
+
 export default function ServiciosPorPrestador() {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string>('');
@@ -30,14 +36,17 @@ export default function ServiciosPorPrestador() {
   const [editingServicio, setEditingServicio] = useState<ServicioPrestador | null>(null);
   const [loading, setLoading] = useState(false);
   const [valoresHistoricos, setValoresHistoricos] = useState<any[]>([]);
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [nuevosValores, setNuevosValores] = useState<Array<{
     valor_asignado: string;
     valor_facturar: string;
     fecha_inicio: string;
+    sucursal_id: string;
   }>>([{
     valor_asignado: '',
     valor_facturar: '',
-    fecha_inicio: new Date().toISOString().slice(0, 10)
+    fecha_inicio: new Date().toISOString().slice(0, 10),
+    sucursal_id: ''
   }]);
 
   const formatName = (name: string) => {
@@ -58,6 +67,7 @@ export default function ServiciosPorPrestador() {
 
   useEffect(() => {
     cargarFinanciadores();
+    cargarSucursales();
   }, []);
 
   useEffect(() => {
@@ -79,6 +89,15 @@ export default function ServiciosPorPrestador() {
     }
   };
 
+  const cargarSucursales = async () => {
+    try {
+      const response = await api.get('/sucursales');
+      setSucursales(response.data);
+    } catch (error) {
+      console.error('Error al cargar sucursales:', error);
+    }
+  };
+
   const cargarServicios = async () => {
     try {
       const response = await api.get(`/admin/servicios/prestador/${financiadorSeleccionado}/servicios`);
@@ -92,20 +111,25 @@ export default function ServiciosPorPrestador() {
     }
   };
 
-  const toggleActivo = async (servicio: ServicioPrestador) => {
-    const nuevoEstado = servicio.activo === 1 ? 0 : 1;
+  const toggleActivo = async (activo: number) => {
+    if (!editingServicio) return;
     
     try {
-      await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${servicio.id_servicio}`, {
-        valor_facturar: formatNumber(servicio.valor_facturar),
-        activo: nuevoEstado,
-        cant_total: formatNumber(servicio.cant_total),
-        valor_sugerido: formatNumber(servicio.valor_sugerido)
+      await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
+        valor_facturar: 0,
+        activo: activo,
+        cant_total: editingServicio.cant_total || 0,
+        valor_sugerido: 0
+      });
+      
+      setEditingServicio({
+        ...editingServicio,
+        activo: activo
       });
       
       notifications.show({
         title: 'Éxito',
-        message: `Servicio ${nuevoEstado === 1 ? 'activado' : 'desactivado'} correctamente`,
+        message: `Servicio ${activo === 1 ? 'activado' : 'desactivado'} correctamente`,
         color: 'green'
       });
       
@@ -120,45 +144,8 @@ export default function ServiciosPorPrestador() {
   };
 
   const handleEdit = (servicio: ServicioPrestador) => {
-    setEditingServicio({
-      ...servicio,
-      valor_facturar: formatNumber(servicio.valor_facturar),
-      cant_total: formatNumber(servicio.cant_total),
-      valor_sugerido: formatNumber(servicio.valor_sugerido)
-    });
+    setEditingServicio(servicio);
     setModalOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!editingServicio) return;
-
-    setLoading(true);
-    try {
-      await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
-        valor_facturar: formatNumber(editingServicio.valor_facturar),
-        activo: editingServicio.activo || 0,
-        cant_total: formatNumber(editingServicio.cant_total),
-        valor_sugerido: formatNumber(editingServicio.valor_sugerido)
-      });
-      
-      notifications.show({
-        title: 'Éxito',
-        message: 'Servicio actualizado correctamente',
-        color: 'green'
-      });
-      
-      setModalOpen(false);
-      setEditingServicio(null);
-      cargarServicios();
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al actualizar servicio',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -220,16 +207,9 @@ export default function ServiciosPorPrestador() {
                   <Table.Td>{formatName(servicio.nombre)}</Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || '-'}</Table.Td>
                   <Table.Td>
-                    <Group gap="sm" align="center">
-                      <Switch
-                        checked={servicio.activo === 1}
-                        onChange={() => toggleActivo(servicio)}
-                        size="sm"
-                      />
-                      <Text size="sm" c={servicio.activo === 1 ? 'green' : 'gray'}>
-                        {servicio.activo === 1 ? 'Activo' : 'Inactivo'}
-                      </Text>
-                    </Group>
+                    <Text size="sm" c={servicio.activo === 1 ? 'green' : 'gray'}>
+                      {servicio.activo === 1 ? 'Activo' : 'Inactivo'}
+                    </Text>
                   </Table.Td>
                   <Table.Td>{formatPeso(formatNumber(servicio.valor_facturar))}</Table.Td>
                   <Table.Td>{formatPeso(formatNumber(servicio.valor_sugerido))}</Table.Td>
@@ -263,7 +243,8 @@ export default function ServiciosPorPrestador() {
           setNuevosValores([{
             valor_asignado: '',
             valor_facturar: '',
-            fecha_inicio: new Date().toISOString().slice(0, 10)
+            fecha_inicio: new Date().toISOString().slice(0, 10),
+            sucursal_id: ''
           }]);
         }}
         title={`Editar Servicio: ${editingServicio ? formatName(editingServicio.nombre) : ''}`}
@@ -272,53 +253,51 @@ export default function ServiciosPorPrestador() {
       >
         {editingServicio && (
           <Stack gap="lg">
-            {/* Edición Rápida */}
+            {/* Estado del Servicio */}
             <Paper p="md" withBorder>
-              <MantineText size="sm" fw={500} mb="sm">Edición Rápida (Valores Actuales)</MantineText>
-              <Stack gap="sm">
-                <Group grow>
-                  <NumberInput
-                    label="Valor Sugerido"
-                    value={formatNumber(editingServicio.valor_sugerido)}
-                    onChange={(val) => setEditingServicio({
-                      ...editingServicio,
-                      valor_sugerido: Number(val) || 0
-                    })}
-                    decimalScale={2}
-                    fixedDecimalScale
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    prefix="$ "
-                  />
-                  <NumberInput
-                    label="Valor a Facturar"
-                    value={formatNumber(editingServicio.valor_facturar)}
-                    onChange={(val) => setEditingServicio({
-                      ...editingServicio,
-                      valor_facturar: Number(val) || 0
-                    })}
-                    decimalScale={2}
-                    fixedDecimalScale
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    prefix="$ "
-                  />
-                  <TextInput
-                    label="Cantidad Sugerida"
-                    type="number"
-                    value={formatNumber(editingServicio.cant_total).toString()}
-                    onChange={(e) => setEditingServicio({
-                      ...editingServicio,
-                      cant_total: parseInt(e.target.value) || 0
-                    })}
-                  />
-                </Group>
-                <Group justify="flex-end">
-                  <Button onClick={handleSubmit} loading={loading}>
-                    Guardar Cambios
-                  </Button>
-                </Group>
-              </Stack>
+              <Group justify="space-between" align="center">
+                <div>
+                  <MantineText size="sm" fw={500}>Estado del Servicio</MantineText>
+                  <MantineText size="xs" c="dimmed">Activa el servicio para que esté disponible en presupuestos</MantineText>
+                </div>
+                <Switch
+                  checked={editingServicio.activo === 1}
+                  onChange={async (e) => {
+                    if (e.currentTarget.checked) {
+                      // Si es la primera vez (no tiene id_prestador_servicio), permitir activar
+                      if (!editingServicio.id_prestador_servicio) {
+                        toggleActivo(1);
+                        return;
+                      }
+                      // Si ya existe, validar que tenga valores VIGENTES
+                      try {
+                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                        const vigentes = res.data.filter((v: any) => !v.fecha_fin);
+                        if (vigentes.length === 0) {
+                          notifications.show({
+                            title: 'Error',
+                            message: 'Debes agregar al menos un valor vigente antes de activar el servicio',
+                            color: 'red'
+                          });
+                          return;
+                        }
+                        toggleActivo(1);
+                      } catch (err) {
+                        notifications.show({
+                          title: 'Error',
+                          message: 'Error al verificar valores',
+                          color: 'red'
+                        });
+                      }
+                    } else {
+                      toggleActivo(0);
+                    }
+                  }}
+                  size="lg"
+                  onLabel="Activo"
+                  offLabel="Inactivo"
+                />
+              </Group>
             </Paper>
 
             {/* Histórico de Valores */}
@@ -332,7 +311,8 @@ export default function ServiciosPorPrestador() {
                   onClick={() => setNuevosValores([...nuevosValores, {
                     valor_asignado: '',
                     valor_facturar: '',
-                    fecha_inicio: new Date().toISOString().slice(0, 10)
+                    fecha_inicio: new Date().toISOString().slice(0, 10),
+                    sucursal_id: ''
                   }])}
                 >
                   <PlusIcon style={{ width: 16, height: 16 }} />
@@ -341,7 +321,23 @@ export default function ServiciosPorPrestador() {
               
               <Stack gap="sm">
                 {nuevosValores.map((valor, index) => (
-                  <Group key={index} align="flex-end">
+                  <Group key={index} align="flex-end" wrap="nowrap">
+                    <Select
+                      label="Sucursal"
+                      placeholder="Todas"
+                      value={valor.sucursal_id}
+                      onChange={(val) => {
+                        const updated = [...nuevosValores];
+                        updated[index].sucursal_id = val || '';
+                        setNuevosValores(updated);
+                      }}
+                      data={[
+                        { value: '', label: 'Todas las sucursales' },
+                        ...sucursales.filter(s => s.Sucursales_mh).map(s => ({ value: String(s.ID), label: s.Sucursales_mh }))
+                      ]}
+                      style={{ flex: 1 }}
+                      clearable
+                    />
                     <NumberInput
                       label="Valor Sugerido"
                       value={valor.valor_asignado ? Number(valor.valor_asignado) : undefined}
@@ -413,11 +409,22 @@ export default function ServiciosPorPrestador() {
                       try {
                         // Guardar todos los valores
                         for (const valor of nuevosValores) {
-                          await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`, {
+                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 'null'}/valores`, {
                             valor_asignado: parseFloat(valor.valor_asignado),
                             valor_facturar: parseFloat(valor.valor_facturar),
-                            fecha_inicio: valor.fecha_inicio
+                            fecha_inicio: valor.fecha_inicio,
+                            sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
+                            id_servicio: editingServicio.id_servicio,
+                            idobra_social: financiadorSeleccionado
                           });
+                          // Actualizar id_prestador_servicio si se creó nuevo
+                          if (!editingServicio.id_prestador_servicio && response.data.id_prestador_servicio) {
+                            setEditingServicio({
+                              ...editingServicio,
+                              id_prestador_servicio: response.data.id_prestador_servicio,
+                              activo: 1
+                            });
+                          }
                         }
                         
                         notifications.show({
@@ -429,7 +436,8 @@ export default function ServiciosPorPrestador() {
                         setNuevosValores([{
                           valor_asignado: '',
                           valor_facturar: '',
-                          fecha_inicio: new Date().toISOString().slice(0, 10)
+                          fecha_inicio: new Date().toISOString().slice(0, 10),
+                          sucursal_id: ''
                         }]);
                         
                         // Recargar histórico
@@ -460,6 +468,7 @@ export default function ServiciosPorPrestador() {
                 <Table striped highlightOnHover>
                   <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
                     <Table.Tr>
+                      <Table.Th>Sucursal</Table.Th>
                       <Table.Th>Fecha Inicio</Table.Th>
                       <Table.Th>Fecha Fin</Table.Th>
                       <Table.Th style={{ textAlign: 'right' }}>Valor Sugerido</Table.Th>
@@ -468,19 +477,27 @@ export default function ServiciosPorPrestador() {
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {valoresHistoricos.map((v: any) => (
-                      <Table.Tr key={v.id}>
-                        <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
-                        <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
-                        <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
-                        <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
-                        <Table.Td>
-                          <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
-                            {!v.fecha_fin ? 'Vigente' : 'Histórico'}
-                          </Text>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
+                    {valoresHistoricos.map((v: any) => {
+                      const sucursal = v.sucursal_id ? sucursales.find(s => s.ID === v.sucursal_id) : null;
+                      return (
+                        <Table.Tr key={v.id}>
+                          <Table.Td>
+                            <Text size="sm" fw={!v.sucursal_id ? 500 : 400}>
+                              {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
+                          <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                          <Table.Td>
+                            <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
+                              {!v.fecha_fin ? 'Vigente' : 'Histórico'}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      );
+                    })}
                   </Table.Tbody>
                 </Table>
               </Paper>
