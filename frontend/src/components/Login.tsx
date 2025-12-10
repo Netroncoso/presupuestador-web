@@ -51,14 +51,31 @@ export default function Login(props: PaperProps) {
       justifyContent: 'center', 
       alignItems: 'center', 
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5'}}> 
+      backgroundColor: '#f5f5f5'
+    }}> 
 
-      <Paper radius="md" p="lg" withBorder w={400} shadow='xl' {...props}>
-        <Text size="lg" fw={500} ta="center" mb="xs">
-           Presupuestador Web
+      <Paper radius="md" p="xl" withBorder shadow='xl' {...props} style={{ display: 'flex', gap: '4rem', maxWidth: '1000px' }}>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '3rem',
+          borderRight: '2px solid #e0e0e0'
+        }}>
+          <img 
+            src="/logoMH.png" 
+            alt="MediHome Logo" 
+            style={{ width: '280px', height: 'auto' }}
+          />
+        </div>
+
+        <div style={{ flex: 1, minWidth: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text size="xl" fw={500} ta="center" mb="xs">
+           MEDIHOME
         </Text>
-        <Text size="lg" fw={500} ta="center" mb="xs">
-          MediHome
+        <Text size="md" fw={400} ta="center" mb="xs">
+          Presupuestador Web
         </Text>
         
         <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -97,12 +114,19 @@ export default function Login(props: PaperProps) {
             />
           </Stack>
           
-          <Group justify="center" mt="xl">
-            <Button type="submit" loading={loading} radius="xl" size="md">
+          <Group justify="center" align='baseline' mt="xl">
+            <Button 
+              type="submit" 
+              loading={loading} 
+              radius="xl" 
+              size="md"
+              style={{ backgroundColor: 'rgb(0, 92, 163)' }}
+            >
               Iniciar Sesión
             </Button>
           </Group>
         </form>
+        </div>
       </Paper>
     </div>
   );
