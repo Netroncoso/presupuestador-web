@@ -25,7 +25,19 @@ export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res
          WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
            AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
            AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
-         ORDER BY v.sucursal_id DESC
+         ORDER BY 
+           CASE 
+             WHEN v.sucursal_id IS NOT NULL 
+               AND DATEDIFF(v.fecha_inicio, 
+                 (SELECT MAX(v2.fecha_inicio) FROM prestador_servicio_valores v2 
+                  WHERE v2.id_prestador_servicio = v.id_prestador_servicio 
+                  AND v2.sucursal_id IS NULL 
+                  AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
+               ) >= -30
+             THEN 1
+             ELSE 2
+           END,
+           v.fecha_inicio DESC
          LIMIT 1),
         ps.valor_sugerido
       ) AS valor_sugerido,
@@ -35,7 +47,19 @@ export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res
          WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
            AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
            AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
-         ORDER BY v.sucursal_id DESC
+         ORDER BY 
+           CASE 
+             WHEN v.sucursal_id IS NOT NULL 
+               AND DATEDIFF(v.fecha_inicio, 
+                 (SELECT MAX(v2.fecha_inicio) FROM prestador_servicio_valores v2 
+                  WHERE v2.id_prestador_servicio = v.id_prestador_servicio 
+                  AND v2.sucursal_id IS NULL 
+                  AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
+               ) >= -30
+             THEN 1
+             ELSE 2
+           END,
+           v.fecha_inicio DESC
          LIMIT 1),
         ps.valor_facturar
       ) AS valor_facturar
@@ -43,7 +67,7 @@ export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res
      JOIN servicios AS s ON ps.id_servicio = s.id_servicio
      WHERE ps.idobra_social = ? AND ps.activo = 1
      HAVING valor_facturar IS NOT NULL`, 
-    [sucursalId, fecha, sucursalId, fecha, id]
+    [sucursalId, fecha, fecha, sucursalId, fecha, fecha, id]
   );
   res.json(rows);
 });

@@ -420,25 +420,31 @@ Permite gestionar precios de servicios por períodos de vigencia, manteniendo un
 **Editar Valores del Servicio:**
 
 1. Hacer clic en ícono de **lápiz** en la columna "Acciones"
-2. Se abre modal con dos secciones:
+2. Se abre modal con tres secciones:
 
-**Sección 1: Edición Rápida (Valores Actuales)**
+**Sección 1: Valores Actuales del Servicio**
 - **Valor Sugerido**: Costo base del servicio ($ formato argentino)
 - **Valor a Facturar**: Precio al financiador ($ formato argentino)
 - **Cantidad Sugerida**: Cantidad inicial recomendada
-- Botón **"Guardar Cambios"**: Actualiza valores actuales en `prestador_servicio`
+- **Estado del Servicio**: Switch para activar/desactivar
+- Botón **"Guardar Cambios"**: Actualiza valores en `prestador_servicio`
 
 **Sección 2: Agregar Valores con Fecha de Vigencia**
 - **Valor Sugerido**: Nuevo costo base
 - **Valor a Facturar**: Nuevo precio al financiador
 - **Fecha Inicio**: Fecha desde la cual aplica el nuevo valor
+- **Sucursal**: "Todas las sucursales" o específica
 - Botón **"+"**: Agregar más valores futuros
 - Botón **"-"**: Eliminar fila
 - Botón **"Guardar Valor(es)"**: Guarda en `prestador_servicio_valores`
 
+⚠️ **Importante - Actualización de Valores Generales:**
+Al guardar un valor general (Todas las sucursales), el sistema cierra automáticamente valores específicos con más de 30 días de antigüedad para evitar inconsistencias de precios.
+
 **Sección 3: Histórico de Valores**
 - Tabla con todos los períodos de vigencia
 - Columnas:
+  - Sucursal (Todas / CABA / Córdoba)
   - Fecha Inicio
   - Fecha Fin ("Vigente" si es NULL)
   - Valor Sugerido
@@ -581,5 +587,5 @@ No, el sistema garantiza que solo haya UN período vigente (fecha_fin = NULL) po
 Para asistencia adicional, contactar al equipo de desarrollo o administrador del sistema.
 
 **Última actualización:** Enero 2025  
-**Versión:** 2.3  
-**Incluye:** Sistema de Valores Históricos (Timelapse) + Flujo Simplificado de Financiador
+**Versión:** 2.5  
+**Incluye:** Sistema de Valores Históricos (Timelapse) + Sistema Anti-Obsolescencia + Flujo Simplificado de Financiador

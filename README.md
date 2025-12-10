@@ -178,19 +178,26 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 | **Editar → Nueva versión** | Actualiza a precio actual | Recalcula con porcentaje original |
 
 ### Gestión (Admin)
-- Modal unificado con edición rápida
+- Modal unificado para gestión de valores históricos
 - ⭐ **Selector de sucursal** ("Todas" o específica)
 - Agregar múltiples valores futuros (con sucursal por fila)
 - Tabla de histórico con columna "Sucursal"
 - Formato monetario argentino ($ 1.234,56)
+- ⭐ **Sistema anti-obsolescencia**: Limpieza automática de valores específicos con > 30 días de antigüedad
 
 ### Valores por Sucursal
 | Configuración | Comportamiento |
 |----------------|----------------|
 | **Valor general** (`sucursal_id = NULL`) | Aplica a todas las sucursales |
 | **Valor específico** (`sucursal_id = X`) | Solo para esa sucursal |
-| **General + Específico** | Específico tiene prioridad |
+| **General + Específico reciente** | Específico tiene prioridad (≤ 30 días diferencia) |
+| **General + Específico obsoleto** | General tiene prioridad (> 30 días diferencia) |
 | **Solo específicos** | Sucursales sin valor no ven el servicio |
+
+**Sistema Anti-Obsolescencia (Ventana de 30 días):**
+- Al guardar valor general, cierra automáticamente valores específicos con > 30 días de antigüedad
+- En consultas, valores específicos obsoletos (> 30 días diferencia con general) pierden prioridad
+- Garantiza que actualizaciones de precios generales se apliquen a todas las sucursales
 
 ## 📱 Notificaciones en Tiempo Real
 
@@ -344,10 +351,17 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ## 📝 Historial de Versiones
 
+### v2.5 (Enero 2025)
+- ⭐ **Sistema anti-obsolescencia de valores históricos**
+- Limpieza automática: valores específicos con > 30 días se cierran al guardar general
+- Prioridad inteligente: específicos obsoletos (> 30 días) usan valor general
+- Ventana de tiempo configurable (30 días por defecto)
+- Garantiza consistencia de precios entre sucursales
+
 ### v2.4 (Enero 2025)
 - ⭐ **Sistema de valores por sucursal**
 - Valores generales (todas) y específicos (por sucursal)
-- Prioridad automática: específico > general
+- Prioridad dinámica: específico reciente > general > específico obsoleto
 - Selector de sucursal en modal de admin
 - Columna "Sucursal" en tabla histórico
 - Usuario solo ve servicios con valores para su sucursal

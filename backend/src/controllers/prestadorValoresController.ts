@@ -77,6 +77,19 @@ export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, r
       [fecha_inicio, prestadorServicioId, sucursal_id, sucursal_id, fecha_inicio, fecha_inicio]
     );
 
+    // OPCIÓN 1: Si es valor general, cerrar valores específicos obsoletos (> 30 días)
+    if (sucursal_id === null || sucursal_id === undefined) {
+      await connection.query(
+        `UPDATE prestador_servicio_valores 
+         SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
+         WHERE id_prestador_servicio = ? 
+           AND sucursal_id IS NOT NULL
+           AND fecha_fin IS NULL
+           AND DATEDIFF(?, fecha_inicio) > 30`,
+        [fecha_inicio, prestadorServicioId, fecha_inicio]
+      );
+    }
+
     // Insertar nuevo período
     await connection.query(
       `INSERT INTO prestador_servicio_valores 

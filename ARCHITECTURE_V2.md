@@ -481,6 +481,15 @@ mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
 ## 📝 Historial de Versiones
 
+### v2.5 (Enero 2025)
+- ✅ **Sistema anti-obsolescencia de valores histórricos**
+- ✅ Opción 1: Limpieza automática al guardar valor general (cierra específicos > 30 días)
+- ✅ Opción 4: Prioridad inteligente en consultas (CASE con DATEDIFF)
+- ✅ Ventana de tiempo: 30 días (configurable)
+- ✅ Garantiza consistencia de precios entre sucursales
+- ✅ Evita que valores antiguos queden "congelados"
+- ✅ Documentación completa de solución COMBO
+
 ### v2.4 (Diciembre 2024)
 - ✅ Simplificación de alertas de rentabilidad (6 → 4 niveles)
 - ✅ Nuevos umbrales: 20%, 30%, 50% (más claros y fáciles de gestionar)
@@ -523,3 +532,146 @@ mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 - Versionado de presupuestos
 - Notificaciones en tiempo real (SSE)
 - Auditoría automatizada
+
+
+## 🛡️ Sistema Anti-Obsolescencia de Valores Históricos (v2.5)
+
+### Problema Identificado
+Valores específicos antiguos mantenían prioridad sobre valores generales nuevos, causando inconsistencias de precios entre sucursales.
+
+**Ejemplo del problema:**
+- 15 Ene: Valor específico CABA = $1,000 (vigente)
+- 15 Feb: Valor general = $1,500 (actualización de precios)
+- Resultado incorrecto: CABA seguía viendo $1,000 (obsoleto)
+
+### Solución COMBO Implementada
+
+#### Opción 1: Limpieza Automática al Guardar
+**Archivo:** `backend/src/controllers/prestadorValoresController.ts`
+
+Al guardar un valor general (`sucursal_id = NULL`), cierra automáticamente valores específicos vigentes con más de 30 días de antigüedad.
+
+```typescript
+// Cierre automático de valores específicos obsoletos
+if (sucursal_id === null || sucursal_id === undefined) {
+  await connection.query(
+    `UPDATE prestador_servicio_valores 
+     SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
+     WHERE id_prestador_servicio = ? 
+       AND sucursal_id IS NOT NULL
+       AND fecha_fin IS NULL
+       AND DATEDIFF(?, fecha_inicio) > 30`,
+    [fecha_inicio, prestadorServicioId, fecha_inicio]
+  );
+}
+```
+
+**Ejemplo:**
+- 15 Ene: Valor específico CABA = $1,000 (vigente)
+- 20 Feb: Admin guarda valor general = $1,500
+- Sistema detecta: DATEDIFF('2025-02-20', '2025-01-15') = 36 días > 30
+- Acción: Cierra valor específico CABA (fecha_fin = '2025-02-19')
+- Resultado: CABA ahora usa valor general $1,500
+
+#### Opción 4: Prioridad Inteligente en Consulta
+**Archivo:** `backend/src/controllers/prestacionesController.ts`
+
+ORDER BY con CASE que compara fechas entre valor específico y general, priorizando específicos recientes (≤ 30 días diferencia).
+
+```typescript
+ORDER BY 
+  CASE 
+    WHEN v.sucursal_id IS NOT NULL 
+      AND DATEDIFF(v.fecha_inicio, 
+        (SELECT MAX(v2.fecha_inicio) FROM prestador_servicio_valores v2 
+         WHERE v2.id_prestador_servicio = v.id_prestador_servicio 
+         AND v2.sucursal_id IS NULL 
+         AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
+      ) >= -30
+    THEN 1  -- Específico reciente
+    ELSE 2  -- Específico obsoleto o general
+  END,
+  v.fecha_inicio DESC
+LIMIT 1
+```
+
+**Ejemplo:**
+- 15 Ene: Valor específico CABA = $1,000
+- 10 Feb: Valor general = $1,500
+- Diferencia: DATEDIFF('2025-02-10', '2025-01-15') = 26 días ≤ 30
+- Resultado: CABA ve $1,000 (específico reciente tiene prioridad)
+
+- 15 Ene: Valor específico CABA = $1,000
+- 20 Feb: Valor general = $1,500
+- Diferencia: DATEDIFF('2025-02-20', '2025-01-15') = 36 días > 30
+- Resultado: CABA ve $1,500 (específico obsoleto, usa general)
+
+### Ventana de Tiempo: 30 Días
+
+**Justificación:**
+- Permite actualizaciones graduales por sucursal
+- Evita que valores antiguos queden "congelados"
+- Balance entre flexibilidad y consistencia
+
+**Configuración:**
+```typescript
+// backend/src/controllers/prestadorValoresController.ts
+const VENTANA_OBSOLESCENCIA_DIAS = 30;
+
+// backend/src/controllers/prestacionesController.ts
+const VENTANA_OBSOLESCENCIA_DIAS = 30;
+```
+
+### Casos de Uso
+
+#### Caso 1: Actualización Gradual (≤ 30 días)
+```
+01 Ene: Valor general = $1,000
+15 Ene: Valor específico CABA = $1,200 (negociación especial)
+20 Ene: Usuario CABA crea presupuesto
+Resultado: Ve $1,200 (específico reciente, diferencia 5 días)
+```
+
+#### Caso 2: Valor Obsoleto (> 30 días)
+```
+01 Ene: Valor específico CABA = $1,000
+15 Feb: Valor general = $1,500 (actualización de precios)
+20 Feb: Usuario CABA crea presupuesto
+Resultado: Ve $1,500 (específico obsoleto, diferencia 45 días)
+```
+
+#### Caso 3: Limpieza Automática
+```
+01 Ene: Valor específico CABA = $1,000 (vigente)
+15 Feb: Admin guarda valor general = $1,500
+Sistema: Detecta diferencia 45 días > 30
+Acción: Cierra valor específico CABA automáticamente
+Resultado: CABA usa valor general desde 15 Feb
+```
+
+### Monitoreo
+
+**Query para detectar valores obsoletos:**
+```sql
+SELECT 
+  ps.id_prestador_servicio,
+  s.Sucursales_mh,
+  v_esp.fecha_inicio as fecha_especifico,
+  v_gen.fecha_inicio as fecha_general,
+  DATEDIFF(v_gen.fecha_inicio, v_esp.fecha_inicio) as diferencia_dias,
+  CASE 
+    WHEN DATEDIFF(v_gen.fecha_inicio, v_esp.fecha_inicio) > 30 
+    THEN 'OBSOLETO' 
+    ELSE 'OK' 
+  END as estado
+FROM prestador_servicio_valores v_esp
+JOIN prestador_servicio ps ON v_esp.id_prestador_servicio = ps.id_prestador_servicio
+JOIN sucursales_mh s ON v_esp.sucursal_id = s.ID
+LEFT JOIN prestador_servicio_valores v_gen 
+  ON v_gen.id_prestador_servicio = ps.id_prestador_servicio 
+  AND v_gen.sucursal_id IS NULL
+  AND v_gen.fecha_fin IS NULL
+WHERE v_esp.fecha_fin IS NULL
+  AND v_esp.sucursal_id IS NOT NULL
+HAVING diferencia_dias > 30;
+```
