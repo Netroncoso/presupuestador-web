@@ -51,81 +51,98 @@ export default function Login(props: PaperProps) {
       justifyContent: 'center', 
       alignItems: 'center', 
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5'
-    }}> 
-
-      <Paper radius="md" p="xl" withBorder shadow='xl' {...props} style={{ display: 'flex', gap: '4rem', maxWidth: '1000px' }}>
-        
+      backgroundColor: '#f5f5f5',
+      padding: '20px'
+    }}>
+      <Paper 
+        radius="20" 
+        p="xl" 
+        withBorder 
+        shadow='xl' 
+        {...props} 
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          width: '100%',
+          maxWidth: '900px',
+          minHeight: '500px',
+          gap: 30
+        }}
+      >
+        {/* Logo Section */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          padding: '3rem',
           borderRight: '2px solid #e0e0e0'
         }}>
           <img 
             src="/logoMH.png" 
             alt="MediHome Logo" 
-            style={{ width: '280px', height: 'auto' }}
+            style={{ maxWidth: '280px', height: 'auto' }}
           />
         </div>
 
-        <div style={{ flex: 1, minWidth: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <Text size="xl" fw={500} ta="center" mb="xs">
-           MEDIHOME
-        </Text>
-        <Text size="md" fw={400} ta="center" mb="xs">
-          Presupuestador Web
-        </Text>
-        
-        <form onSubmit={form.onSubmit(handleSubmit)}>
-          <Stack align="stretch" justify="space-around" gap="md" >
-            {error && (
-              <Alert icon={<ExclamationCircleIcon width={16} height={16} />} color="red">
-                {error}
-              </Alert>
-            )}
-            
-            <TextInput
-              
-              required
-              label="Usuario"
-              placeholder="Ingresa tu usuario"
-              value={form.values.username}
-              onChange={(event) => form.setFieldValue('username', event.currentTarget.value)}
-              error={form.errors.username}
-              radius="md"
-              variant="unstyled"
-            />
-            
-            <PasswordInput
-              required
-              label="Contraseña"
-              placeholder="Tu contraseña"
-              value={form.values.password}
-              onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
-              error={form.errors.password}
-              radius="md"
-              variant="unstyled"
-              mt="md"
-              visibilityToggleIcon={({ reveal }) => 
-                reveal ? <EyeSlashIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />
-              }
-            />
-          </Stack>
+        {/* Form Section */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center',
+        }}>
+          <Text size="xl" fw={500} ta="center" mb="xs">
+            MEDIHOME
+          </Text>
+          <Text size="md" fw={400} ta="center" mb="xs">
+            Presupuestador Web
+          </Text>
           
-          <Group justify="center" align='baseline' mt="xl">
+          <form onSubmit={form.onSubmit(handleSubmit)}>
+            <Stack gap="xs">
+              {error && (
+                <Alert icon={<ExclamationCircleIcon width={16} height={16} />} color="red">
+                  {error}
+                </Alert>
+              )}
+              
+              <TextInput
+                required
+                label="Usuario"
+                placeholder="Ingresa tu usuario"
+                value={form.values.username}
+                onChange={(event) => form.setFieldValue('username', event.currentTarget.value)}
+                error={form.errors.username}
+                radius="md"
+                variant="filled"
+              />
+              
+              <PasswordInput
+                required
+                label="Contraseña"
+                placeholder="xxxxxxxx"
+                value={form.values.password}
+                onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
+                error={form.errors.password}
+                radius="md"
+                variant="filled"
+                mt="md"
+                visibilityToggleIcon={({ reveal }) => 
+                  reveal ? <EyeSlashIcon width={20} height={20} /> : <EyeIcon width={20} height={20} />
+                }
+              />
+            </Stack>
+            
             <Button 
               type="submit" 
               loading={loading} 
-              radius="xl" 
+              radius="md" 
               size="md"
               style={{ backgroundColor: 'rgb(0, 92, 163)' }}
+              fullWidth
+              mt="xl"
             >
               Iniciar Sesión
             </Button>
-          </Group>
-        </form>
+          </form>
         </div>
       </Paper>
     </div>
