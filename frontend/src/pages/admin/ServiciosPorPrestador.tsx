@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput, Text } from '@mantine/core';
-import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, MagnifyingGlassIcon,SwatchIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 
@@ -154,6 +154,51 @@ export default function ServiciosPorPrestador() {
     setModalOpen(true);
   };
 
+  const handleVerValores = async (servicio: ServicioPrestador) => {
+    try {
+      const res = await api.get(`/prestaciones/servicio/${servicio.id_prestador_servicio}/valores`);
+      const vigentes = res.data.filter((v: any) => !v.fecha_fin);
+      setValoresHistoricos(vigentes);
+      setServicioValores(servicio);
+      setModalValoresOpen(true);
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error al cargar valores',
+        color: 'red'
+      });
+    }
+  };
+
+  const renderValorCell = (servicio: ServicioPrestador, valor: number | null | undefined, tipo: 'facturar' | 'asignado') => {
+    const count = servicio.count_valores_vigentes ?? 0;
+    
+    if (count > 1) {
+      return (
+        <Tooltip label="Ver valores por sucursal">
+          <ActionIcon color="red" variant="subtle" size="sm" onClick={() => handleVerValores(servicio)}>
+            <SwatchIcon />
+          </ActionIcon>
+        </Tooltip>
+      );
+    }
+    
+    if (count === 1) {
+      return (
+        <div>
+          <Text size="sm">{formatPeso(formatNumber(valor))}</Text>
+          <Text size="xs" c="dimmed">
+            ({servicio.sucursal_id_vigente 
+              ? sucursales.find(s => s.ID === servicio.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
+              : 'Todas'})
+          </Text>
+        </div>
+      );
+    }
+    
+    return <Text size="sm" c="dimmed">-</Text>;
+  };
+
   return (
     <Stack gap="md">
       <Select
@@ -218,80 +263,10 @@ export default function ServiciosPorPrestador() {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    {servicio.count_valores_vigentes > 1 ? (
-                      <Tooltip label="Ver valores por sucursal">
-                        <ActionIcon 
-                          variant="subtle" 
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const res = await api.get(`/prestaciones/servicio/${servicio.id_prestador_servicio}/valores`);
-                              const vigentes = res.data.filter((v: any) => !v.fecha_fin);
-                              setValoresHistoricos(vigentes);
-                              setServicioValores(servicio);
-                              setModalValoresOpen(true);
-                            } catch (err) {
-                              notifications.show({
-                                title: 'Error',
-                                message: 'Error al cargar valores',
-                                color: 'red'
-                              });
-                            }
-                          }}
-                        >
-                          <MagnifyingGlassIcon />
-                        </ActionIcon>
-                      </Tooltip>
-                    ) : servicio.count_valores_vigentes === 1 ? (
-                      <div>
-                        <Text size="sm">{formatPeso(formatNumber(servicio.valor_facturar_vigente))}</Text>
-                        <Text size="xs" c="dimmed">
-                          ({servicio.sucursal_id_vigente 
-                            ? sucursales.find(s => s.ID === servicio.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
-                            : 'Todas'})
-                        </Text>
-                      </div>
-                    ) : (
-                      <Text size="sm" c="dimmed">-</Text>
-                    )}
+                    {renderValorCell(servicio, servicio.valor_facturar_vigente, 'facturar')}
                   </Table.Td>
                   <Table.Td>
-                    {servicio.count_valores_vigentes > 1 ? (
-                      <Tooltip label="Ver valores por sucursal">
-                        <ActionIcon 
-                          variant="subtle" 
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const res = await api.get(`/prestaciones/servicio/${servicio.id_prestador_servicio}/valores`);
-                              const vigentes = res.data.filter((v: any) => !v.fecha_fin);
-                              setValoresHistoricos(vigentes);
-                              setServicioValores(servicio);
-                              setModalValoresOpen(true);
-                            } catch (err) {
-                              notifications.show({
-                                title: 'Error',
-                                message: 'Error al cargar valores',
-                                color: 'red'
-                              });
-                            }
-                          }}
-                        >
-                          <MagnifyingGlassIcon />
-                        </ActionIcon>
-                      </Tooltip>
-                    ) : servicio.count_valores_vigentes === 1 ? (
-                      <div>
-                        <Text size="sm">{formatPeso(formatNumber(servicio.valor_asignado_vigente))}</Text>
-                        <Text size="xs" c="dimmed">
-                          ({servicio.sucursal_id_vigente 
-                            ? sucursales.find(s => s.ID === servicio.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
-                            : 'Todas'})
-                        </Text>
-                      </div>
-                    ) : (
-                      <Text size="sm" c="dimmed">-</Text>
-                    )}
+                    {renderValorCell(servicio, servicio.valor_asignado_vigente, 'asignado')}
                   </Table.Td>
                   <Table.Td>{formatNumber(servicio.cant_total)}</Table.Td>
                   <Table.Td>

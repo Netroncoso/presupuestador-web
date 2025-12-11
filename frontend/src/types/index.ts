@@ -38,6 +38,8 @@ export interface Presupuesto {
   rentabilidad?: number;
   rentabilidad_con_plazo?: number;
   created_at?: string;
+  estado?: 'borrador' | 'pendiente' | 'en_revision' | 'aprobado' | 'rechazado';
+  version?: number;
 }
 
 export interface Usuario {

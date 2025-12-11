@@ -13,6 +13,27 @@ const requireAuditor = (req: any, res: any, next: any) => {
   next();
 };
 
+// Obtener historial de auditoría de un presupuesto
+router.get('/historial/:id', auth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        a.id, a.estado_anterior, a.estado_nuevo, a.comentario, a.fecha as created_at,
+        u.username as auditor_nombre
+      FROM auditorias_presupuestos a
+      LEFT JOIN usuarios u ON a.auditor_id = u.id
+      WHERE a.presupuesto_id = ?
+      ORDER BY a.fecha DESC
+    `, [id]);
+    
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error obteniendo historial de auditoría' });
+  }
+});
+
 // Obtener presupuestos pendientes
 router.get('/pendientes', auth, requireAuditor, async (req, res) => {
   try {

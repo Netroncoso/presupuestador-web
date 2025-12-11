@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Table, Paper, TextInput, Group, ActionIcon, Badge, Loader, Text } from '@mantine/core';
+import { Table, Paper, TextInput, Group, ActionIcon, Select, Loader, Text } from '@mantine/core';
 import { PencilSquareIcon, MagnifyingGlassIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { api } from '../api/api';
+import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
 
 const ICON_SIZE = { width: 16, height: 16 };
 const ICON_SIZE_LG = { width: 20, height: 20 };
@@ -20,6 +21,7 @@ interface Presupuesto {
   rentabilidad: number;
   rentabilidad_con_plazo: number | null;
   created_at: string;
+  estado?: string;
 }
 
 interface ListaPresupuestosProps {
@@ -36,6 +38,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   const [filtroRentabilidad, setFiltroRentabilidad] = useState('');
   const [filtroMonto, setFiltroMonto] = useState('');
   const [filtroId, setFiltroId] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
 
   const cargarPresupuestos = useCallback(async () => {
     try {
@@ -81,8 +84,12 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
       }
     }
 
+    if (filtroEstado) {
+      resultado = resultado.filter(p => p.estado === filtroEstado);
+    }
+
     return resultado;
-  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto, filtroId]);
+  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto, filtroId, filtroEstado]);
 
   if (loading) {
     return <Loader />;
@@ -116,6 +123,20 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
               </ActionIcon>
             ) : null
           }
+        />
+        <Select
+          placeholder="Filtrar por estado"
+          value={filtroEstado}
+          onChange={(value) => setFiltroEstado(value || '')}
+          data={[
+            { value: '', label: 'Todos' },
+            { value: 'borrador', label: 'Borrador' },
+            { value: 'pendiente', label: 'Pendiente' },
+            { value: 'en_revision', label: 'En Revisión' },
+            { value: 'aprobado', label: 'Aprobado' },
+            { value: 'rechazado', label: 'Rechazado' }
+          ]}
+          clearable
         />
         <TextInput
           placeholder="Rentabilidad mínima (%)"
@@ -153,6 +174,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>DNI</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Sucursal</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Estado</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Total</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Total Facturar</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Utilidad</Table.Th>
@@ -164,7 +186,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         <Table.Tbody>
           {filtrados.length === 0 ? (
             <Table.Tr>
-              <Table.Td colSpan={9}>
+              <Table.Td colSpan={11}>
                 <Text ta="center" c="dimmed">No se encontraron presupuestos</Text>
               </Table.Td>
             </Table.Tr>
@@ -175,6 +197,11 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>{p.Nombre_Apellido}</Table.Td>
                 <Table.Td>{p.DNI}</Table.Td>
                 <Table.Td>{p.Sucursal}</Table.Td>
+                <Table.Td>
+                  <Text size="sm" fw={500} c={getEstadoBadgeColor(p.estado)}>
+                    {getEstadoLabel(p.estado)}
+                  </Text>
+                </Table.Td>
                 <Table.Td>${Number(p.costo_total || 0).toFixed(2)}</Table.Td>
                 <Table.Td>${Number(p.total_facturar || 0).toFixed(2)}</Table.Td>
                 <Table.Td>

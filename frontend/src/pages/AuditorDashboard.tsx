@@ -12,6 +12,7 @@ import { ModalAuditoria } from '../components/ModalAuditoria';
 import { ModalDetallePresupuesto } from '../components/ModalDetallePresupuesto';
 import Notificaciones from './Notificaciones';
 import ListaPresupuestos from './ListaPresupuestos';
+import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
 
 interface PresupuestoPendiente {
   idPresupuestos: number;
@@ -223,9 +224,9 @@ const AuditorDashboard: React.FC = () => {
                           <Badge variant="light">v{presupuesto.version}</Badge>
                         </Table.Td>
                         <Table.Td>
-                          <Badge color={presupuesto.estado === 'pendiente' ? 'yellow' : 'blue'}>
-                            {presupuesto.estado.replace('_', ' ')}
-                          </Badge>
+                          <Text size="sm" fw={500} c={getEstadoBadgeColor(presupuesto.estado)}>
+                            {getEstadoLabel(presupuesto.estado)}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
                           <Text fw={500}>${Number(presupuesto.costo_total || 0).toLocaleString()}</Text>

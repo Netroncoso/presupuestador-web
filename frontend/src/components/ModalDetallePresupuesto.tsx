@@ -1,5 +1,7 @@
-import React from 'react';
-import { Modal, Text, Badge, Group, Table, Stack, Paper, Title } from '@mantine/core';
+import React, { useEffect, useState } from 'react';
+import { Modal, Text, Badge, Group, Table, Stack, Paper, Title, Accordion, Timeline } from '@mantine/core';
+import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
+import { api } from '../api/api';
 
 interface ModalDetallePresupuestoProps {
   opened: boolean;
@@ -12,6 +14,16 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
   onClose,
   presupuesto
 }) => {
+  const [auditorias, setAuditorias] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (opened && presupuesto?.idPresupuestos) {
+      api.get(`/auditoria/historial/${presupuesto.idPresupuestos}`)
+        .then(res => setAuditorias(res.data))
+        .catch(err => console.error('Error cargando auditorías:', err));
+    }
+  }, [opened, presupuesto?.idPresupuestos]);
+
   if (!presupuesto) return null;
 
   return (
@@ -28,9 +40,9 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
       <Stack gap="md">
         <Group>
           <Badge variant="light" color="blue">v{presupuesto.version}</Badge>
-          <Badge variant="dot" color={presupuesto.estado === 'aprobado' ? 'green' : presupuesto.estado === 'rechazado' ? 'red' : 'yellow'}>
-            {presupuesto.estado?.toUpperCase()}
-          </Badge>
+          <Text size="sm" fw={600} c={getEstadoBadgeColor(presupuesto.estado)}>
+            {getEstadoLabel(presupuesto.estado)}
+          </Text>
           {presupuesto.dificil_acceso === 'SI' && (
             <Badge color="orange">Difícil Acceso</Badge>
           )}
@@ -95,6 +107,29 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
             )}
           </Group>
         </Paper>
+
+        {auditorias.length > 0 && (
+          <Accordion variant="contained">
+            <Accordion.Item value="auditorias">
+              <Accordion.Control>
+                <Text fw={500}>Mensajes de Auditoría ({auditorias.length})</Text>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Timeline active={auditorias.length} bulletSize={24} lineWidth={2}>
+                  {auditorias.map((aud, idx) => (
+                    <Timeline.Item key={aud.id} title={`${aud.estado_anterior} → ${aud.estado_nuevo}`}>
+                      <Text size="sm" c="dimmed">{aud.auditor_nombre || 'Sistema'}</Text>
+                      <Text size="xs" c="dimmed">{new Date(aud.created_at).toLocaleString()}</Text>
+                      {aud.comentario && (
+                        <Text size="sm" mt="xs">{aud.comentario}</Text>
+                      )}
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+        )}
 
         {presupuesto.prestaciones && presupuesto.prestaciones.length > 0 && (
           <Paper p="md" withBorder>
