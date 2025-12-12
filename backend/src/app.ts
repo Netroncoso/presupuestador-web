@@ -7,6 +7,7 @@ import sucursalesRoutes from './routes/sucursales';
 import presupuestosV2Routes from './routes/presupuestosV2';
 import notificacionesRoutes from './routes/notificaciones';
 import auditoriaRoutes from './routes/auditoria-simple';
+import auditoriaMultiRoutes from './routes/auditoria-multi';
 import presupuestoInsumosRoutes from './routes/presupuestoInsumos';
 import presupuestoPrestacionesRoutes from './routes/presupuestoPrestaciones';
 import insumosRoutes from './routes/insumos';
@@ -25,9 +26,13 @@ import sseRoutes from './routes/sse';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
+import { iniciarCronJobs } from './services/cronJobs';
 
 dotenv.config();
 const app = express();
+
+// Iniciar cron jobs
+iniciarCronJobs();
 
 // CORS configuration
 const allowedOrigins = process.env.FRONTEND_URL?.split(',').map(url => url.trim()) || [];
@@ -60,7 +65,8 @@ app.use('/api/stream', sseRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/presupuestos', presupuestosV2Routes);
 app.use('/api/notificaciones', notificacionesRoutes);
-app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api/auditoria', auditoriaRoutes); // Sistema simple (deprecado)
+app.use('/api/auditoria-multi', auditoriaMultiRoutes); // Sistema multi-gerencial
 app.use('/api/presupuestos', presupuestoInsumosRoutes); // /:id/insumos
 app.use('/api/presupuestos', presupuestoPrestacionesRoutes); // /:id/prestaciones
 app.use('/api/presupuesto-insumos', presupuestoInsumosRoutes); // /:id

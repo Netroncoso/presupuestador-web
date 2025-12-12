@@ -46,6 +46,6 @@ export class CalculosService {
       reglas.push(`Utilidad superior a $${auditoria.utilidadMinima.toLocaleString()}`);
     }
 
-    return reglas.length > 0 ? 'pendiente' : 'borrador';
+    return reglas.length > 0 ? 'pendiente_administrativa' : 'aprobado';
   }
 }

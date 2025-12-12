@@ -66,7 +66,7 @@ export class PresupuestoService {
       rentabilidadConPlazo
     });
 
-    if (estadoFinal === 'pendiente') {
+    if (estadoFinal === 'pendiente_administrativa') {
       await this.repo.notificarAuditores(
         id,
         presupuesto.version,
