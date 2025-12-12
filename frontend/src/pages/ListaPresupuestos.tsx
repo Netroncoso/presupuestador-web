@@ -131,9 +131,14 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           data={[
             { value: '', label: 'Todos' },
             { value: 'borrador', label: 'Borrador' },
-            { value: 'pendiente', label: 'Pendiente' },
-            { value: 'en_revision', label: 'En Revisión' },
+            { value: 'pendiente_administrativa', label: 'Pendiente G. Admin' },
+            { value: 'en_revision_administrativa', label: 'En Revisión G. Admin' },
+            { value: 'pendiente_prestacional', label: 'Pendiente G. Prestacional' },
+            { value: 'en_revision_prestacional', label: 'En Revisión G. Prestacional' },
+            { value: 'pendiente_general', label: 'Pendiente G. General' },
+            { value: 'en_revision_general', label: 'En Revisión G. General' },
             { value: 'aprobado', label: 'Aprobado' },
+            { value: 'aprobado_condicional', label: 'Aprobado Condicional' },
             { value: 'rechazado', label: 'Rechazado' }
           ]}
           clearable

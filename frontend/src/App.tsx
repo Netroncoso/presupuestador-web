@@ -7,7 +7,9 @@ import './styles/global.css';
 
 const UserDashboard = React.lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
-const AuditorDashboard = React.lazy(() => import('./pages/AuditorDashboard'));
+const GerenciaAdministrativa = React.lazy(() => import('./pages/GerenciaAdministrativa'));
+const GerenciaPrestacional = React.lazy(() => import('./pages/GerenciaPrestacional'));
+const GerenciaGeneral = React.lazy(() => import('./pages/GerenciaGeneral'));
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -24,8 +26,14 @@ function AppContent() {
     switch (user.rol) {
       case 'admin':
         return <AdminDashboard />;
-      case 'auditor_medico':
-        return <AuditorDashboard />;
+      case 'gerencia_administrativa':
+        return <GerenciaAdministrativa />;
+      case 'gerencia_prestacional':
+        return <GerenciaPrestacional />;
+      case 'gerencia_general':
+        return <GerenciaGeneral />;
+      case 'gerencia_financiera':
+        return <GerenciaGeneral />; // Financiera usa mismo dashboard que General
       default:
         return <UserDashboard />;
     }
