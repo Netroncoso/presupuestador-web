@@ -20,10 +20,21 @@ const DEFAULT_RULES = {
     offsetDefault: 0,
   },
   estados: {
-    validos: ['pendiente', 'en_revision', 'aprobado', 'rechazado', 'borrador'],
+    validos: [
+      'borrador',
+      'pendiente_administrativa',
+      'en_revision_administrativa',
+      'pendiente_prestacional',
+      'en_revision_prestacional',
+      'pendiente_general',
+      'en_revision_general',
+      'aprobado',
+      'aprobado_condicional',
+      'rechazado'
+    ],
     iniciales: ['borrador'],
-    finales: ['aprobado', 'rechazado'],
-    requierenNotificacion: ['aprobado', 'rechazado'],
+    finales: ['aprobado', 'aprobado_condicional', 'rechazado'],
+    requierenNotificacion: ['aprobado', 'aprobado_condicional', 'rechazado'],
   },
   versionado: {
     versionInicial: 1,

@@ -138,9 +138,11 @@ export interface Presupuestos extends RowDataPacket {
   usuario_id?: number;
   presupuesto_padre?: number;
   es_ultima_version?: boolean;
-  estado?: 'borrador' | 'pendiente' | 'en_revision' | 'aprobado' | 'rechazado';
+  estado?: 'borrador' | 'pendiente_administrativa' | 'en_revision_administrativa' | 'pendiente_prestacional' | 'en_revision_prestacional' | 'pendiente_general' | 'en_revision_general' | 'aprobado' | 'aprobado_condicional' | 'rechazado';
   version?: number;
   porcentaje_insumos?: number;
+  revisor_id?: number;
+  revisor_asignado_at?: Date;
 }
 
 export interface Servicios extends RowDataPacket {
@@ -170,7 +172,7 @@ export interface Usuarios extends RowDataPacket {
   id: number;
   username: string;
   password: string;
-  rol?: 'admin' | 'user' | 'auditor_medico';
+  rol?: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general';
   activo?: boolean;
   created_at?: Date;
   sucursal_id?: number;

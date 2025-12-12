@@ -45,5 +45,35 @@ export const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFun
   next();
 };
 
+// Middlewares para gerencias
+export const requireGerenciaAdministrativa = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.rol !== 'gerencia_administrativa' && req.user?.rol !== 'admin') {
+    return next(new AppError(403, 'Acceso denegado. Se requiere rol de Gerencia Administrativa'));
+  }
+  next();
+};
+
+export const requireGerenciaPrestacional = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.rol !== 'gerencia_prestacional' && req.user?.rol !== 'admin') {
+    return next(new AppError(403, 'Acceso denegado. Se requiere rol de Gerencia Prestacional'));
+  }
+  next();
+};
+
+export const requireGerenciaGeneral = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.rol !== 'gerencia_general' && req.user?.rol !== 'admin') {
+    return next(new AppError(403, 'Acceso denegado. Se requiere rol de Gerencia General'));
+  }
+  next();
+};
+
+export const requireAnyGerencia = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const gerencias = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'admin'];
+  if (!gerencias.includes(req.user?.rol)) {
+    return next(new AppError(403, 'Acceso denegado. Se requiere rol de gerencia'));
+  }
+  next();
+};
+
 // Alias para compatibilidad
 export const auth = authenticateToken;
