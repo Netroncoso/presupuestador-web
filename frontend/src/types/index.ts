@@ -24,6 +24,18 @@ export interface Prestacion {
   cant_total?: number;
 }
 
+export type EstadoPresupuesto = 
+  | 'borrador'
+  | 'pendiente_administrativa'
+  | 'en_revision_administrativa'
+  | 'pendiente_prestacional'
+  | 'en_revision_prestacional'
+  | 'pendiente_general'
+  | 'en_revision_general'
+  | 'aprobado'
+  | 'aprobado_condicional'
+  | 'rechazado';
+
 export interface Presupuesto {
   idPresupuestos: number;
   Nombre_Apellido: string;
@@ -38,14 +50,27 @@ export interface Presupuesto {
   rentabilidad?: number;
   rentabilidad_con_plazo?: number;
   created_at?: string;
-  estado?: 'borrador' | 'pendiente' | 'en_revision' | 'aprobado' | 'rechazado';
+  estado?: EstadoPresupuesto;
   version?: number;
+  revisor_id?: number;
+  revisor_nombre?: string;
+  revisor_asignado_at?: string;
+  minutos_asignado?: number;
+  dias_pendiente?: number;
 }
+
+export type RolUsuario = 
+  | 'admin'
+  | 'user'
+  | 'gerencia_administrativa'
+  | 'gerencia_prestacional'
+  | 'gerencia_financiera'
+  | 'gerencia_general';
 
 export interface Usuario {
   id: number;
   username: string;
-  rol: 'admin' | 'user';
+  rol: RolUsuario;
   activo: boolean;
   sucursal_id?: number;
   sucursal_nombre?: string;
