@@ -10,7 +10,8 @@ Sistema integral de gestión de presupuestos médicos con auditoría automatizad
 - **Auditoría Automatizada**: 4 reglas automáticas para validación de presupuestos
 - **Notificaciones en Tiempo Real**: SSE (Server-Sent Events) para actualizaciones instantáneas
 - **Modo Solo Lectura**: Visualización segura de presupuestos históricos con valores de época
-- **Roles de Usuario**: Usuario normal, Auditor médico, Administrador
+- **Sistema Multi-Gerencial**: 4 gerencias especializadas con flujo FCFS y auto-liberación
+- **Roles de Usuario**: Usuario normal, Gerencias (Administrativa, Prestacional, Financiera, General), Administrador
 
 ## 📋 Requisitos
 
@@ -49,6 +50,9 @@ mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
 # Migración de tipos de datos y FKs (COMPLETADA)
 # Ver: backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md
+
+# Migración sistema multi-gerencial v3.0 (NUEVA)
+mysql -u root -p mh_1 < backend/migrations/001_migrate_multi_gerencial.sql
 ```
 
 ## 🔑 Variables de Entorno
@@ -78,6 +82,7 @@ VITE_API_URL=http://localhost:3000
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md) - SSE y notificaciones en tiempo real
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos y sucursales
 - [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) - Sistema de umbrales dinámicos
+- [Sistema Multi-Gerencial](./SISTEMA_MULTI_GERENCIAL_V3.md) - Auditoría con 4 gerencias y FCFS
 
 ## 🏗️ Arquitectura
 
@@ -113,11 +118,25 @@ presupuestador-web/
 - Solicitar auditoría manual
 - Recibir notificaciones de aprobación/rechazo
 
-### Auditor Médico
-- Revisar presupuestos pendientes
+### Gerencia Administrativa
+- Primera línea de auditoría
 - Aprobar/Rechazar presupuestos
-- Ver historial completo (solo lectura)
-- Recibir notificaciones de presupuestos pendientes
+- Derivar a Gerencia Prestacional
+- Aprobación condicional para casos estratégicos
+
+### Gerencia Prestacional
+- Segunda línea de auditoría
+- Aprobar/Rechazar presupuestos
+- Observar (devolver a usuario para correcciones)
+- Escalar a Gerencia General
+- Aprobación condicional
+
+### Gerencia General
+- Última línea de auditoría
+- Aprobar/Rechazar presupuestos
+- Devolver a otras gerencias
+- Aprobación condicional
+- Decisión final en casos complejos
 
 ### Administrador
 - Gestión de usuarios
@@ -130,8 +149,13 @@ presupuestador-web/
 1. **Crear Presupuesto**: Usuario ingresa datos del paciente
 2. **Agregar Insumos/Prestaciones**: Selección con valores vigentes actuales
 3. **Finalizar**: Sistema calcula totales y evalúa reglas automáticas
-4. **Auditoría** (si aplica): Auditor médico revisa y aprueba/rechaza
-5. **Historial**: Registro completo con versionado y valores de época
+4. **Auditoría Multi-Gerencial** (si aplica):
+   - G. Administrativa: Primera revisión, puede aprobar o derivar
+   - G. Prestacional: Revisión técnica, puede aprobar, observar o escalar
+   - G. General: Decisión final en casos complejos
+5. **Asignación FCFS**: Primer gerente disponible toma el caso
+6. **Auto-liberación**: Casos inactivos > 30 min vuelven a disponibles
+7. **Historial**: Registro completo con versionado, trazabilidad y valores de época
 
 ## 🎯 Reglas de Auditoría Automática
 
@@ -345,11 +369,28 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 2.2  
-**Última actualización:** Diciembre 2024  
+**Versión:** 3.0  
+**Última actualización:** Enero 2025  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v3.0 (Enero 2025)
+- ⭐ **Sistema Multi-Gerencial de Auditoría**
+- 4 gerencias especializadas (Administrativa, Prestacional, Financiera, General)
+- Asignación FCFS (First Come First Served) con FOR UPDATE
+- Auto-liberación automática de casos inactivos (30 minutos)
+- Aprobación condicional para casos políticos/estratégicos
+- 10 estados de presupuestos (borrador → pendiente → en_revisión → final)
+- 15 métodos de transición con notificaciones automáticas
+- Observar: devolver a usuario sin crear nueva versión
+- Escalar: elevar casos complejos a gerencia superior
+- Devolver: re-evaluación por otra gerencia
+- 9 índices optimizados para alto volumen
+- Historial de auditoría humanizado (lenguaje natural + fechas relativas)
+- Trazabilidad completa en tabla auditorias_presupuestos
+- SSE actualizado para notificaciones multi-gerenciales
+- Eliminación completa de rol auditor_medico deprecado
 
 ### v2.5 (Enero 2025)
 - ⭐ **Sistema anti-obsolescencia de valores históricos**

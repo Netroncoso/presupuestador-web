@@ -4,7 +4,7 @@ import { Table, Button, TextInput, Select, Modal, Group, Text, ActionIcon, Switc
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Usuario, Sucursal } from '../../types';
 
-interface UsuarioLocal extends Usuario {
+interface UsuarioLocal extends Omit<Usuario, 'activo'> {
   activo: number;
 }
 
@@ -131,7 +131,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
 
   return (
     <>
-      <Modal opened={opened} onClose={onClose} title="Gestión de Usuarios" size="lg">
+      <Modal opened={opened} onClose={onClose} title="Gestión de Usuarios" size="xl">
         <Group style={{ marginBottom: 16 }}>
           <Button leftSection={<UserPlusIcon width={18} height={18} />} onClick={() => setCreateModal(true)}>
           Nuevo Usuario
@@ -154,7 +154,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
                 <Table.Td>{usuario.username}</Table.Td>
                 <Table.Td>
                   <Text size="sm" c={usuario.rol === 'admin' ? 'red' : 'blue'}>
-                    {usuario.rol}
+                    {usuario.rol.replace('gerencia_', 'G. ').replace('_', ' ')}
                   </Text>
                 </Table.Td>
                 <Table.Td>
@@ -231,6 +231,10 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           onChange={(value) => setFormData({ ...formData, rol: value || 'user' })}
           data={[
             { value: 'user', label: 'Usuario' },
+            { value: 'gerencia_administrativa', label: 'Gerencia Administrativa' },
+            { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
+            { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
+            { value: 'gerencia_general', label: 'Gerencia General' },
             { value: 'admin', label: 'Administrador' }
           ]}
           mb="sm"
@@ -270,6 +274,10 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           onChange={(value) => setFormData({ ...formData, rol: value || 'user' })}
           data={[
             { value: 'user', label: 'Usuario' },
+            { value: 'gerencia_administrativa', label: 'Gerencia Administrativa' },
+            { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
+            { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
+            { value: 'gerencia_general', label: 'Gerencia General' },
             { value: 'admin', label: 'Administrador' }
           ]}
           mb="sm"

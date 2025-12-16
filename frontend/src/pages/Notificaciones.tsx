@@ -35,7 +35,8 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
   const [filtroPaciente, setFiltroPaciente] = useState<string>('');
   const [filtroPresupuesto, setFiltroPresupuesto] = useState<string>('');
   
-  const esAuditor = user?.rol === 'auditor_medico';
+  const rolesGerencia = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general'];
+  const esAuditor = user?.rol ? rolesGerencia.includes(user.rol) : false;
 
   useEffect(() => {
     fetchNotifications();

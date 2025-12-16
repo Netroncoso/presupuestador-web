@@ -144,12 +144,16 @@ export class AuditoriaMultiService {
         [id, presupuesto[0].version, auditorId, comentario]
       );
       
+      const mensajeNotificacion = comentario 
+        ? `Presupuesto de ${presupuesto[0].Nombre_Apellido} derivado desde G. Administrativa: ${comentario}`
+        : `Presupuesto de ${presupuesto[0].Nombre_Apellido} derivado desde G. Administrativa`;
+      
       await this.notificarGerencia(
         connection,
         id,
         presupuesto[0].version,
         'gerencia_prestacional',
-        `Presupuesto de ${presupuesto[0].Nombre_Apellido} derivado desde G. Administrativa`
+        mensajeNotificacion
       );
       
       await connection.commit();
@@ -416,13 +420,27 @@ export class AuditoriaMultiService {
         [id, presupuesto[0].version, auditorId, estadoAnterior, estadoNuevo, comentario]
       );
       
+      const mensajeAprobacion = comentario
+        ? `Presupuesto APROBADO por ${gerenciaNombre}: ${comentario}`
+        : `Presupuesto APROBADO por ${gerenciaNombre}`;
+      
+      // Notificar al usuario creador
       await this.notificarUsuario(
         connection,
         presupuesto[0].usuario_id,
         id,
         presupuesto[0].version,
         estadoNuevo,
-        `Presupuesto APROBADO por ${gerenciaNombre}`
+        mensajeAprobacion
+      );
+      
+      // Notificar a gerencia administrativa (para seguimiento)
+      await this.notificarGerencia(
+        connection,
+        id,
+        presupuesto[0].version,
+        'gerencia_administrativa',
+        mensajeAprobacion
       );
       
       await connection.commit();
@@ -476,13 +494,25 @@ export class AuditoriaMultiService {
         [id, presupuesto[0].version, auditorId, estadoAnterior, motivo]
       );
       
+      const mensajeCondicional = `Presupuesto APROBADO CONDICIONALMENTE por ${gerenciaNombre}: ${motivo}`;
+      
+      // Notificar al usuario creador
       await this.notificarUsuario(
         connection,
         presupuesto[0].usuario_id,
         id,
         presupuesto[0].version,
         'aprobado_condicional',
-        `Presupuesto APROBADO CONDICIONALMENTE por ${gerenciaNombre}: ${motivo}`
+        mensajeCondicional
+      );
+      
+      // Notificar a gerencia administrativa (para seguimiento)
+      await this.notificarGerencia(
+        connection,
+        id,
+        presupuesto[0].version,
+        'gerencia_administrativa',
+        mensajeCondicional
       );
       
       await connection.commit();
@@ -532,13 +562,25 @@ export class AuditoriaMultiService {
         [id, presupuesto[0].version, auditorId, estadoAnterior, comentario]
       );
       
+      const mensajeRechazo = `Presupuesto RECHAZADO por ${gerenciaNombre}: ${comentario}`;
+      
+      // Notificar al usuario creador
       await this.notificarUsuario(
         connection,
         presupuesto[0].usuario_id,
         id,
         presupuesto[0].version,
         'rechazado',
-        `Presupuesto RECHAZADO por ${gerenciaNombre}: ${comentario}`
+        mensajeRechazo
+      );
+      
+      // Notificar a gerencia administrativa (para seguimiento)
+      await this.notificarGerencia(
+        connection,
+        id,
+        presupuesto[0].version,
+        'gerencia_administrativa',
+        mensajeRechazo
       );
       
       await connection.commit();

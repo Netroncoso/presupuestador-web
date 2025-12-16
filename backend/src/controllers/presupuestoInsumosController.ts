@@ -141,7 +141,7 @@ export const obtenerInsumosPresupuesto = asyncHandler(async (req: Request, res: 
   `, [presupuestoId, presupuestoId]);
 
   // Calcular precio_facturar con porcentaje
-  const resultado = rows.map(row => ({
+  const resultado = rows.map((row: any) => ({
     producto: row.producto,
     costo: row.costo,
     precio_facturar: row.costo * (1 + (row.porcentaje_insumos || 0) / 100),

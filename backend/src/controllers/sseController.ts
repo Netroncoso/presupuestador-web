@@ -126,7 +126,8 @@ const sendInitialData = async (res: Response, userId: number, userRole: string) 
       return;
     }
 
-    if (userRole === 'auditor_medico') {
+    const rolesGerencia = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+    if (rolesGerencia.includes(userRole)) {
       const presupuestosData = await getPresupuestosData();
       if (!sendEvent(res, 'presupuestos', presupuestosData)) {
         removeConnection(userId, res);
@@ -171,7 +172,11 @@ const getPresupuestosData = async () => {
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID
     LEFT JOIN sucursales_mh ps ON p.sucursal_id = ps.ID
-    WHERE p.estado IN ('pendiente', 'en_revision') AND p.es_ultima_version = 1
+    WHERE p.estado IN (
+      'pendiente_administrativa', 'en_revision_administrativa',
+      'pendiente_prestacional', 'en_revision_prestacional',
+      'pendiente_general', 'en_revision_general'
+    ) AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
   `);
   
@@ -227,9 +232,10 @@ export const broadcastPresupuestoUpdate = async () => {
 
 const getAuditorConnections = (): SSEConnection[] => {
   const auditorConnections: SSEConnection[] = [];
+  const rolesGerencia = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
   activeConnections.forEach(connections => {
     connections.forEach(conn => {
-      if (conn.userRole === 'auditor_medico') {
+      if (rolesGerencia.includes(conn.userRole)) {
         auditorConnections.push(conn);
       }
     });

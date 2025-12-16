@@ -155,6 +155,14 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
           minRows={3}
         />
 
+        <Textarea
+          label="Motivo para Aprobación Condicional"
+          placeholder="Motivo (mínimo 10 caracteres)..."
+          value={motivo}
+          onChange={(e) => setMotivo(e.currentTarget.value)}
+          minRows={2}
+        />
+
         {/* GERENCIA ADMINISTRATIVA */}
         {rol === 'gerencia_administrativa' && (
           <Group grow>
@@ -195,13 +203,6 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
                 Escalar a G. General
               </Button>
             </Group>
-            <Textarea
-              label="Motivo para Escalar (obligatorio)"
-              placeholder="Motivo del escalamiento..."
-              value={motivo}
-              onChange={(e) => setMotivo(e.currentTarget.value)}
-              minRows={2}
-            />
           </>
         )}
 
@@ -232,13 +233,6 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
             <Button color="blue" onClick={devolver} loading={loading} fullWidth>
               Devolver a Gerencia Seleccionada
             </Button>
-            <Textarea
-              label="Motivo para Aprobación Condicional"
-              placeholder="Motivo (mínimo 10 caracteres)..."
-              value={motivo}
-              onChange={(e) => setMotivo(e.currentTarget.value)}
-              minRows={2}
-            />
           </>
         )}
       </Stack>

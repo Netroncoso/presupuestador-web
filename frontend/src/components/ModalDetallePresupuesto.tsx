@@ -9,6 +9,54 @@ interface ModalDetallePresupuestoProps {
   presupuesto: any;
 }
 
+const getAccionDescripcion = (estadoAnterior: string, estadoNuevo: string, auditor: string) => {
+  const acciones: Record<string, string> = {
+    'borrador_pendiente_administrativa': 'solicitó auditoría',
+    'en_revision_administrativa_pendiente_prestacional': 'derivó a Gerencia Prestacional',
+    'en_revision_prestacional_pendiente_general': 'escaló a Gerencia General',
+    'en_revision_administrativa_aprobado': 'aprobó el presupuesto',
+    'en_revision_prestacional_aprobado': 'aprobó el presupuesto',
+    'en_revision_general_aprobado': 'aprobó el presupuesto',
+    'en_revision_administrativa_aprobado_condicional': 'aprobó condicionalmente',
+    'en_revision_prestacional_aprobado_condicional': 'aprobó condicionalmente',
+    'en_revision_general_aprobado_condicional': 'aprobó condicionalmente',
+    'en_revision_administrativa_rechazado': 'rechazó el presupuesto',
+    'en_revision_prestacional_rechazado': 'rechazó el presupuesto',
+    'en_revision_general_rechazado': 'rechazó el presupuesto',
+    'en_revision_prestacional_borrador': 'devolvió para correcciones',
+    'en_revision_general_pendiente_administrativa': 'devolvió a Gerencia Administrativa',
+    'en_revision_general_pendiente_prestacional': 'devolvió a Gerencia Prestacional',
+  };
+  
+  const key = `${estadoAnterior}_${estadoNuevo}`;
+  const accion = acciones[key] || 'cambió el estado';
+  
+  return `${auditor} ${accion}`;
+};
+
+const formatearFecha = (fecha: string) => {
+  const date = new Date(fecha);
+  const hoy = new Date();
+  const ayer = new Date(hoy);
+  ayer.setDate(ayer.getDate() - 1);
+  
+  const esHoy = date.toDateString() === hoy.toDateString();
+  const esAyer = date.toDateString() === ayer.toDateString();
+  
+  const hora = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  
+  if (esHoy) return `Hoy a las ${hora}`;
+  if (esAyer) return `Ayer a las ${hora}`;
+  
+  return date.toLocaleString('es-AR', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+};
+
 export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = ({
   opened,
   onClose,
@@ -112,16 +160,18 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           <Accordion variant="contained">
             <Accordion.Item value="auditorias">
               <Accordion.Control>
-                <Text fw={500}>Mensajes de Auditoría ({auditorias.length})</Text>
+                <Text fw={500}>Historial de Auditoría ({auditorias.length})</Text>
               </Accordion.Control>
               <Accordion.Panel>
                 <Timeline active={auditorias.length} bulletSize={24} lineWidth={2}>
-                  {auditorias.map((aud, idx) => (
-                    <Timeline.Item key={aud.id} title={`${aud.estado_anterior} → ${aud.estado_nuevo}`}>
-                      <Text size="sm" c="dimmed">{aud.auditor_nombre || 'Sistema'}</Text>
-                      <Text size="xs" c="dimmed">{new Date(aud.created_at).toLocaleString()}</Text>
+                  {auditorias.map((aud) => (
+                    <Timeline.Item 
+                      key={aud.id} 
+                      title={getAccionDescripcion(aud.estado_anterior, aud.estado_nuevo, aud.auditor_nombre || 'Sistema')}
+                    >
+                      <Text size="xs" c="dimmed">{formatearFecha(aud.created_at)}</Text>
                       {aud.comentario && (
-                        <Text size="sm" mt="xs">{aud.comentario}</Text>
+                        <Text size="sm" mt="xs" fs="italic" c="dark">"{aud.comentario}"</Text>
                       )}
                     </Timeline.Item>
                   ))}

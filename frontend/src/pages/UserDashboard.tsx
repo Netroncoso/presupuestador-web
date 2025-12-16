@@ -346,7 +346,7 @@ export default function UserDashboard() {
         notifications.show({
           title: "Auditoría Solicitada",
           message:
-            "El auditor médico será notificado para revisar el presupuesto",
+            "La Gerencia Administrativa será notificada para revisar el presupuesto",
           color: "blue",
           position: "top-center",
           autoClose: false,

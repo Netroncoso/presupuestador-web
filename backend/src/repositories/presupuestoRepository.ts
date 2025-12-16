@@ -54,7 +54,7 @@ export class PresupuestoRepository {
     await pool.query(`
       INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
       SELECT u.id, ?, ?, 'pendiente', ?
-      FROM usuarios u WHERE u.rol = 'auditor_medico'
+      FROM usuarios u WHERE u.rol = 'gerencia_administrativa' AND u.activo = 1
     `, [presupuestoId, version, mensaje]);
   }
 }

@@ -1,20 +1,25 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { pool } from '../db';
 import { auth } from '../middleware/auth';
 import { broadcastNotificationUpdate, broadcastPresupuestoUpdate } from '../controllers/sseController';
 
 const router = Router();
 
-// Middleware para verificar rol auditor/admin
-const requireAuditor = (req: any, res: any, next: any) => {
-  if (!['auditor_medico', 'admin'].includes(req.user?.rol)) {
-    return res.status(403).json({ error: 'Acceso denegado: Solo auditores o admins' });
+interface AuthRequest extends Request {
+  user?: { id: number; rol: string };
+}
+
+// Middleware para verificar rol gerencias/admin
+const requireAuditor = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+  if (!rolesPermitidos.includes(req.user?.rol)) {
+    return res.status(403).json({ error: 'Acceso denegado: Solo gerencias o admins' });
   }
   next();
 };
 
 // Obtener historial de auditoría de un presupuesto
-router.get('/historial/:id', auth, async (req, res) => {
+router.get('/historial/:id', auth, async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   
   try {
@@ -35,7 +40,7 @@ router.get('/historial/:id', auth, async (req, res) => {
 });
 
 // Obtener presupuestos pendientes
-router.get('/pendientes', auth, requireAuditor, async (req, res) => {
+router.get('/pendientes', auth, requireAuditor, async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query(`
       SELECT 
@@ -59,15 +64,15 @@ router.get('/pendientes', auth, requireAuditor, async (req, res) => {
   }
 });
 
-// Pedir auditoría manual
-router.put('/pedir/:id', auth, async (req: any, res) => {
+// Pedir auditoría manual (envía a gerencia administrativa)
+router.put('/pedir/:id', auth, async (req: AuthRequest, res: Response) => {
   const id = parseInt(req.params.id);
   const { mensaje } = req.body;
   
   try {
-    // Cambiar estado a pendiente
+    // Cambiar estado a pendiente_administrativa (sistema multi-gerencial)
     const [result] = await pool.query(
-      'UPDATE presupuestos SET estado = "pendiente" WHERE idPresupuestos = ? AND es_ultima_version = 1',
+      'UPDATE presupuestos SET estado = "pendiente_administrativa" WHERE idPresupuestos = ? AND es_ultima_version = 1',
       [id]
     );
     
@@ -84,31 +89,38 @@ router.put('/pedir/:id', auth, async (req: any, res) => {
     if ((presupuesto as any[]).length > 0) {
       const p = (presupuesto as any)[0];
       
+      // Registrar en auditorías que el usuario solicitó auditoría manual
+      await pool.query(`
+        INSERT INTO auditorias_presupuestos 
+        (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
+        VALUES (?, ?, ?, 'borrador', 'pendiente_administrativa', ?)
+      `, [id, p.version || 1, p.usuario_id, mensaje || 'Auditoría solicitada manualmente']);
+      
       // Crear mensaje personalizado
       let mensajeNotificacion = `Auditoría solicitada para presupuesto de ${p.Nombre_Apellido}`;
       if (mensaje && mensaje.trim()) {
         mensajeNotificacion += ` - ${mensaje.trim()}`;
       }
       
-      // Notificar auditores
+      // Notificar gerencia administrativa
       await pool.query(`
         INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
         SELECT u.id, ?, ?, 'pendiente', ?
-        FROM usuarios u WHERE u.rol = 'auditor_medico'
+        FROM usuarios u WHERE u.rol = 'gerencia_administrativa' AND u.activo = 1
       `, [id, p.version || 1, mensajeNotificacion]);
       
-      // Broadcast to auditors
+      // Broadcast to gerencias
       broadcastPresupuestoUpdate();
     }
     
-    res.json({ success: true, estado: 'pendiente' });
+    res.json({ success: true, estado: 'pendiente_administrativa' });
   } catch (error) {
     res.status(500).json({ error: 'Error solicitando auditoría' });
   }
 });
 
 // Cambiar estado
-router.put('/estado/:id', auth, requireAuditor, async (req: any, res) => {
+router.put('/estado/:id', auth, requireAuditor, async (req: AuthRequest, res: Response) => {
   const id = parseInt(req.params.id);
   const { estado, comentario } = req.body;
   const auditor_id = req.user?.id;

@@ -4,10 +4,11 @@ import * as presupuestosController from '../controllers/presupuestosControllerV2
 
 const router = Router();
 
-// Middleware para verificar rol auditor/admin
+// Middleware para verificar rol gerencias/admin
 const requireAuditor = (req: any, res: any, next: any) => {
-  if (!['auditor_medico', 'admin'].includes(req.user?.rol)) {
-    return res.status(403).json({ error: 'Acceso denegado: Solo auditores o admins' });
+  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+  if (!rolesPermitidos.includes(req.user?.rol)) {
+    return res.status(403).json({ error: 'Acceso denegado: Solo gerencias o admins' });
   }
   next();
 };

@@ -4,7 +4,7 @@ import { api } from '../api/api';
 interface User {
   id: number;
   username: string;
-  rol: 'admin' | 'user' | 'auditor_medico';
+  rol: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general';
 }
 
 interface AuthContextType {
