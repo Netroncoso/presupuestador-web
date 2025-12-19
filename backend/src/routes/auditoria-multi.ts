@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticateToken, requireGerenciaAdministrativa, requireGerenciaPrestacional, requireGerenciaGeneral, requireAnyGerencia } from '../middleware/auth';
 import { auditoriaMultiService } from '../services/auditoriaMultiService';
 import { AppError } from '../middleware/errorHandler';
+import { csrfProtection } from '../middleware/csrf';
 import { pool } from '../db';
 import { RowDataPacket } from 'mysql2';
 
@@ -9,6 +10,14 @@ const router = Router();
 
 // Aplicar autenticación a todas las rutas
 router.use(authenticateToken);
+
+// Aplicar protección CSRF a todas las rutas PUT
+router.use((req, res, next) => {
+  if (req.method === 'PUT') {
+    return csrfProtection(req, res, next);
+  }
+  next();
+});
 
 // ============================================================================
 // ENDPOINTS COMUNES (TODAS LAS GERENCIAS)
@@ -82,12 +91,42 @@ router.get('/mis-casos', requireAnyGerencia, async (req: Request & { user?: any 
       LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
       LEFT JOIN usuarios u ON p.usuario_id = u.id
       WHERE p.revisor_id = ?
-        AND p.estado LIKE '%en_revision%'
+        AND p.estado IN ('en_revision_administrativa', 'en_revision_prestacional', 'en_revision_general')
         AND p.es_ultima_version = 1
       ORDER BY p.revisor_asignado_at DESC
     `, [usuarioId]);
     
     res.json(casos);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/auditoria-multi/mis-auditorias
+ * Obtiene presupuestos auditados por el usuario (historial)
+ */
+router.get('/mis-auditorias', requireAnyGerencia, async (req: Request & { user?: any }, res: Response, next) => {
+  try {
+    const usuarioId = req.user.id;
+    
+    const [presupuestos] = await pool.query<RowDataPacket[]>(`
+      SELECT DISTINCT
+        p.*,
+        s.Sucursales_mh as Sucursal,
+        f.Financiador as financiador_nombre,
+        u.username as usuario_creador
+      FROM presupuestos p
+      INNER JOIN auditorias_presupuestos a ON p.idPresupuestos = a.presupuesto_id
+      LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
+      LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+      LEFT JOIN usuarios u ON p.usuario_id = u.id
+      WHERE a.auditor_id = ?
+        AND p.es_ultima_version = 1
+      ORDER BY p.created_at DESC
+    `, [usuarioId]);
+    
+    res.json(presupuestos);
   } catch (error) {
     next(error);
   }
@@ -100,8 +139,12 @@ router.get('/mis-casos', requireAnyGerencia, async (req: Request & { user?: any 
 router.put('/tomar/:id', requireAnyGerencia, async (req: Request & { user?: any }, res: Response, next) => {
   try {
     const id = parseInt(req.params.id);
-    const usuarioId = req.user.id;
     
+    if (isNaN(id)) {
+      throw new AppError(400, 'ID de presupuesto inválido');
+    }
+    
+    const usuarioId = req.user.id;
     const resultado = await auditoriaMultiService.tomarCaso(id, usuarioId);
     res.json(resultado);
   } catch (error) {

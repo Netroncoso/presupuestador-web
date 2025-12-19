@@ -67,6 +67,13 @@ export const requireGerenciaGeneral = (req: AuthRequest, res: Response, next: Ne
   next();
 };
 
+export const requireGerenciaFinanciera = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.rol !== 'gerencia_financiera' && req.user?.rol !== 'admin') {
+    return next(new AppError(403, 'Acceso denegado. Se requiere rol de Gerencia Financiera'));
+  }
+  next();
+};
+
 export const requireAnyGerencia = (req: AuthRequest, res: Response, next: NextFunction) => {
   const gerencias = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'admin'];
   if (!gerencias.includes(req.user?.rol)) {

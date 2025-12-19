@@ -11,11 +11,60 @@ const presupuestoService = new PresupuestoService();
 const versioningService = new VersioningService();
 const auditoriaService = new AuditoriaService();
 
+function calcularTotalesPresupuesto(presupuesto: any) {
+  const totalInsumos = Number(presupuesto.calc_total_insumos);
+  const totalPrestaciones = Number(presupuesto.calc_total_prestaciones);
+  const costoTotal = totalInsumos + totalPrestaciones;
+  const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar);
+  const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
+  
+  let rentabilidadConPlazo = rentabilidad;
+  if (presupuesto.idobra_social && presupuesto.tasa_mensual && costoTotal > 0) {
+    const diasCobranza = presupuesto.dias_cobranza_real || presupuesto.dias_cobranza_teorico || 30;
+    const tasaMensual = (presupuesto.tasa_mensual || 2) / 100;
+    const mesesCobranza = Math.floor(diasCobranza / 30);
+    const valorPresente = totalFacturar / Math.pow(1 + tasaMensual, mesesCobranza);
+    const utilidadConPlazo = valorPresente - costoTotal;
+    rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100;
+  }
+  
+  return {
+    ...presupuesto,
+    total_insumos: totalInsumos,
+    total_prestaciones: totalPrestaciones,
+    costo_total: costoTotal,
+    total_facturar: totalFacturar,
+    rentabilidad: rentabilidad,
+    rentabilidad_con_plazo: rentabilidadConPlazo
+  };
+}
+
+async function obtenerPrestacionesPresupuesto(id: number) {
+  const [prestaciones] = await pool.query<any[]>(`
+    SELECT pp.*, s.nombre as servicio_nombre, s.tipo_unidad
+    FROM presupuesto_prestaciones pp
+    LEFT JOIN servicios s ON CAST(pp.id_servicio AS UNSIGNED) = s.id_servicio
+    WHERE pp.idPresupuestos = ?
+    ORDER BY pp.prestacion
+  `, [id]);
+  return prestaciones;
+}
+
+async function obtenerInsumosPresupuesto(id: number) {
+  const [insumos] = await pool.query<any[]>(`
+    SELECT * FROM presupuesto_insumos 
+    WHERE idPresupuestos = ?
+    ORDER BY producto
+  `, [id]);
+  return insumos;
+}
+
 // Listar solo últimas versiones
 export const listarPresupuestos = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const limit = parseInt(req.query.limit as string) || BusinessRules.paginacion.limitDefault;
   const offset = parseInt(req.query.offset as string) || BusinessRules.paginacion.offsetDefault;
   const estado = req.query.estado as string;
+  const scope = req.query.scope as string;
   const userId = req.user?.id;
   const userRole = req.user?.rol;
   
@@ -23,8 +72,13 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
   const params: any[] = [];
   
   if (userRole === 'user') {
-    whereClause += ' AND p.usuario_id = ?';
-    params.push(userId);
+    if (scope === 'solo-mios') {
+      whereClause += ' AND p.usuario_id = ?';
+      params.push(userId);
+    } else {
+      whereClause += ' AND (p.usuario_id = ? OR u.sucursal_id = (SELECT sucursal_id FROM usuarios WHERE id = ?))';
+      params.push(userId, userId);
+    }
   }
   
   if (estado) {
@@ -57,13 +111,21 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
   const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos } = req.body;
   const usuario_id = req.user?.id;
   
-  const [result] = await pool.query<MutationResult>(`
-    INSERT INTO presupuestos 
-    (Nombre_Apellido, DNI, sucursal_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
-    VALUES (?,?,?,?,?,?, ?, 1, ?)
-  `, [nombre.trim(), dni, sucursal_id, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+  if (!nombre || !dni || !sucursal_id) {
+    throw new AppError(400, 'Datos incompletos: nombre, dni y sucursal_id son requeridos');
+  }
   
-  res.status(201).json({ id: result.insertId, version: 1 });
+  try {
+    const [result] = await pool.query<MutationResult>(`
+      INSERT INTO presupuestos 
+      (Nombre_Apellido, DNI, sucursal_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+      VALUES (?,?,?,?,?,?, ?, 1, ?)
+    `, [nombre.trim(), dni, sucursal_id, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+    
+    res.status(201).json({ id: result.insertId, version: 1 });
+  } catch (error) {
+    throw new AppError(500, 'Error al crear presupuesto');
+  }
 });
 
 // Finalizar presupuesto (evaluar estado final, no crear versión)
@@ -203,45 +265,11 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
   
   // Si los totales están en 0, usar los calculados
   if (presupuesto.costo_total === 0 && (presupuesto.calc_total_insumos > 0 || presupuesto.calc_total_prestaciones > 0)) {
-    const totalInsumos = Number(presupuesto.calc_total_insumos);
-    const totalPrestaciones = Number(presupuesto.calc_total_prestaciones);
-    const costoTotal = totalInsumos + totalPrestaciones;
-    const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar);
-    const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
-    
-    let rentabilidadConPlazo = rentabilidad;
-    if (presupuesto.idobra_social && presupuesto.tasa_mensual && costoTotal > 0) {
-      const diasCobranza = presupuesto.dias_cobranza_real || presupuesto.dias_cobranza_teorico || 30;
-      const tasaMensual = (presupuesto.tasa_mensual || 2) / 100;
-      const mesesCobranza = Math.floor(diasCobranza / 30);
-      const valorPresente = totalFacturar / Math.pow(1 + tasaMensual, mesesCobranza);
-      const utilidadConPlazo = valorPresente - costoTotal;
-      rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100;
-    }
-    
-    presupuesto.total_insumos = totalInsumos;
-    presupuesto.total_prestaciones = totalPrestaciones;
-    presupuesto.costo_total = costoTotal;
-    presupuesto.total_facturar = totalFacturar;
-    presupuesto.rentabilidad = rentabilidad;
-    presupuesto.rentabilidad_con_plazo = rentabilidadConPlazo;
+    presupuesto = calcularTotalesPresupuesto(presupuesto);
   }
 
-  // Obtener prestaciones del presupuesto
-  const [prestaciones] = await pool.query<any[]>(`
-    SELECT pp.*, s.nombre as servicio_nombre, s.tipo_unidad
-    FROM presupuesto_prestaciones pp
-    LEFT JOIN servicios s ON CAST(pp.id_servicio AS UNSIGNED) = s.id_servicio
-    WHERE pp.idPresupuestos = ?
-    ORDER BY pp.prestacion
-  `, [id]);
-
-  // Obtener insumos del presupuesto
-  const [insumos] = await pool.query<any[]>(`
-    SELECT * FROM presupuesto_insumos 
-    WHERE idPresupuestos = ?
-    ORDER BY producto
-  `, [id]);
+  const prestaciones = await obtenerPrestacionesPresupuesto(id);
+  const insumos = await obtenerInsumosPresupuesto(id);
 
   res.json({
     ...presupuesto,

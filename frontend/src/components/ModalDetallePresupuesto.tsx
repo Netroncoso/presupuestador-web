@@ -10,22 +10,26 @@ interface ModalDetallePresupuestoProps {
 }
 
 const getAccionDescripcion = (estadoAnterior: string, estadoNuevo: string, auditor: string) => {
+  if (estadoNuevo === 'pendiente_administrativa') {
+    return `${auditor} solicitó auditoría`;
+  }
+  
   const acciones: Record<string, string> = {
-    'borrador_pendiente_administrativa': 'solicitó auditoría',
-    'en_revision_administrativa_pendiente_prestacional': 'derivó a Gerencia Prestacional',
-    'en_revision_prestacional_pendiente_general': 'escaló a Gerencia General',
-    'en_revision_administrativa_aprobado': 'aprobó el presupuesto',
-    'en_revision_prestacional_aprobado': 'aprobó el presupuesto',
-    'en_revision_general_aprobado': 'aprobó el presupuesto',
+    'en_revision_administrativa_pendiente_prestacional': 'derivó a G. Prestacional',
+    'en_revision_prestacional_pendiente_general': 'escaló a G. General',
+    'en_revision_administrativa_aprobado': 'aprobó',
+    'en_revision_prestacional_aprobado': 'aprobó',
+    'en_revision_general_aprobado': 'aprobó',
     'en_revision_administrativa_aprobado_condicional': 'aprobó condicionalmente',
     'en_revision_prestacional_aprobado_condicional': 'aprobó condicionalmente',
     'en_revision_general_aprobado_condicional': 'aprobó condicionalmente',
-    'en_revision_administrativa_rechazado': 'rechazó el presupuesto',
-    'en_revision_prestacional_rechazado': 'rechazó el presupuesto',
-    'en_revision_general_rechazado': 'rechazó el presupuesto',
+    'en_revision_administrativa_rechazado': 'rechazó',
+    'en_revision_prestacional_rechazado': 'rechazó',
+    'en_revision_general_rechazado': 'rechazó',
+    'en_revision_prestacional_observado': 'devolvió para correcciones',
     'en_revision_prestacional_borrador': 'devolvió para correcciones',
-    'en_revision_general_pendiente_administrativa': 'devolvió a Gerencia Administrativa',
-    'en_revision_general_pendiente_prestacional': 'devolvió a Gerencia Prestacional',
+    'en_revision_general_pendiente_administrativa': 'devolvió a G. Administrativa',
+    'en_revision_general_pendiente_prestacional': 'devolvió a G. Prestacional',
   };
   
   const key = `${estadoAnterior}_${estadoNuevo}`;
@@ -88,9 +92,9 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
       <Stack gap="md">
         <Group>
           <Badge variant="light" color="blue">v{presupuesto.version}</Badge>
-          <Text size="sm" fw={600} c={getEstadoBadgeColor(presupuesto.estado)}>
+          <Badge variant="light" color={getEstadoBadgeColor(presupuesto.estado)} size="md">
             {getEstadoLabel(presupuesto.estado)}
-          </Text>
+          </Badge>
           {presupuesto.dificil_acceso === 'SI' && (
             <Badge color="orange">Difícil Acceso</Badge>
           )}

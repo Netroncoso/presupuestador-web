@@ -42,8 +42,14 @@ export const actualizarConfiguracion = asyncHandler(async (req: Request, res: Re
 export const actualizarMultiple = asyncHandler(async (req: Request, res: Response) => {
   const { configuraciones } = req.body;
 
-  if (!Array.isArray(configuraciones)) {
-    throw new AppError(400, 'Se esperaba un array de configuraciones');
+  if (!Array.isArray(configuraciones) || configuraciones.length === 0) {
+    throw new AppError(400, 'Se esperaba un array de configuraciones no vacío');
+  }
+
+  for (const config of configuraciones) {
+    if (!config.clave || config.valor === undefined) {
+      throw new AppError(400, 'Cada configuración debe tener clave y valor');
+    }
   }
 
   const connection = await pool.getConnection();

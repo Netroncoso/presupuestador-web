@@ -37,8 +37,15 @@ const CONFIG = {
 
 export const RentabilidadAlert = ({ tipo, rentabilidad, usandoPlazo }: Props) => {
   const config = CONFIG[tipo];
+  
+  if (!config) {
+    console.error(`Tipo de alerta desconocido: ${tipo}`);
+    return null;
+  }
+  
   const Icon = config.icon;
   const plazoText = usandoPlazo ? ' (Ajustada por plazo)' : '';
+  const rentabilidadSegura = isNaN(rentabilidad) ? 0 : rentabilidad;
 
   return (
     <Alert
@@ -49,7 +56,7 @@ export const RentabilidadAlert = ({ tipo, rentabilidad, usandoPlazo }: Props) =>
       mb="xs"
     >
       <Text size="sm">
-        <strong>Rentabilidad: {rentabilidad.toFixed(2)}%</strong>{plazoText} - {config.mensaje}
+        <strong>Rentabilidad: {rentabilidadSegura.toFixed(2)}%</strong>{plazoText} - {config.mensaje}
       </Text>
     </Alert>
   );

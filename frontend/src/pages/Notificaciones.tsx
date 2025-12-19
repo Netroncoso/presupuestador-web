@@ -38,6 +38,21 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
   const rolesGerencia = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general'];
   const esAuditor = user?.rol ? rolesGerencia.includes(user.rol) : false;
 
+  const getOrigenNotificacion = (notif: Notificacion): string => {
+    if (notif.tipo === 'pendiente') {
+      if (notif.mensaje.includes('derivado') || notif.mensaje.includes('devuelto por')) {
+        if (notif.mensaje.includes('G. Administrativa') || notif.mensaje.includes('Gerencia Administrativa')) return 'G. Admin';
+        if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Prest';
+        if (notif.mensaje.includes('G. General') || notif.mensaje.includes('Gerencia General')) return 'G. Gral';
+      }
+      return 'Usuario';
+    }
+    if (notif.mensaje.includes('G. Administrativa') || notif.mensaje.includes('Gerencia Administrativa')) return 'G. Admin';
+    if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Prest';
+    if (notif.mensaje.includes('G. General') || notif.mensaje.includes('Gerencia General')) return 'G. Gral';
+    return 'Sistema';
+  };
+
   useEffect(() => {
     fetchNotifications();
     
@@ -202,7 +217,7 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
               {!esAuditor && <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>}
               <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Presupuesto</Table.Th>
               <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Mensaje</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Asunto</Table.Th>
               <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
               <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
             </Table.Tr>
@@ -238,7 +253,18 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                   <span style={{ fontSize: '12px', color: '#868e96' }}>DNI: {notif.dni_paciente}</span>
                 </Table.Td>
                 <Table.Td>
-                  <span style={{ fontSize: '14px' }}>{notif.mensaje}</span>
+                  <span style={{ fontSize: '14px' }}>
+                    {notif.tipo === 'pendiente' ? 'Auditoría Solicitada' :
+                     notif.tipo === 'aprobado_condicional' ? 'Aprobado Condicional' :
+                     notif.tipo === 'aprobado' ? 'Aprobado' :
+                     notif.tipo === 'rechazado' ? 'Rechazado' :
+                     notif.tipo === 'observado' ? 'Observado' :
+                     'Notificación'}
+                    {' - '}
+                    <Text size="xs" c="dimmed" span>
+                      {getOrigenNotificacion(notif)}
+                    </Text>
+                  </span>
                 </Table.Td>
                 <Table.Td>
                   <span style={{ fontSize: '12px', color: '#868e96' }}>

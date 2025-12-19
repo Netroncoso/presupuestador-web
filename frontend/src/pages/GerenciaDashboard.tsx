@@ -30,7 +30,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
   const [presupuestoDetalle, setPresupuestoDetalle] = useState<any>(null);
   const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
   const [procesando, setProcesando] = useState(false);
-  const [activeTab, setActiveTab] = useState<string | null>('pendientes');
+  const [activeTab, setActiveTab] = useState<string | null>('notificaciones');
   const [filtroPresupuestoId, setFiltroPresupuestoId] = useState<string>('');
   const { presupuestos } = useRealtimeUpdates();
 
@@ -121,18 +121,18 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
 
       <Tabs value={activeTab} onChange={setActiveTab} color="blue" radius="md">
         <Tabs.List>
-          <Tabs.Tab value="pendientes">
+          <Tabs.Tab value="notificaciones">
             <Group gap="xs">
-              <ShieldCheckIcon style={{ width: 20, height: 20 }} />
-              Casos Disponibles
-              {pendientes.length > 0 && <Badge size="sm" circle>{pendientes.length}</Badge>}
+              <BellIcon style={{ width: 20, height: 20 }} />
+              Notificaciones
+              <NotificationIndicator count={notificationCount} />
             </Group>
           </Tabs.Tab>
-          <Tabs.Tab value="mis-casos">
+          <Tabs.Tab value="auditoria">
             <Group gap="xs">
-              <ClockIcon style={{ width: 20, height: 20 }} />
-              Mis Casos
-              {misCasos.length > 0 && <Badge size="sm" circle color="blue">{misCasos.length}</Badge>}
+              <ShieldCheckIcon style={{ width: 20, height: 20 }} />
+              Auditoría
+              {(pendientes.length + misCasos.length) > 0 && <Badge size="sm" circle>{pendientes.length + misCasos.length}</Badge>}
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="historial">
@@ -141,16 +141,16 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
               Historial
             </Group>
           </Tabs.Tab>
-          <Tabs.Tab value="notificaciones">
-            <Group gap="xs">
-              <BellIcon style={{ width: 20, height: 20 }} />
-              Notificaciones
-              <NotificationIndicator count={notificationCount} />
-            </Group>
-          </Tabs.Tab>
         </Tabs.List>
 
-        <Tabs.Panel value="pendientes" pt="md">
+        <Tabs.Panel value="notificaciones" pt="md">
+          <Notificaciones onIrAuditoria={(presupuestoId) => {
+            setActiveTab('auditoria');
+            setFiltroPresupuestoId(presupuestoId.toString());
+          }} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="auditoria" pt="md">
           <Paper p="md" radius="md" withBorder shadow="xs" mb="lg">
             <Group justify="space-between">
               <Text size="lg" fw={500}>
@@ -249,76 +249,67 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
               </Table.ScrollContainer>
             </Paper>
           )}
-        </Tabs.Panel>
 
-        <Tabs.Panel value="mis-casos" pt="md">
           {misCasos.length > 0 && (
-            <Alert icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />} color="blue" mb="md">
-              Los casos se liberan automáticamente después de 30 minutos de inactividad
-            </Alert>
-          )}
-
-          {misCasos.length === 0 ? (
-            <Paper p="xl" withBorder radius="md">
-              <Center>
-                <Text size="xl" fw={400} c="dimmed" ta="center">No tienes casos asignados</Text>
-              </Center>
-            </Paper>
-          ) : (
-            <Paper withBorder radius="md" shadow="sm">
-              <Table.ScrollContainer minWidth={800}>
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Paciente</Table.Th>
-                      <Table.Th>Estado</Table.Th>
-                      <Table.Th>Tiempo Asignado</Table.Th>
-                      <Table.Th>Acciones</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {misCasos.map((presupuesto) => (
-                      <Table.Tr key={presupuesto.idPresupuestos}>
-                        <Table.Td>
-                          <div>
-                            <Text fw={500}>{presupuesto.Nombre_Apellido}</Text>
-                            <Text size="sm" c="dimmed">DNI: {presupuesto.DNI}</Text>
-                          </div>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm" fw={500} c={getEstadoBadgeColor(presupuesto.estado)}>
-                            {getEstadoLabel(presupuesto.estado)}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text c={presupuesto.minutos_asignado && presupuesto.minutos_asignado > 20 ? 'orange' : 'dimmed'}>
-                            {presupuesto.minutos_asignado || 0} min
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Group gap="xs">
-                            <ActionIcon
-                              variant="transparent"
-                              color="blue"
-                              onClick={() => verDetallePresupuesto(presupuesto)}
-                            >
-                              <EyeIcon style={{ width: 20, height: 20 }} />
-                            </ActionIcon>
-                            <Button
-                              size="xs"
-                              color="green"
-                              onClick={() => setSelectedPresupuesto(presupuesto)}
-                            >
-                              Auditar
-                            </Button>
-                          </Group>
-                        </Table.Td>
+            <>
+              <Alert icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />} color="blue" mt="xl" mb="md">
+                Los casos se liberan automáticamente después de 30 minutos de inactividad
+              </Alert>
+              <Paper withBorder radius="md" shadow="sm">
+                <Table.ScrollContainer minWidth={800}>
+                  <Table striped highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Paciente</Table.Th>
+                        <Table.Th>Estado</Table.Th>
+                        <Table.Th>Tiempo Asignado</Table.Th>
+                        <Table.Th>Acciones</Table.Th>
                       </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Table.ScrollContainer>
-            </Paper>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {misCasos.map((presupuesto) => (
+                        <Table.Tr key={presupuesto.idPresupuestos}>
+                          <Table.Td>
+                            <div>
+                              <Text fw={500}>{presupuesto.Nombre_Apellido}</Text>
+                              <Text size="sm" c="dimmed">DNI: {presupuesto.DNI}</Text>
+                            </div>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm" fw={500} c={getEstadoBadgeColor(presupuesto.estado)}>
+                              {getEstadoLabel(presupuesto.estado)}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text c={presupuesto.minutos_asignado && presupuesto.minutos_asignado > 20 ? 'orange' : 'dimmed'}>
+                              {presupuesto.minutos_asignado || 0} min
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Group gap="xs">
+                              <ActionIcon
+                                variant="transparent"
+                                color="blue"
+                                onClick={() => verDetallePresupuesto(presupuesto)}
+                              >
+                                <EyeIcon style={{ width: 20, height: 20 }} />
+                              </ActionIcon>
+                              <Button
+                                size="xs"
+                                color="green"
+                                onClick={() => setSelectedPresupuesto(presupuesto)}
+                              >
+                                Auditar
+                              </Button>
+                            </Group>
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </Table.ScrollContainer>
+              </Paper>
+            </>
           )}
         </Tabs.Panel>
 
@@ -329,13 +320,6 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
             esAuditor={true}
             onVerDetalle={verDetallePresupuesto}
           />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="notificaciones" pt="md">
-          <Notificaciones onIrAuditoria={(presupuestoId) => {
-            setActiveTab('pendientes');
-            setFiltroPresupuestoId(presupuestoId.toString());
-          }} />
         </Tabs.Panel>
       </Tabs>
 

@@ -22,6 +22,7 @@ import adminUsuariosRoutes from './routes/adminUsuarios';
 import configuracionRoutes from './routes/configuracion';
 import alertasServiciosRoutes from './routes/alertasServicios';
 import tiposUnidadRoutes from './routes/tiposUnidad';
+import reportesFinancierosRoutes from './routes/reportesFinancieros';
 import sseRoutes from './routes/sse';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
@@ -35,7 +36,13 @@ const app = express();
 iniciarCronJobs();
 
 // CORS configuration
-const allowedOrigins = process.env.FRONTEND_URL?.split(',').map(url => url.trim()) || [];
+let allowedOrigins: string[] = [];
+try {
+  allowedOrigins = process.env.FRONTEND_URL?.split(',').map(url => url.trim()) || [];
+} catch (error) {
+  logger.error('Error parsing FRONTEND_URL', error instanceof Error ? error.message : 'Unknown error');
+}
+
 app.use(cors({ 
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -84,6 +91,7 @@ app.use('/api/admin', adminUsuariosRoutes);
 app.use('/api/configuracion', configuracionRoutes);
 app.use('/api/alertas-servicios', alertasServiciosRoutes);
 app.use('/api/tipos-unidad', tiposUnidadRoutes);
+app.use('/api/reportes/financiero', reportesFinancierosRoutes);
 
 // Global error handler
 app.use(errorHandler);
@@ -92,6 +100,7 @@ const port = parseInt(process.env.PORT || '4000');
 app.listen(port, '0.0.0.0', () => {
   logger.info(`Backend listening on port ${port}`);
 }).on('error', (err) => {
-  logger.error('Failed to start server', err instanceof Error ? err.message : 'Unknown error');
+  const errorMsg = err instanceof Error ? err.message.replace(/[\r\n]/g, ' ') : 'Unknown error';
+  logger.error('Failed to start server', errorMsg);
   process.exit(1);
 });

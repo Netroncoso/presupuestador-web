@@ -25,18 +25,18 @@ export const getEstadoBadgeColor = (estado?: string): string => {
 
 export const getEstadoLabel = (estado?: string): string => {
   const labels: Record<string, string> = {
-    borrador: 'BORRADOR',
-    pendiente_administrativa: 'PENDIENTE G. ADMIN',
-    en_revision_administrativa: 'EN REVISIÓN G. ADMIN',
-    pendiente_prestacional: 'PENDIENTE G. PRESTACIONAL',
-    en_revision_prestacional: 'EN REVISIÓN G. PRESTACIONAL',
-    pendiente_general: 'PENDIENTE G. GENERAL',
-    en_revision_general: 'EN REVISIÓN G. GENERAL',
-    aprobado: 'APROBADO',
-    aprobado_condicional: 'APROBADO CONDICIONAL',
-    rechazado: 'RECHAZADO',
+    borrador: 'Borrador',
+    pendiente_administrativa: 'Pendiente G. Admin',
+    en_revision_administrativa: 'En Revisión G. Admin',
+    pendiente_prestacional: 'Pendiente G. Prestacional',
+    en_revision_prestacional: 'En Revisión G. Prestacional',
+    pendiente_general: 'Pendiente G. General',
+    en_revision_general: 'En Revisión G. General',
+    aprobado: 'Aprobado',
+    aprobado_condicional: 'Aprobado Condicional',
+    rechazado: 'Rechazado',
   };
-  return labels[estado || ''] || estado?.toUpperCase() || 'BORRADOR';
+  return labels[estado || ''] || estado || 'Borrador';
 };
 
 export const esEstadoEditable = (estado?: string): boolean => {

@@ -13,3 +13,5 @@ backup_*.sql
 # Logs
 *.log
 npm-debug.log*
+backend/debug_endpoint.js
+backend/debug_endpoint.js

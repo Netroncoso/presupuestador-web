@@ -114,16 +114,21 @@ export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, r
 
 // Función interna para obtener valor vigente por fecha
 export const obtenerValorVigente = async (prestadorServicioId: number, fecha: string | null = null) => {
-  const fechaConsulta = fecha || new Date().toISOString().slice(0, 10);
-  
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT valor_asignado, valor_facturar 
-     FROM prestador_servicio_valores 
-     WHERE id_prestador_servicio = ? 
-       AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
-     LIMIT 1`,
-    [prestadorServicioId, fechaConsulta]
-  );
+  try {
+    const fechaConsulta = fecha || new Date().toISOString().slice(0, 10);
+    
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT valor_asignado, valor_facturar 
+       FROM prestador_servicio_valores 
+       WHERE id_prestador_servicio = ? 
+         AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
+       LIMIT 1`,
+      [prestadorServicioId, fechaConsulta]
+    );
 
-  return rows.length ? rows[0] : null;
+    return rows.length ? rows[0] : null;
+  } catch (error) {
+    console.error('Error obteniendo valor vigente:', error);
+    return null;
+  }
 };

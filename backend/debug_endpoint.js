@@ -1,7 +1,14 @@
 // Endpoint temporal para debuggear notificaciones
 // Agregar a app.ts temporalmente
+// ⚠️ SOLO PARA DESARROLLO - ELIMINAR EN PRODUCCIÓN
 
-app.get('/api/debug/notificaciones/:userId', async (req, res) => {
+import { requireAuth, requireAdmin } from './middleware/auth';
+
+app.get('/api/debug/notificaciones/:userId', requireAuth, requireAdmin, async (req, res) => {
+  // Verificar que solo se ejecute en desarrollo
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Endpoint no disponible en producción' });
+  }
   const userId = parseInt(req.params.userId);
   
   try {

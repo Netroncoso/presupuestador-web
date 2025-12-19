@@ -52,6 +52,11 @@ async function loadRulesFromDB() {
   try {
     const [rows] = await pool.query<any[]>('SELECT clave, valor FROM configuracion_sistema');
     
+    if (!rows || !Array.isArray(rows)) {
+      console.warn('No se encontraron reglas en BD, usando valores por defecto');
+      return;
+    }
+    
     rows.forEach(row => {
       const [categoria, campo] = row.clave.split('.');
       if (cachedRules[categoria as keyof typeof cachedRules] && 
@@ -62,7 +67,7 @@ async function loadRulesFromDB() {
     
     lastFetch = Date.now();
   } catch (error) {
-    console.error('Error cargando reglas desde BD, usando valores por defecto:', error);
+    console.error('Error cargando reglas desde BD, usando valores por defecto:', error instanceof Error ? error.message : 'Error desconocido');
   }
 }
 
@@ -71,7 +76,11 @@ async function loadRulesFromDB() {
  */
 export async function getBusinessRules() {
   if (Date.now() - lastFetch > CACHE_TTL) {
-    await loadRulesFromDB();
+    try {
+      await loadRulesFromDB();
+    } catch (error) {
+      console.error('Error actualizando reglas, usando cache:', error instanceof Error ? error.message : 'Error desconocido');
+    }
   }
   return cachedRules;
 }
@@ -103,4 +112,6 @@ export function getTasaMensual(tasa_mensual?: number | null): number {
 }
 
 // Cargar reglas al iniciar
-loadRulesFromDB();
+loadRulesFromDB().catch(err => {
+  console.error('Error crítico al cargar reglas de negocio:', err instanceof Error ? err.message : 'Error desconocido');
+});

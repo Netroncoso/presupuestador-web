@@ -54,7 +54,7 @@ notificaciones,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 notificaciones,usuario_id,2,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_1,usuarios,id
 notificaciones,presupuesto_id,3,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_2,presupuestos,idPresupuestos
 notificaciones,version_presupuesto,4,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-notificaciones,tipo,5,"enum('pendiente','aprobado','rechazado','nueva_version')",enum,13,YES,pendiente,,,,NULL,NULL,NULL
+notificaciones,tipo,5,"enum('pendiente','aprobado','aprobado_condicional','rechazado','observado','nueva_version')",enum,20,YES,pendiente,,,,NULL,NULL,NULL
 notificaciones,mensaje,6,varchar(512),varchar,512,YES,NULL,,,,NULL,NULL,NULL
 notificaciones,estado,7,"enum('nuevo','leido')",enum,5,YES,nuevo,MUL,,,NULL,NULL,NULL
 notificaciones,creado_en,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
@@ -96,7 +96,7 @@ presupuesto_prestaciones,updated_at,9,timestamp,timestamp,NULL,YES,CURRENT_TIMES
 presupuestos,idPresupuestos,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuestos,Nombre_Apellido,2,varchar(45),varchar,45,YES,NULL,,,,NULL,NULL,NULL
 presupuestos,DNI,3,varchar(20),varchar,20,NO,NULL,MUL,,,NULL,NULL,NULL
-presupuestos,sucursal_id,4,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+presupuestos,sucursal_id,4,int,int,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
 presupuestos,total_insumos,5,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
 presupuestos,dificil_acceso,6,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
 presupuestos,total_prestaciones,7,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
@@ -110,9 +110,11 @@ presupuestos,rentabilidad_con_plazo,14,"decimal(5,2)",decimal,NULL,YES,NULL,,,,N
 presupuestos,usuario_id,15,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_usuario,usuarios,id
 presupuestos,presupuesto_padre,16,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_padre,presupuestos,idPresupuestos
 presupuestos,es_ultima_version,17,tinyint,tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
-presupuestos,estado,18,"enum('borrador','pendiente','en_revision','aprobado','rechazado')",enum,11,YES,borrador,MUL,,,NULL,NULL,NULL
-presupuestos,version,19,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-presupuestos,porcentaje_insumos,20,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
+presupuestos,estado,18,"enum('borrador','pendiente_administrativa','en_revision_administrativa','pendiente_prestacional','en_revision_prestacional','pendiente_general','en_revision_general','aprobado','aprobado_condicional','rechazado')",enum,26,YES,borrador,MUL,,,NULL,NULL,NULL
+presupuestos,revisor_id,19,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_revisor,usuarios,id
+presupuestos,revisor_asignado_at,20,timestamp,timestamp,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
+presupuestos,version,21,int,int,NULL,YES,1,,,,NULL,NULL,NULL
+presupuestos,porcentaje_insumos,22,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
 servicios,id_servicio,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 servicios,nombre,2,varchar(100),varchar,100,NO,NULL,,,,NULL,NULL,NULL
 servicios,tipo_unidad,3,varchar(50),varchar,50,YES,NULL,MUL,,,fk_servicios_tipo_unidad,tipos_unidad,nombre
@@ -130,7 +132,7 @@ tipos_unidad,updated_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAU
 usuarios,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 usuarios,username,2,varchar(50),varchar,50,NO,NULL,UNI,,,NULL,NULL,NULL
 usuarios,password,3,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL
-usuarios,rol,4,"enum('admin','user','auditor_medico')",enum,14,YES,user,,,,NULL,NULL,NULL
+usuarios,rol,4,"enum('user','gerencia_administrativa','gerencia_prestacional','gerencia_financiera','gerencia_general','admin')",enum,23,YES,user,,,,NULL,NULL,NULL
 usuarios,activo,5,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 usuarios,created_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 usuarios,sucursal_id,7,int,int,NULL,YES,NULL,MUL,,,fk_usuarios_sucursal,sucursales_mh,ID

@@ -61,9 +61,13 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
   }, [opened]);
 
   const handleCreate = async () => {
+    if (!formData.username || !formData.password || !formData.rol || !formData.sucursal_id) {
+      alert('Todos los campos son obligatorios');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:4000/api/admin/usuarios', {
+      const response = await fetch('http://localhost:4000/api/admin/usuarios', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,11 +75,17 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
         },
         body: JSON.stringify(formData)
       });
-      setCreateModal(false);
-      setFormData({ username: '', password: '', rol: 'user', sucursal_id: '' });
-      fetchUsuarios();
+      if (response.ok) {
+        setCreateModal(false);
+        setFormData({ username: '', password: '', rol: 'user', sucursal_id: '' });
+        fetchUsuarios();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Error al crear usuario');
+      }
     } catch (error) {
       console.error('Error:', error);
+      alert('Error al crear usuario');
     }
   };
 
@@ -217,6 +227,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           value={formData.username}
           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
           mb="sm"
+          required
         />
         <TextInput
           label="Contraseña"
@@ -224,6 +235,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           mb="sm"
+          required
         />
         <Select
           label="Rol"
@@ -238,6 +250,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
             { value: 'admin', label: 'Administrador' }
           ]}
           mb="sm"
+          required
         />
         <Select
           label="Sucursal"
@@ -246,7 +259,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           onChange={(value) => setFormData({ ...formData, sucursal_id: value || '' })}
           data={sucursales.map(s => ({ value: s.ID.toString(), label: s.Sucursales_mh }))}
           mb="md"
-          clearable
+          required
         />
         <Group>
           <Button onClick={handleCreate}>Crear</Button>

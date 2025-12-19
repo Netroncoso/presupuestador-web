@@ -39,21 +39,29 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   const [filtroMonto, setFiltroMonto] = useState('');
   const [filtroId, setFiltroId] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroAuditor, setFiltroAuditor] = useState('todos');
+  const [filtroCreador, setFiltroCreador] = useState('todos');
 
   const cargarPresupuestos = useCallback(async () => {
     try {
-      const response = await api.get('/presupuestos');
+      let endpoint = '/presupuestos';
+      if (esAuditor && filtroAuditor === 'mis-auditorias') {
+        endpoint = '/auditoria-multi/mis-auditorias';
+      } else if (!esAuditor && filtroCreador === 'solo-mios') {
+        endpoint = '/presupuestos?scope=solo-mios';
+      }
+      const response = await api.get(endpoint);
       setPresupuestos(response.data);
     } catch (error) {
       console.error('Error cargando presupuestos:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [esAuditor, filtroAuditor, filtroCreador]);
 
   useEffect(() => {
     cargarPresupuestos();
-  }, [recargarTrigger, cargarPresupuestos]);
+  }, [recargarTrigger, cargarPresupuestos, filtroAuditor, filtroCreador]);
 
   const filtrados = useMemo(() => {
     let resultado = presupuestos;
@@ -124,6 +132,28 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             ) : null
           }
         />
+        {esAuditor && (
+          <Select
+            placeholder="Auditor"
+            value={filtroAuditor}
+            onChange={(value) => setFiltroAuditor(value || 'todos')}
+            data={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'mis-auditorias', label: 'Mis auditorías' }
+            ]}
+          />
+        )}
+        {!esAuditor && (
+          <Select
+            placeholder="Creador"
+            value={filtroCreador}
+            onChange={(value) => setFiltroCreador(value || 'todos')}
+            data={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'solo-mios', label: 'Solo míos' }
+            ]}
+          />
+        )}
         <Select
           placeholder="Filtrar por estado"
           value={filtroEstado}
@@ -203,7 +233,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>{p.DNI}</Table.Td>
                 <Table.Td>{p.Sucursal}</Table.Td>
                 <Table.Td>
-                  <Text size="sm" fw={500} c={getEstadoBadgeColor(p.estado)}>
+                  <Text size="sm" fw={400} c={getEstadoBadgeColor(p.estado)}>
                     {getEstadoLabel(p.estado)}
                   </Text>
                 </Table.Td>

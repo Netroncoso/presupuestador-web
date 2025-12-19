@@ -306,6 +306,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     }
 
     const existeIndex = prestacionesSeleccionadas.findIndex(p => p.id_servicio === prestacionSeleccionada)
+    const prestacionesAnteriores = [...prestacionesSeleccionadas]
     
     if (existeIndex >= 0) {
       const nuevas = [...prestacionesSeleccionadas]
@@ -322,7 +323,16 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         cantidad: cantidadNum,
         valor_asignado: valorNum,
         valor_facturar: Number(prestacionData.valor_facturar)
-      }).catch((err: any) => console.error('Error saving prestacion:', err))
+      }).catch((err: any) => {
+        console.error('Error saving prestacion:', err)
+        setPrestacionesSeleccionadas(prestacionesAnteriores)
+        notifications.show({
+          title: 'Error',
+          message: 'No se pudo guardar la prestación',
+          color: 'red'
+        })
+        return
+      })
     }
 
     setCantidad('1')
@@ -338,13 +348,23 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   const eliminarPrestacion = useCallback((index: number) => {
     const prestacion = prestacionesSeleccionadas[index]
+    const prestacionesAnteriores = [...prestacionesSeleccionadas]
     const nuevas = prestacionesSeleccionadas.filter((_, i) => i !== index)
     setPrestacionesSeleccionadas(nuevas)
     
     if (presupuestoId) {
       api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
         data: { id_servicio: prestacion.id_servicio }
-      }).catch((err: any) => console.error('Error deleting prestacion:', err))
+      }).catch((err: any) => {
+        console.error('Error deleting prestacion:', err)
+        setPrestacionesSeleccionadas(prestacionesAnteriores)
+        notifications.show({
+          title: 'Error',
+          message: 'No se pudo eliminar la prestación',
+          color: 'red'
+        })
+        return
+      })
     }
     
     notifications.show({ 

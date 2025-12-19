@@ -87,7 +87,7 @@ const addConnection = (userId: number, userRole: string, res: Response): SSEConn
   const connection = { res, userId, userRole };
   activeConnections.get(userId)!.push(connection);
   
-  logger.info(`SSE connection established for user ${userId}`);
+  logger.info(`SSE connection established for user ${String(userId).replace(/[\r\n]/g, '')}`);
   return connection;
 };
 
@@ -95,7 +95,7 @@ const startHeartbeat = (connection: SSEConnection) => {
   return setInterval(() => {
     if (!sendHeartbeat(connection.res)) {
       removeConnection(connection.userId, connection.res);
-      logger.info(`Heartbeat failed, removing connection for user ${connection.userId}`);
+      logger.info(`Heartbeat failed, removing connection for user ${String(connection.userId).replace(/[\r\n]/g, '')}`);
       return; // Stop the interval
     }
   }, HEARTBEAT_INTERVAL);
@@ -109,12 +109,13 @@ const setupCleanupHandlers = (req: AuthenticatedRequest, heartbeat: NodeJS.Timeo
 
   req.on('close', () => {
     cleanup();
-    logger.info(`SSE connection closed for user ${userId}`);
+    logger.info(`SSE connection closed for user ${String(userId).replace(/[\r\n]/g, '')}`);
   });
 
   req.on('error', (err) => {
     cleanup();
-    logger.error(`SSE connection error for user ${userId}:`, err);
+    const errorMsg = err instanceof Error ? err.message.replace(/[\r\n]/g, ' ') : 'Unknown error';
+    logger.error(`SSE connection error for user ${String(userId).replace(/[\r\n]/g, '')}:`, errorMsg);
   });
 };
 

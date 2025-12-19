@@ -1,16 +1,19 @@
 import { Router } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
+import { csrfProtection } from '../../middleware/csrf';
 import { getAllServicios, createServicio, updateServicio, deleteServicio } from '../../controllers/admin/adminServiciosCrudController';
 
 const router = Router();
 
-// Apply authentication and admin middleware to all routes
+// Apply authentication to all routes
 router.use(authenticateToken);
-router.use(requireAdmin);
 
+// GET is accessible to all authenticated users (needed for filters)
 router.get('/', getAllServicios);
-router.post('/', createServicio);
-router.put('/:id', updateServicio);
-router.delete('/:id', deleteServicio);
+
+// Write operations require admin
+router.post('/', requireAdmin, csrfProtection, createServicio);
+router.put('/:id', requireAdmin, csrfProtection, updateServicio);
+router.delete('/:id', requireAdmin, csrfProtection, deleteServicio);
 
 export default router;

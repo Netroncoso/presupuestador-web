@@ -21,6 +21,20 @@ export const createUsuario = asyncHandler(async (req: Request, res: Response) =>
     throw new AppError(400, 'Username y password son requeridos');
   }
 
+  const rolesValidos = ['user', 'gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'admin'];
+  if (rol && !rolesValidos.includes(rol)) {
+    throw new AppError(400, 'Rol inválido');
+  }
+
+  const [existingUser] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM usuarios WHERE username = ?',
+    [username]
+  );
+  
+  if (existingUser.length > 0) {
+    throw new AppError(409, 'El username ya existe');
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10);
   
   await pool.query<ResultSetHeader>(
@@ -35,12 +49,25 @@ export const updateUsuario = asyncHandler(async (req: Request, res: Response) =>
   const { id } = req.params;
   const { username, password, rol, sucursal_id } = req.body;
   
+  if (!username || !rol) {
+    throw new AppError(400, 'Username y rol son requeridos');
+  }
+
+  const rolesValidos = ['user', 'gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'admin'];
+  if (!rolesValidos.includes(rol)) {
+    throw new AppError(400, 'Rol inválido');
+  }
+  
   const [userCheck] = await pool.query<RowDataPacket[]>(
     'SELECT username FROM usuarios WHERE id = ?',
     [id]
   );
   
-  if (userCheck.length > 0 && userCheck[0].username === 'admin') {
+  if (userCheck.length === 0) {
+    throw new AppError(404, 'Usuario no encontrado');
+  }
+  
+  if (userCheck[0].username === 'admin') {
     throw new AppError(403, 'No se puede editar el usuario administrador principal');
   }
   
@@ -64,12 +91,20 @@ export const toggleUsuario = asyncHandler(async (req: Request, res: Response) =>
   const { id } = req.params;
   const { activo } = req.body;
   
+  if (activo === undefined) {
+    throw new AppError(400, 'El campo activo es requerido');
+  }
+  
   const [userCheck] = await pool.query<RowDataPacket[]>(
     'SELECT username FROM usuarios WHERE id = ?',
     [id]
   );
   
-  if (userCheck.length > 0 && userCheck[0].username === 'admin') {
+  if (userCheck.length === 0) {
+    throw new AppError(404, 'Usuario no encontrado');
+  }
+  
+  if (userCheck[0].username === 'admin') {
     throw new AppError(403, 'No se puede desactivar el usuario administrador principal');
   }
   

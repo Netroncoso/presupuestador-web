@@ -14,6 +14,14 @@ export const actualizarAlertaServicio = asyncHandler(async (req: Request, res: R
   const id = parseInt(req.params.id);
   const { cantidad_maxima, mensaje_alerta, color_alerta, activo } = req.body;
 
+  if (isNaN(id)) {
+    throw new AppError(400, 'ID inválido');
+  }
+
+  if (cantidad_maxima === undefined || !mensaje_alerta || !color_alerta || activo === undefined) {
+    throw new AppError(400, 'Todos los campos son requeridos');
+  }
+
   const [result] = await pool.query<MutationResult>(
     `UPDATE alertas_servicios 
      SET cantidad_maxima = ?, mensaje_alerta = ?, color_alerta = ?, activo = ?

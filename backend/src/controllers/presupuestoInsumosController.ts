@@ -96,7 +96,6 @@ export const eliminarInsumoPresupuesto = asyncHandler(async (req: Request, res: 
     [presupuestoId, producto]
   );
   
-  // Recalcular totales
   await recalcularTotales(presupuestoId);
 
   res.json({ ok: true });

@@ -18,13 +18,14 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.error('Request error', {
-      message: err.message,
-      path: req.path,
-      method: req.method
-    });
-  }
+  logger.error('Request error', {
+    message: err.message,
+    statusCode,
+    path: req.path,
+    method: req.method,
+    userId: (req as any).user?.id,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
 
   res.status(statusCode).json({
     error: process.env.NODE_ENV === 'production' && statusCode === 500 

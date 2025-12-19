@@ -61,6 +61,11 @@ const AuditorDashboard: React.FC = () => {
       setPendientes(response.data);
     } catch (error) {
       console.error('Error cargando pendientes:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudieron cargar los presupuestos pendientes',
+        color: 'red'
+      });
     } finally {
       setLoading(false);
     }

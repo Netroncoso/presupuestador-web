@@ -17,14 +17,15 @@ export class AuditoriaMultiService {
     presupuestoId: number,
     version: number,
     rol: string,
-    mensaje: string
+    mensaje: string,
+    tipo: string = 'pendiente'
   ) {
     await connection.query(`
       INSERT INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
-      SELECT u.id, ?, ?, 'pendiente', ?
+      SELECT u.id, ?, ?, ?, ?
       FROM usuarios u 
       WHERE u.rol = ? AND u.activo = 1
-    `, [presupuestoId, version, mensaje, rol]);
+    `, [presupuestoId, version, tipo, mensaje, rol]);
   }
 
   private async notificarUsuario(
@@ -115,6 +116,10 @@ export class AuditoriaMultiService {
   }
 
   async derivarAPrestacional(id: number, auditorId: number, comentario?: string) {
+    if (!id || !auditorId) {
+      throw new AppError(400, 'ID de presupuesto y auditor son requeridos');
+    }
+
     const connection = await pool.getConnection();
     
     try {
@@ -126,6 +131,7 @@ export class AuditoriaMultiService {
       );
       
       if (presupuesto.length === 0) throw new AppError(404, 'Presupuesto no encontrado');
+      if (!presupuesto[0].version) throw new AppError(400, 'Presupuesto sin versión válida');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para derivar este caso');
       
       await connection.query(
@@ -195,6 +201,7 @@ export class AuditoriaMultiService {
       );
       
       if (presupuesto.length === 0) throw new AppError(404, 'Presupuesto no encontrado');
+      if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para observar este caso');
       
       await connection.query(
@@ -402,6 +409,7 @@ export class AuditoriaMultiService {
       );
       
       if (presupuesto.length === 0) throw new AppError(404, 'Presupuesto no encontrado');
+      if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para auditar este caso');
       
       await connection.query(
@@ -440,7 +448,8 @@ export class AuditoriaMultiService {
         id,
         presupuesto[0].version,
         'gerencia_administrativa',
-        mensajeAprobacion
+        mensajeAprobacion,
+        estadoNuevo
       );
       
       await connection.commit();
@@ -461,6 +470,10 @@ export class AuditoriaMultiService {
     gerenciaNombre: string,
     motivo: string
   ) {
+    if (!id || !auditorId || !estadoAnterior || !gerenciaNombre) {
+      throw new AppError(400, 'Faltan parámetros requeridos');
+    }
+
     if (!motivo || motivo.trim().length < 10) {
       throw new AppError(400, 'Debe especificar motivo (mínimo 10 caracteres)');
     }
@@ -476,6 +489,7 @@ export class AuditoriaMultiService {
       );
       
       if (presupuesto.length === 0) throw new AppError(404, 'Presupuesto no encontrado');
+      if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para auditar este caso');
       
       await connection.query(
@@ -512,7 +526,8 @@ export class AuditoriaMultiService {
         id,
         presupuesto[0].version,
         'gerencia_administrativa',
-        mensajeCondicional
+        mensajeCondicional,
+        'aprobado_condicional'
       );
       
       await connection.commit();
@@ -533,6 +548,10 @@ export class AuditoriaMultiService {
     gerenciaNombre: string,
     comentario: string
   ) {
+    if (!id || !auditorId || !estadoAnterior || !gerenciaNombre || !comentario) {
+      throw new AppError(400, 'Faltan parámetros requeridos');
+    }
+
     const connection = await pool.getConnection();
     
     try {
@@ -544,6 +563,7 @@ export class AuditoriaMultiService {
       );
       
       if (presupuesto.length === 0) throw new AppError(404, 'Presupuesto no encontrado');
+      if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para auditar este caso');
       
       await connection.query(
@@ -580,7 +600,8 @@ export class AuditoriaMultiService {
         id,
         presupuesto[0].version,
         'gerencia_administrativa',
-        mensajeRechazo
+        mensajeRechazo,
+        'rechazado'
       );
       
       await connection.commit();

@@ -12,7 +12,9 @@ export class CalculosService {
     tasaMensual: number,
     diasCobranza: number
   ): number {
-    if (costoTotal === 0) return 0;
+    if (costoTotal === 0 || isNaN(costoTotal) || isNaN(totalFacturar)) return 0;
+    if (isNaN(tasaMensual) || isNaN(diasCobranza) || diasCobranza < 0) return this.calcularRentabilidad(costoTotal, totalFacturar);
+    
     const mesesCobranza = Math.floor(diasCobranza / 30);
     const valorPresente = totalFacturar / Math.pow(1 + tasaMensual / 100, mesesCobranza);
     const utilidadConPlazo = valorPresente - costoTotal;

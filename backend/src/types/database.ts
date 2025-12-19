@@ -92,7 +92,8 @@ export interface PrestadorServicioValores extends RowDataPacket {
   valor_asignado: number;
   valor_facturar: number;
   fecha_inicio: Date;
-  fecha_fin?: Date;
+  fecha_fin?: Date | null;
+  sucursal_id?: number | null;
   created_at?: Date;
 }
 
@@ -105,7 +106,7 @@ export interface PresupuestoInsumos extends RowDataPacket {
   cantidad: number;
   created_at?: Date;
   updated_at?: Date;
-  id_insumo?: number;
+  id_insumo?: number | null;
 }
 
 export interface PresupuestoPrestaciones extends RowDataPacket {

@@ -10,6 +10,7 @@ const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const GerenciaAdministrativa = React.lazy(() => import('./pages/GerenciaAdministrativa'));
 const GerenciaPrestacional = React.lazy(() => import('./pages/GerenciaPrestacional'));
 const GerenciaGeneral = React.lazy(() => import('./pages/GerenciaGeneral'));
+const GerenciaFinanciera = React.lazy(() => import('./pages/GerenciaFinanciera'));
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -33,7 +34,7 @@ function AppContent() {
       case 'gerencia_general':
         return <GerenciaGeneral />;
       case 'gerencia_financiera':
-        return <GerenciaGeneral />; // Financiera usa mismo dashboard que General
+        return <GerenciaFinanciera />;
       default:
         return <UserDashboard />;
     }

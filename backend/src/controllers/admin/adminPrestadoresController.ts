@@ -23,6 +23,10 @@ export const updatePrestador = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo } = req.body;
 
+    if (!id || activo === undefined) {
+      return res.status(400).json({ error: 'ID y estado activo son requeridos' });
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       'UPDATE financiador SET activo = ?, tasa_mensual = ?, dias_cobranza_teorico = ?, dias_cobranza_real = ?, id_acuerdo = ? WHERE idobra_social = ?',
       [activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo ?? null, id]
@@ -34,8 +38,9 @@ export const updatePrestador = async (req: Request, res: Response) => {
 
     res.json({ message: 'Prestador actualizado correctamente' });
   } catch (err) {
-    console.error('Error updating prestador:', err);
-    res.status(500).json({ error: 'Error al actualizar prestador' });
+    const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+    console.error('Error updating prestador:', errorMsg);
+    res.status(500).json({ error: 'Error al actualizar prestador', details: errorMsg });
   }
 };
 
