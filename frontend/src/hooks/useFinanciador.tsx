@@ -30,5 +30,5 @@ export const useFinanciador = (
     };
 
     cargarInfoFinanciador();
-  }, [financiadorId, setFinanciadorInfo]);
+  }, [financiadorId]); // eslint-disable-line react-hooks/exhaustive-deps
 };

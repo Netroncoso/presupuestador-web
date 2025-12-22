@@ -25,14 +25,11 @@ export class ReportesFinancierosService {
       ? (kpis.total_aprobados / kpis.total_presupuestos * 100) 
       : 0;
     
-    // Tiempo promedio de auditoría (desde primera auditoría hasta aprobación)
+    // Tiempo promedio de auditoría
     const [tiempoRows] = await pool.query<RowDataPacket[]>(`
-      SELECT AVG(TIMESTAMPDIFF(HOUR, fecha_primera_auditoria, fecha_aprobacion)) as horas_promedio
+      SELECT AVG(horas) as horas_promedio
       FROM (
-        SELECT 
-          p.idPresupuestos,
-          MIN(a.fecha) as fecha_primera_auditoria,
-          MAX(CASE WHEN p.estado IN ('aprobado', 'aprobado_condicional') THEN p.updated_at END) as fecha_aprobacion
+        SELECT TIMESTAMPDIFF(HOUR, MIN(a.fecha), p.updated_at) as horas
         FROM presupuestos p
         INNER JOIN auditorias_presupuestos a ON p.idPresupuestos = a.presupuesto_id
         WHERE p.estado IN ('aprobado', 'aprobado_condicional')
@@ -40,7 +37,6 @@ export class ReportesFinancierosService {
           ${whereClause.replace('WHERE', 'AND')}
         GROUP BY p.idPresupuestos
       ) sub
-      WHERE fecha_aprobacion IS NOT NULL
     `);
     
     return {
@@ -108,7 +104,7 @@ export class ReportesFinancierosService {
     }));
   }
   
-  async obtenerAnalisisCostos(financiadorId?: string, servicioId?: string, periodo: string = 'mes_actual') {
+  async obtenerAnalisisCostos(financiadorId?: string, servicioId?: string, periodo: string = 'mes_actual', page: number = 1, limit: number = 100) {
     const whereClause = this.getWhereClausePeriodo(periodo);
     const params: any[] = [];
     
@@ -123,6 +119,21 @@ export class ReportesFinancierosService {
       filtroServicio = 'AND s.id_servicio = ?';
       params.push(servicioId);
     }
+    
+    const offset = (page - 1) * limit;
+    
+    const [countRows] = await pool.query<RowDataPacket[]>(`
+      SELECT COUNT(DISTINCT CONCAT(f.idobra_social, '-', s.id_servicio)) as total
+      FROM presupuesto_prestaciones pp
+      INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
+      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN financiador f ON p.idobra_social = f.idobra_social
+      WHERE p.estado IN ('aprobado', 'aprobado_condicional')
+        AND p.es_ultima_version = 1
+        ${whereClause}
+        ${filtroFinanciador}
+        ${filtroServicio}
+    `, params);
     
     const [rows] = await pool.query<RowDataPacket[]>(`
       SELECT 
@@ -145,13 +156,19 @@ export class ReportesFinancierosService {
         ${filtroServicio}
       GROUP BY f.idobra_social, s.id_servicio
       ORDER BY veces_usado DESC
-      LIMIT 50
-    `, params);
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
     
-    return rows;
+    return {
+      data: rows,
+      total: countRows[0].total,
+      page,
+      limit,
+      totalPages: Math.ceil(countRows[0].total / limit)
+    };
   }
   
-  async obtenerPromediosGenerales(servicioId?: string, periodo: string = 'mes_actual') {
+  async obtenerPromediosGenerales(servicioId?: string, periodo: string = 'mes_actual', page: number = 1, limit: number = 100) {
     const whereClause = this.getWhereClausePeriodo(periodo);
     const params: any[] = [];
     
@@ -160,6 +177,19 @@ export class ReportesFinancierosService {
       filtroServicio = 'AND s.id_servicio = ?';
       params.push(servicioId);
     }
+    
+    const offset = (page - 1) * limit;
+    
+    const [countRows] = await pool.query<RowDataPacket[]>(`
+      SELECT COUNT(DISTINCT s.id_servicio) as total
+      FROM presupuesto_prestaciones pp
+      INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
+      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      WHERE p.estado IN ('aprobado', 'aprobado_condicional')
+        AND p.es_ultima_version = 1
+        ${whereClause}
+        ${filtroServicio}
+    `, params);
     
     const [rows] = await pool.query<RowDataPacket[]>(`
       SELECT 
@@ -178,10 +208,16 @@ export class ReportesFinancierosService {
         ${filtroServicio}
       GROUP BY s.id_servicio
       ORDER BY veces_usado DESC
-      LIMIT 50
-    `, params);
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
     
-    return rows;
+    return {
+      data: rows,
+      total: countRows[0].total,
+      page,
+      limit,
+      totalPages: Math.ceil(countRows[0].total / limit)
+    };
   }
   
   async obtenerServiciosPorFinanciador(financiadorId: string, periodo: string = 'mes_actual') {

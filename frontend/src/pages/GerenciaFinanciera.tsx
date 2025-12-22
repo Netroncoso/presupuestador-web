@@ -1,13 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Title, Text, Table, Group, Paper, Loader, Center, Tabs, Select, Grid, Card } from '@mantine/core';
+import { Container, Title, Text, Table, Group, Paper, Loader, Center, Tabs, Select, Grid, Card, Button, Tooltip, Pagination } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/api';
-import { ArrowRightStartOnRectangleIcon, UserCircleIcon, ChartBarIcon, BanknotesIcon, CheckCircleIcon, ClockIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
-import { Button } from '@mantine/core';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, ChartBarIcon, BanknotesIcon, CheckCircleIcon, ClockIcon, ArrowTrendingUpIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useNotificationCount } from '../hooks/useNotificationCount';
 import ListaPresupuestos from './ListaPresupuestos';
 import { ModalDetallePresupuesto } from '../components/ModalDetallePresupuesto';
+
+const ICON_SIZE = { width: 20, height: 20 };
+const ICON_SIZE_LG = { width: 24, height: 24 };
+const ICON_SIZE_SM = { width: 16, height: 16 };
+
+const PERIODOS_DATA = [
+  { value: 'mes_actual', label: 'Mes Actual' },
+  { value: 'trimestre_actual', label: 'Trimestre Actual' },
+  { value: 'anio_actual', label: 'Año Actual' },
+  { value: 'ultimos_6_meses', label: 'Últimos 6 Meses' },
+  { value: 'todo', label: 'Todo' }
+];
+
+const formatCurrency = (value: number) => 
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
+
+const formatPercent = (value: number | null | undefined) => 
+  value == null ? '0.0%' : `${Number(value).toFixed(1)}%`;
+
+const getRentabilidadColor = (value: number) => 
+  value >= 30 ? 'green' : value >= 15 ? 'yellow' : 'red';
 
 export default function GerenciaFinanciera() {
   const { user, logout } = useAuth();
@@ -31,6 +51,12 @@ export default function GerenciaFinanciera() {
   const [filtroFinanciador, setFiltroFinanciador] = useState<string>('');
   const [filtroServicio, setFiltroServicio] = useState<string>('');
   
+  // Paginación
+  const [pageAnalisis, setPageAnalisis] = useState(1);
+  const [totalPagesAnalisis, setTotalPagesAnalisis] = useState(1);
+  const [pagePromedios, setPagePromedios] = useState(1);
+  const [totalPagesPromedios, setTotalPagesPromedios] = useState(1);
+  
   // Modal detalle
   const [presupuestoDetalle, setPresupuestoDetalle] = useState<any>(null);
   const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
@@ -39,9 +65,17 @@ export default function GerenciaFinanciera() {
     if (activeTab === 'resumen') {
       cargarResumen();
     } else if (activeTab === 'analisis') {
+      setPageAnalisis(1);
+      setPagePromedios(1);
       cargarAnalisisCostos();
     }
   }, [activeTab, periodo, filtroFinanciador, filtroServicio]);
+
+  useEffect(() => {
+    if (activeTab === 'analisis') {
+      cargarAnalisisCostos();
+    }
+  }, [pageAnalisis, pagePromedios]);
 
   useEffect(() => {
     cargarFinanciadores();
@@ -72,11 +106,11 @@ export default function GerenciaFinanciera() {
   const cargarAnalisisCostos = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ periodo });
+      const params = new URLSearchParams({ periodo, page: pageAnalisis.toString(), limit: '100' });
       if (filtroFinanciador) params.append('financiador_id', filtroFinanciador);
       if (filtroServicio) params.append('servicio_id', filtroServicio);
       
-      const paramsPromedios = new URLSearchParams({ periodo });
+      const paramsPromedios = new URLSearchParams({ periodo, page: pagePromedios.toString(), limit: '100' });
       if (filtroServicio) paramsPromedios.append('servicio_id', filtroServicio);
       
       const [analisisRes, promediosRes] = await Promise.all([
@@ -84,8 +118,10 @@ export default function GerenciaFinanciera() {
         api.get(`/reportes/financiero/promedios-generales?${paramsPromedios}`)
       ]);
       
-      setAnalisisCostos(analisisRes.data);
-      setPromediosGenerales(promediosRes.data);
+      setAnalisisCostos(analisisRes.data.data);
+      setTotalPagesAnalisis(analisisRes.data.totalPages);
+      setPromediosGenerales(promediosRes.data.data);
+      setTotalPagesPromedios(promediosRes.data.totalPages);
     } catch (error) {
       console.error('Error cargando análisis:', error);
     } finally {
@@ -126,14 +162,7 @@ export default function GerenciaFinanciera() {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(value);
-  };
 
-  const formatPercent = (value: number | null | undefined) => {
-    if (value == null) return '0.0%';
-    return `${Number(value).toFixed(1)}%`;
-  };
 
   if (loading && activeTab === 'resumen' && !kpis) {
     return (
@@ -148,10 +177,10 @@ export default function GerenciaFinanciera() {
       <Group justify="space-between" mb={20}>
         <Title fw={500} order={2} c="blue">Gerencia Financiera</Title>
         <Group gap="xs">
-          <UserCircleIcon style={{ width: 20, height: 20 }} />
+          <UserCircleIcon style={ICON_SIZE} />
           <Text fw={500} size="sm" tt="capitalize">{user?.username}</Text>
           <ConnectionStatus isConnected={isConnected} />
-          <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={{ width: 20, height: 20 }}/>}>
+          <Button ml="md" variant="outline" color="red" size="xs" onClick={logout} rightSection={<ArrowRightStartOnRectangleIcon style={ICON_SIZE}/>}>
             Salir
           </Button>
         </Group>
@@ -161,19 +190,19 @@ export default function GerenciaFinanciera() {
         <Tabs.List>
           <Tabs.Tab value="resumen">
             <Group gap="xs">
-              <ChartBarIcon style={{ width: 20, height: 20 }} />
+              <ChartBarIcon style={ICON_SIZE} />
               Resumen Ejecutivo
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="analisis">
             <Group gap="xs">
-              <ArrowTrendingUpIcon style={{ width: 20, height: 20 }} />
+              <ArrowTrendingUpIcon style={ICON_SIZE} />
               Análisis de Costos
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="historial">
             <Group gap="xs">
-              <ClockIcon style={{ width: 20, height: 20 }} />
+              <ClockIcon style={ICON_SIZE} />
               Historial
             </Group>
           </Tabs.Tab>
@@ -184,13 +213,7 @@ export default function GerenciaFinanciera() {
             label="Período"
             value={periodo}
             onChange={(value) => setPeriodo(value || 'mes_actual')}
-            data={[
-              { value: 'mes_actual', label: 'Mes Actual' },
-              { value: 'trimestre_actual', label: 'Trimestre Actual' },
-              { value: 'anio_actual', label: 'Año Actual' },
-              { value: 'ultimos_6_meses', label: 'Últimos 6 Meses' },
-              { value: 'todo', label: 'Todo' }
-            ]}
+            data={PERIODOS_DATA}
             mb="xl"
             style={{ maxWidth: 250 }}
           />
@@ -201,7 +224,7 @@ export default function GerenciaFinanciera() {
                 <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
                   <Card shadow="sm" padding="lg" radius="md" withBorder>
                     <Group gap="xs" mb="xs">
-                      <BanknotesIcon style={{ width: 24, height: 24, color: '#228be6' }} />
+                      <BanknotesIcon style={{ ...ICON_SIZE_LG, color: '#228be6' }} />
                       <Text size="sm" c="dimmed">Facturación</Text>
                     </Group>
                     <Text size="xl" fw={700}>{formatCurrency(kpis.facturacion_total)}</Text>
@@ -210,7 +233,16 @@ export default function GerenciaFinanciera() {
                 <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
                   <Card shadow="sm" padding="lg" radius="md" withBorder>
                     <Group gap="xs" mb="xs">
-                      <ArrowTrendingUpIcon style={{ width: 24, height: 24, color: '#40c057' }} />
+                      <BanknotesIcon style={{ ...ICON_SIZE_LG, color: '#20c997' }} />
+                      <Text size="sm" c="dimmed">Utilidad Total</Text>
+                    </Group>
+                    <Text size="xl" fw={700}>{formatCurrency(kpis.utilidad_total)}</Text>
+                  </Card>
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
+                  <Card shadow="sm" padding="lg" radius="md" withBorder>
+                    <Group gap="xs" mb="xs">
+                      <ArrowTrendingUpIcon style={{ ...ICON_SIZE_LG, color: '#40c057' }} />
                       <Text size="sm" c="dimmed">Rentabilidad</Text>
                     </Group>
                     <Text size="xl" fw={700}>{formatPercent(kpis.rentabilidad_promedio)}</Text>
@@ -219,7 +251,7 @@ export default function GerenciaFinanciera() {
                 <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
                   <Card shadow="sm" padding="lg" radius="md" withBorder>
                     <Group gap="xs" mb="xs">
-                      <CheckCircleIcon style={{ width: 24, height: 24, color: '#fab005' }} />
+                      <CheckCircleIcon style={{ ...ICON_SIZE_LG, color: '#fab005' }} />
                       <Text size="sm" c="dimmed">Tasa Aprobación</Text>
                     </Group>
                     <Text size="xl" fw={700}>{formatPercent(kpis.tasa_aprobacion)}</Text>
@@ -228,19 +260,10 @@ export default function GerenciaFinanciera() {
                 <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
                   <Card shadow="sm" padding="lg" radius="md" withBorder>
                     <Group gap="xs" mb="xs">
-                      <ClockIcon style={{ width: 24, height: 24, color: '#fd7e14' }} />
+                      <ClockIcon style={{ ...ICON_SIZE_LG, color: '#fd7e14' }} />
                       <Text size="sm" c="dimmed">Tiempo Auditoría</Text>
                     </Group>
                     <Text size="xl" fw={700}>{kpis.tiempo_auditoria_horas.toFixed(1)}h</Text>
-                  </Card>
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, md: 2.4 }}>
-                  <Card shadow="sm" padding="lg" radius="md" withBorder>
-                    <Group gap="xs" mb="xs">
-                      <BanknotesIcon style={{ width: 24, height: 24, color: '#20c997' }} />
-                      <Text size="sm" c="dimmed">Utilidad Total</Text>
-                    </Group>
-                    <Text size="xl" fw={700}>{formatCurrency(kpis.utilidad_total)}</Text>
                   </Card>
                 </Grid.Col>
               </Grid>
@@ -266,7 +289,7 @@ export default function GerenciaFinanciera() {
                           <Table.Td>{f.total_presupuestos}</Table.Td>
                           <Table.Td>{formatCurrency(f.facturacion_total)}</Table.Td>
                           <Table.Td>
-                            <Text c={f.rentabilidad_promedio >= 30 ? 'green' : f.rentabilidad_promedio >= 15 ? 'yellow' : 'red'}>
+                            <Text c={getRentabilidadColor(f.rentabilidad_promedio)}>
                               {formatPercent(f.rentabilidad_promedio)}
                             </Text>
                           </Table.Td>
@@ -300,7 +323,7 @@ export default function GerenciaFinanciera() {
                           <Table.Td>{s.total_presupuestos}</Table.Td>
                           <Table.Td>{formatCurrency(s.facturacion_total)}</Table.Td>
                           <Table.Td>
-                            <Text c={s.rentabilidad_promedio >= 30 ? 'green' : s.rentabilidad_promedio >= 15 ? 'yellow' : 'red'}>
+                            <Text c={getRentabilidadColor(s.rentabilidad_promedio)}>
                               {formatPercent(s.rentabilidad_promedio)}
                             </Text>
                           </Table.Td>
@@ -319,8 +342,8 @@ export default function GerenciaFinanciera() {
         <Tabs.Panel value="historial" pt="md">
           <ListaPresupuestos 
             onEditarPresupuesto={() => {}} 
-            recargarTrigger={0} 
-            esAuditor={true}
+            recargarTrigger={0}
+            soloConsulta={true}
             onVerDetalle={verDetallePresupuesto}
           />
         </Tabs.Panel>
@@ -331,13 +354,7 @@ export default function GerenciaFinanciera() {
               label="Período"
               value={periodo}
               onChange={(value) => setPeriodo(value || 'mes_actual')}
-              data={[
-                { value: 'mes_actual', label: 'Mes Actual' },
-                { value: 'trimestre_actual', label: 'Trimestre Actual' },
-                { value: 'anio_actual', label: 'Año Actual' },
-                { value: 'ultimos_6_meses', label: 'Últimos 6 Meses' },
-                { value: 'todo', label: 'Todo' }
-              ]}
+              data={PERIODOS_DATA}
             />
             <Select
               label="Financiador"
@@ -362,9 +379,14 @@ export default function GerenciaFinanciera() {
             />
           </Group>
 
-          <Title order={5} mb="md">Detalle por Financiador</Title>
+          <Group gap="xs" mb="md">
+            <Title order={5}>Detalle por Financiador</Title>
+            <Tooltip label="Análisis basado en presupuestos finalizados del período seleccionado" position="right">
+              <InformationCircleIcon style={{ ...ICON_SIZE_SM, color: '#228be6', cursor: 'help' }} />
+            </Tooltip>
+          </Group>
           <Paper withBorder radius="md" shadow="sm" mb="xl">
-            <Table.ScrollContainer minWidth={1000}>
+            <Table.ScrollContainer minWidth={1000} mah={600}>
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
@@ -403,7 +425,7 @@ export default function GerenciaFinanciera() {
                         <Table.Td>{formatCurrency(item.valor_asignado_promedio)}</Table.Td>
                         <Table.Td>{formatCurrency(item.valor_facturar_promedio)}</Table.Td>
                         <Table.Td>
-                          <Text c={item.margen_promedio >= 30 ? 'green' : item.margen_promedio >= 15 ? 'yellow' : 'red'}>
+                          <Text c={getRentabilidadColor(item.margen_promedio)}>
                             {formatPercent(item.margen_promedio)}
                           </Text>
                         </Table.Td>
@@ -414,11 +436,21 @@ export default function GerenciaFinanciera() {
                 </Table.Tbody>
               </Table>
             </Table.ScrollContainer>
+            {totalPagesAnalisis > 1 && (
+              <Group justify="center" p="md">
+                <Pagination total={totalPagesAnalisis} value={pageAnalisis} onChange={setPageAnalisis} />
+              </Group>
+            )}
           </Paper>
 
-          <Title order={5} mb="md">Promedios Generales por Servicio</Title>
+          <Group gap="xs" mb="md">
+            <Title order={5}>Promedios Generales por Servicio</Title>
+            <Tooltip label="Promedios calculados sobre todos los presupuestos finalizados del período seleccionado" position="right">
+              <InformationCircleIcon style={{ ...ICON_SIZE_SM, color: '#228be6', cursor: 'help' }} />
+            </Tooltip>
+          </Group>
           <Paper withBorder radius="md" shadow="sm">
-            <Table.ScrollContainer minWidth={800}>
+            <Table.ScrollContainer minWidth={800} mah={600}>
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
@@ -454,7 +486,7 @@ export default function GerenciaFinanciera() {
                         <Table.Td fw={600}>{formatCurrency(item.valor_asignado_promedio)}</Table.Td>
                         <Table.Td fw={600}>{formatCurrency(item.valor_facturar_promedio)}</Table.Td>
                         <Table.Td>
-                          <Text fw={700} c={item.margen_promedio >= 30 ? 'green' : item.margen_promedio >= 15 ? 'yellow' : 'red'}>
+                          <Text fw={700} c={getRentabilidadColor(item.margen_promedio)}>
                             {formatPercent(item.margen_promedio)}
                           </Text>
                         </Table.Td>
@@ -464,6 +496,11 @@ export default function GerenciaFinanciera() {
                 </Table.Tbody>
               </Table>
             </Table.ScrollContainer>
+            {totalPagesPromedios > 1 && (
+              <Group justify="center" p="md">
+                <Pagination total={totalPagesPromedios} value={pagePromedios} onChange={setPagePromedios} />
+              </Group>
+            )}
           </Paper>
         </Tabs.Panel>
       </Tabs>

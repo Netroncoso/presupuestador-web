@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Text, Badge, Group, Table, Stack, Paper, Title, Accordion, Timeline } from '@mantine/core';
+import { Modal, Stack, Group, Badge, Paper, Title, Text, Accordion, Timeline, Table } from '@mantine/core';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
 import { api } from '../api/api';
 
@@ -102,62 +102,58 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
 
         <Paper p="md" withBorder>
           <Title order={4} mb="sm">Información del Paciente</Title>
-          <Group grow>
-            <div>
-              <Text size="md" c="dimmed">Paciente</Text>
-              <Text fw={450}>{presupuesto.Nombre_Apellido}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">DNI</Text>
-              <Text fw={450}>{presupuesto.DNI}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Sucursal</Text>
-              <Text fw={450}>{presupuesto.Sucursal || presupuesto.sucursal_nombre}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Financiador</Text>
-              <Text fw={450}>{presupuesto.Financiador || presupuesto.financiador || 'No asignado'}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Creado por</Text>
-              <Text fw={450}>{presupuesto.creador || presupuesto.usuario_creador || 'No disponible'}</Text>
-            </div>
-          </Group>
+          <Table>
+            <Table.Tbody>
+              <Table.Tr>
+                <Table.Td fw={500}>Paciente</Table.Td>
+                <Table.Td>{presupuesto.Nombre_Apellido}</Table.Td>
+                <Table.Td fw={500}>DNI</Table.Td>
+                <Table.Td>{presupuesto.DNI}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Td fw={500}>Sucursal</Table.Td>
+                <Table.Td>{presupuesto.Sucursal || presupuesto.sucursal_nombre}</Table.Td>
+                <Table.Td fw={500}>Financiador</Table.Td>
+                <Table.Td>{presupuesto.Financiador || presupuesto.financiador || 'No asignado'}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Td fw={500}>Creado por</Table.Td>
+                <Table.Td colSpan={3}>{presupuesto.creador || presupuesto.usuario_creador || 'No disponible'}</Table.Td>
+              </Table.Tr>
+            </Table.Tbody>
+          </Table>
         </Paper>
 
         <Paper p="md" withBorder>
-          <Title order={4} mb="md">Totales del Presupuesto</Title>
-          <Group grow>
-            <div>
-              <Text size="md" c="dimmed">Costo Total</Text>
-              <Text fw={450} size="lg">${Number(presupuesto.costo_total || 0).toLocaleString()}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Total a Facturar</Text>
-              <Text fw={450} size="lg" c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Utilidad</Text>
-              <Text fw={450} size="lg" c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
-                ${(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)).toLocaleString()}
-              </Text>
-            </div>
-            <div>
-              <Text size="md" c="dimmed">Rentabilidad</Text>
-              <Text fw={450} size="lg" c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
-                {Number(presupuesto.rentabilidad || 0).toFixed(2)}%
-              </Text>
-            </div>
-            {presupuesto.rentabilidad_con_plazo && (
-              <div>
-                <Text size="md" c="dimmed">Rent. con Plazo</Text>
-                <Text fw={450} size="lg" c={Number(presupuesto.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'}>
-                  {Number(presupuesto.rentabilidad_con_plazo || 0).toFixed(2)}%
-                </Text>
-              </div>
-            )}
-          </Group>
+          <Title order={4} mb="sm">Totales del Presupuesto</Title>
+          <Table>
+            <Table.Tbody>
+              <Table.Tr>
+                <Table.Td fw={500}>Costo Total</Table.Td>
+                <Table.Td>${Number(presupuesto.costo_total || 0).toLocaleString()}</Table.Td>
+                <Table.Td fw={500}>Total a Facturar</Table.Td>
+                <Table.Td c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Td fw={500}>Utilidad</Table.Td>
+                <Table.Td c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
+                  ${(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)).toLocaleString()}
+                </Table.Td>
+                <Table.Td fw={500}>Rentabilidad</Table.Td>
+                <Table.Td c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
+                  {Number(presupuesto.rentabilidad || 0).toFixed(2)}%
+                </Table.Td>
+              </Table.Tr>
+              {presupuesto.rentabilidad_con_plazo && (
+                <Table.Tr>
+                  <Table.Td fw={500}>Rent. con Plazo</Table.Td>
+                  <Table.Td c={Number(presupuesto.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'} colSpan={3}>
+                    {Number(presupuesto.rentabilidad_con_plazo || 0).toFixed(2)}%
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
         </Paper>
 
         {auditorias.length > 0 && (

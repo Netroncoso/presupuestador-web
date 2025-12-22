@@ -28,10 +28,11 @@ interface ListaPresupuestosProps {
   onEditarPresupuesto: (presupuesto: Presupuesto, soloLectura?: boolean) => void;
   recargarTrigger?: number;
   esAuditor?: boolean;
+  soloConsulta?: boolean;
   onVerDetalle?: (presupuesto: Presupuesto) => void;
 }
 
-export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, onVerDetalle }: ListaPresupuestosProps) {
+export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, soloConsulta = false, onVerDetalle }: ListaPresupuestosProps) {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroNombre, setFiltroNombre] = useState('');
@@ -143,7 +144,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             ]}
           />
         )}
-        {!esAuditor && (
+        {!esAuditor && !soloConsulta && (
           <Select
             placeholder="Creador"
             value={filtroCreador}
@@ -252,7 +253,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 <Table.Td>{new Date(p.created_at).toLocaleDateString()}</Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    {esAuditor ? (
+                    {(esAuditor || soloConsulta) ? (
                       <ActionIcon 
                         variant="transparent" 
                         color="blue" 

@@ -33,8 +33,6 @@ import {
   UserCircleIcon,
   ArrowRightStartOnRectangleIcon,
   DocumentTextIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   ArchiveBoxArrowDownIcon,
   ClockIcon,
   BellIcon,
@@ -66,7 +64,7 @@ export default function UserDashboard() {
   const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<
     any[]
   >([]);
-  const [alertasAbiertas, setAlertasAbiertas] = useState(true);
+
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<
@@ -375,22 +373,15 @@ export default function UserDashboard() {
     [presupuestoId, cerrarModalAuditoria, finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, handleNuevoPresupuesto]
   );
 
-  const handleTodosItemsGuardados = useCallback(() => {
+  const handleContinuarValidacion = useCallback((continuar: boolean) => {
     cerrarModalValidacion();
-    setValidacionCompletada(true);
-    handleFinalizarPresupuesto();
+    if (continuar) {
+      setValidacionCompletada(true);
+      handleFinalizarPresupuesto();
+    } else {
+      setItemsFaltantes([]);
+    }
   }, [cerrarModalValidacion, handleFinalizarPresupuesto]);
-
-  const handleContinuarSinItems = useCallback(() => {
-    cerrarModalValidacion();
-    setValidacionCompletada(true);
-    handleFinalizarPresupuesto();
-  }, [cerrarModalValidacion, handleFinalizarPresupuesto]);
-
-  const handleCerrarModalValidacion = useCallback(() => {
-    cerrarModalValidacion();
-    setItemsFaltantes([]);
-  }, [cerrarModalValidacion]);
 
   const handleConfirmarEdicion = useCallback(async () => {
     if (!presupuestoParaEditar) return;
@@ -716,6 +707,7 @@ export default function UserDashboard() {
 
         <Tabs.Panel value="prestaciones" pt="md">
           <Prestaciones
+            key={presupuestoId}
             prestacionesSeleccionadas={prestacionesSeleccionadas}
             setPrestacionesSeleccionadas={setPrestacionesSeleccionadas}
             onTotalChange={setTotalesPrestaciones}
@@ -762,11 +754,11 @@ export default function UserDashboard() {
 
       <ModalValidacionItems
         opened={modalValidacionAbierto}
-        onClose={handleCerrarModalValidacion}
+        onClose={() => handleContinuarValidacion(false)}
         itemsFaltantes={itemsFaltantes}
         onReintentarItem={procesarItem}
-        onContinuarDeTodasFormas={handleContinuarSinItems}
-        onFinalizarPresupuesto={handleTodosItemsGuardados}
+        onContinuarDeTodasFormas={() => handleContinuarValidacion(true)}
+        onFinalizarPresupuesto={() => handleContinuarValidacion(true)}
       />
     </Container>
   );

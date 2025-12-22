@@ -42,7 +42,6 @@ interface Props {
 
 export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false }: Props) {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
-  const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string | null>(null)
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
   const [cantidad, setCantidad] = useState('1')
@@ -90,9 +89,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   useEffect(() => {
     if (presupuestoId && financiadorId) {
       const financiadorIdStr = String(financiadorId)
-      setFinanciadorSeleccionado(financiadorIdStr)
       
-      // Si es solo lectura, cargar valores históricos según fecha del presupuesto
       if (soloLectura) {
         api.get(`/presupuestos/${presupuestoId}`).then(presupuestoRes => {
           const fechaPresupuesto = presupuestoRes.data.created_at?.slice(0, 10)
@@ -102,25 +99,20 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           cargarPrestacionesPorFinanciador(financiadorIdStr)
         })
       } else {
-        // Si es edición, usar valores actuales (nueva versión = nuevo contexto)
         cargarPrestacionesPorFinanciador(financiadorIdStr)
       }
       
       api.get(`/prestaciones/prestador/${financiadorIdStr}/info`).then(infoRes => {
         setFinanciadorInfo(infoRes.data)
-        if (onFinanciadorChange) {
-          onFinanciadorChange(financiadorIdStr, infoRes.data)
-        }
       }).catch((err: any) => console.error('Error loading financiador info:', err))
     } else if (!presupuestoId) {
-      setFinanciadorSeleccionado(null)
       setPrestacionesDisponibles([])
       setPrestacionSeleccionada(null)
       setCantidad('1')
       setValorAsignado('')
       setFinanciadorInfo({})
     }
-  }, [presupuestoId, financiadorId, onFinanciadorChange, soloLectura])
+  }, [presupuestoId, financiadorId, soloLectura])
 
   const cargarFinanciadores = async () => {
     try {
@@ -158,7 +150,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   const handleFinanciadorChange = async (value: string | null) => {
     // Si hay prestaciones y cambia el financiador, mostrar modal de confirmación
-    if (value !== financiadorSeleccionado && prestacionesSeleccionadas.length > 0) {
+    if (value !== financiadorId && prestacionesSeleccionadas.length > 0) {
       setNuevoFinanciadorPendiente(value)
       setModalConfirmacionAbierto(true)
       return
@@ -170,7 +162,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   const aplicarCambioFinanciador = async (value: string | null) => {
     // Limpiar prestaciones si cambia el financiador
-    if (value !== financiadorSeleccionado && prestacionesSeleccionadas.length > 0) {
+    if (value !== financiadorId && prestacionesSeleccionadas.length > 0) {
       // Eliminar prestaciones de BD si hay presupuestoId
       if (presupuestoId) {
         try {
@@ -191,7 +183,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       })
     }
     
-    setFinanciadorSeleccionado(value)
     setPrestacionesDisponibles([])
     setPrestacionSeleccionada(null)
     setCantidad('1')
@@ -436,7 +427,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             <Select
               placeholder="Seleccione un financiador"
               data={financiadoresOptions}
-              value={financiadorSeleccionado}
+              value={financiadorId ? String(financiadorId) : null}
               onChange={handleFinanciadorChange}
               searchable
               disabled={soloLectura}
@@ -452,7 +443,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             )}
           </Stack>
 
-          {financiadorSeleccionado && prestacionesDisponibles.length > 0 && (
+          {financiadorId && prestacionesDisponibles.length > 0 && (
             <>
             <Grid>
               <Grid.Col span={6}>
@@ -677,7 +668,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             </>
           )}
 
-          {financiadorSeleccionado && prestacionesDisponibles.length === 0 && !loading && (
+          {financiadorId && prestacionesDisponibles.length === 0 && !loading && (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
               No hay prestaciones disponibles para este financiador
             </div>
