@@ -24,6 +24,8 @@ import alertasServiciosRoutes from './routes/alertasServicios';
 import tiposUnidadRoutes from './routes/tiposUnidad';
 import reportesFinancierosRoutes from './routes/reportesFinancieros';
 import sseRoutes from './routes/sse';
+import healthRoutes from './routes/health';
+import cacheStatsRoutes from './routes/cacheStats';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
@@ -65,6 +67,9 @@ app.use(csrfProtection);
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
 
+// Health check (public)
+app.use('/api/health', healthRoutes);
+
 // SSE routes (protected, but handles auth internally)
 app.use('/api/stream', sseRoutes);
 
@@ -92,6 +97,7 @@ app.use('/api/configuracion', configuracionRoutes);
 app.use('/api/alertas-servicios', alertasServiciosRoutes);
 app.use('/api/tipos-unidad', tiposUnidadRoutes);
 app.use('/api/reportes/financiero', reportesFinancierosRoutes);
+app.use('/api/cache', cacheStatsRoutes);
 
 // Global error handler
 app.use(errorHandler);
