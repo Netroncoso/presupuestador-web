@@ -2,9 +2,15 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { cacheService } from '../services/cacheService';
 
 export const getPrestadores = asyncHandler(async (req: Request, res: Response) => {
+  const cacheKey = 'catalogos:prestadores';
+  const cached = cacheService.get(cacheKey);
+  if (cached) return res.json(cached);
+  
   const [rows] = await pool.query('SELECT idobra_social, Financiador, activo FROM financiador ORDER BY activo DESC, Financiador');
+  cacheService.set(cacheKey, rows, 1800); // 30 min
   res.json(rows);
 });
 
@@ -79,6 +85,10 @@ export const getPrestadorInfo = asyncHandler(async (req: Request, res: Response)
     throw new AppError(400, 'ID de prestador inválido');
   }
 
+  const cacheKey = `catalogos:prestador:${id}`;
+  const cached = cacheService.get(cacheKey);
+  if (cached) return res.json(cached);
+
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT 
        f.idobra_social, 
@@ -99,5 +109,6 @@ export const getPrestadorInfo = asyncHandler(async (req: Request, res: Response)
     throw new AppError(404, 'Prestador no encontrado');
   }
   
+  cacheService.set(cacheKey, rows[0], 1800); // 30 min
   res.json(rows[0]);
 });
