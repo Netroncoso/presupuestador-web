@@ -2,6 +2,7 @@ import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import { RowDataPacket } from 'mysql2';
 import { cacheService } from './cacheService';
+import { logger } from '../utils/logger';
 
 /**
  * Servicio de Auditoría Multi-Gerencial
@@ -455,6 +456,7 @@ export class AuditoriaMultiService {
       
       await connection.commit();
       cacheService.invalidateReportes();
+      logger.info('Presupuesto aprobado', { presupuestoId: id, auditor: auditorId, gerencia: gerenciaNombre });
       return { success: true };
       
     } catch (error) {
@@ -534,6 +536,7 @@ export class AuditoriaMultiService {
       
       await connection.commit();
       cacheService.invalidateReportes();
+      logger.info('Presupuesto aprobado condicional', { presupuestoId: id, auditor: auditorId, gerencia: gerenciaNombre, motivo });
       return { success: true };
       
     } catch (error) {
@@ -609,6 +612,7 @@ export class AuditoriaMultiService {
       
       await connection.commit();
       cacheService.invalidateReportes();
+      logger.warn('Presupuesto rechazado', { presupuestoId: id, auditor: auditorId, gerencia: gerenciaNombre, motivo: comentario });
       return { success: true };
       
     } catch (error) {
