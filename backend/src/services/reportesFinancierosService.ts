@@ -1,9 +1,14 @@
 import { pool } from '../db';
 import { RowDataPacket } from 'mysql2';
+import { cacheService } from './cacheService';
 
 export class ReportesFinancierosService {
   
   async obtenerKPIs(periodo: string = 'mes_actual') {
+    const cacheKey = `reportes:kpis:${periodo}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const whereClause = this.getWhereClausePeriodo(periodo, false);
     
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -39,7 +44,7 @@ export class ReportesFinancierosService {
       ) sub
     `);
     
-    return {
+    const result = {
       facturacion_total: Number(kpis.facturacion_total) || 0,
       rentabilidad_promedio: Number(kpis.rentabilidad_promedio) || 0,
       rentabilidad_plazo_promedio: Number(kpis.rentabilidad_plazo_promedio) || 0,
@@ -47,9 +52,16 @@ export class ReportesFinancierosService {
       tasa_aprobacion: tasaAprobacion,
       tiempo_auditoria_horas: Number(tiempoRows[0]?.horas_promedio) || 0
     };
+    
+    cacheService.set(cacheKey, result, 300);
+    return result;
   }
   
   async obtenerRankingFinanciadores(periodo: string = 'mes_actual') {
+    const cacheKey = `reportes:ranking-financiadores:${periodo}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const whereClause = this.getWhereClausePeriodo(periodo);
     
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -73,10 +85,15 @@ export class ReportesFinancierosService {
       LIMIT 10
     `);
     
+    cacheService.set(cacheKey, rows, 300);
     return rows;
   }
   
   async obtenerRankingSucursales(periodo: string = 'mes_actual') {
+    const cacheKey = `reportes:ranking-sucursales:${periodo}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const whereClause = this.getWhereClausePeriodo(periodo, true);
     
     const [rows] = await pool.query<RowDataPacket[]>(`
@@ -96,12 +113,15 @@ export class ReportesFinancierosService {
       ORDER BY facturacion_total DESC
     `);
     
-    return rows.map(row => ({
+    const result = rows.map(row => ({
       ...row,
       tasa_aprobacion: row.total_presupuestos > 0 
         ? (row.total_aprobados / row.total_presupuestos * 100) 
         : 0
     }));
+    
+    cacheService.set(cacheKey, result, 300);
+    return result;
   }
   
   async obtenerAnalisisCostos(financiadorId?: string, servicioId?: string, periodo: string = 'mes_actual', page: number = 1, limit: number = 100) {

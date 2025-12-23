@@ -1,6 +1,7 @@
 import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import { RowDataPacket } from 'mysql2';
+import { cacheService } from './cacheService';
 
 /**
  * Servicio de Auditoría Multi-Gerencial
@@ -453,6 +454,7 @@ export class AuditoriaMultiService {
       );
       
       await connection.commit();
+      cacheService.invalidateReportes();
       return { success: true };
       
     } catch (error) {
@@ -531,6 +533,7 @@ export class AuditoriaMultiService {
       );
       
       await connection.commit();
+      cacheService.invalidateReportes();
       return { success: true };
       
     } catch (error) {
@@ -605,6 +608,7 @@ export class AuditoriaMultiService {
       );
       
       await connection.commit();
+      cacheService.invalidateReportes();
       return { success: true };
       
     } catch (error) {

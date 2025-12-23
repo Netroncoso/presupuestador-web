@@ -21,7 +21,8 @@
     "express-rate-limit": "^7.5.1",
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.3.0"
+    "mysql2": "^3.3.0",
+    "node-cache": "^5.1.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -32,6 +33,7 @@
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.27",
+    "@types/node-cache": "^4.2.5",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^6.0.3",
