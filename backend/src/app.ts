@@ -26,6 +26,7 @@ import reportesFinancierosRoutes from './routes/reportesFinancieros';
 import sseRoutes from './routes/sse';
 import healthRoutes from './routes/health';
 import cacheStatsRoutes from './routes/cacheStats';
+import equipamientosRoutes from './routes/equipamientos';
 import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
@@ -98,6 +99,7 @@ app.use('/api/alertas-servicios', alertasServiciosRoutes);
 app.use('/api/tipos-unidad', tiposUnidadRoutes);
 app.use('/api/reportes/financiero', reportesFinancierosRoutes);
 app.use('/api/cache', cacheStatsRoutes);
+app.use('/api/equipamientos', equipamientosRoutes);
 
 // Global error handler
 app.use(errorHandler);
