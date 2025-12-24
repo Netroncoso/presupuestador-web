@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Alert } from '@mantine/core';
-import { ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Title, Checkbox, ActionIcon } from '@mantine/core';
+import { TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../api/api';
 
@@ -13,10 +13,6 @@ interface Equipamiento {
   costo: number;
   precio_facturar: number;
   tiene_acuerdo: boolean;
-  genera_alerta?: boolean;
-  umbral_alerta?: number;
-  mensaje_alerta?: string;
-  color_alerta?: string;
 }
 
 interface EquipamientoDisponible {
@@ -26,17 +22,6 @@ interface EquipamientoDisponible {
   valor_asignado: number;
   valor_facturar: number;
   tiene_acuerdo: boolean;
-  genera_alerta: boolean;
-  umbral_alerta: number | null;
-  mensaje_alerta: string | null;
-  color_alerta: string;
-}
-
-interface Alerta {
-  mensaje: string;
-  color: string;
-  equipamiento: string;
-  cantidad: number;
 }
 
 interface Props {
@@ -58,19 +43,36 @@ export default function Equipamiento({
 }: Props) {
   const [equipamientosDisponibles, setEquipamientosDisponibles] = useState<EquipamientoDisponible[]>([]);
   const [equipamientoSeleccionado, setEquipamientoSeleccionado] = useState<number | null>(null);
-  const [cantidad, setCantidad] = useState<number>(1);
-  const [alertasActivas, setAlertasActivas] = useState<Alerta[]>([]);
+  const [cantidad, setCantidad] = useState(1);
+  const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
+  const [nuevaCantidad, setNuevaCantidad] = useState(1);
+  const [nuevoCosto, setNuevoCosto] = useState(0);
+  const [nuevoPrecio, setNuevoPrecio] = useState(0);
+
+  const totalCosto = useMemo(
+    () => equipamientosSeleccionados.reduce((sum, e) => sum + Number(e.cantidad) * Number(e.costo), 0),
+    [equipamientosSeleccionados]
+  );
+
+  const totalFacturar = useMemo(
+    () => equipamientosSeleccionados.reduce((sum, e) => sum + Number(e.cantidad) * Number(e.precio_facturar), 0),
+    [equipamientosSeleccionados]
+  );
+
+  const equipamientoSeleccionadoData = useMemo(
+    () => equipamientoSeleccionado ? equipamientosDisponibles.find(e => e.id === equipamientoSeleccionado) : null,
+    [equipamientoSeleccionado, equipamientosDisponibles]
+  );
+
+  useEffect(() => {
+    onTotalChange(totalCosto, totalFacturar);
+  }, [totalCosto, totalFacturar, onTotalChange]);
 
   useEffect(() => {
     if (financiadorId) {
       cargarEquipamientos();
     }
   }, [financiadorId]);
-
-  useEffect(() => {
-    calcularTotales();
-    verificarAlertas();
-  }, [equipamientosSeleccionados]);
 
   const cargarEquipamientos = async () => {
     try {
@@ -85,12 +87,20 @@ export default function Equipamiento({
     }
   };
 
+  const handleEquipamientoChange = (id: number) => {
+    setEquipamientoSeleccionado(id);
+    const equipo = equipamientosDisponibles.find(e => e.id === id);
+    if (equipo) {
+      setCantidad(1);
+    }
+  };
+
   const agregarEquipamiento = () => {
     if (!equipamientoSeleccionado || cantidad <= 0) {
       notifications.show({
-        title: 'Error',
-        message: 'Seleccione un equipamiento y cantidad válida',
-        color: 'red'
+        title: 'Campos incompletos',
+        message: 'Complete todos los campos',
+        color: 'orange'
       });
       return;
     }
@@ -98,78 +108,65 @@ export default function Equipamiento({
     const equipo = equipamientosDisponibles.find(e => e.id === equipamientoSeleccionado);
     if (!equipo) return;
 
+    const existeIndex = equipamientosSeleccionados.findIndex(e => e.id_equipamiento === equipamientoSeleccionado);
+
     const nuevo: Equipamiento = {
-      id: Date.now(),
+      id: existeIndex >= 0 ? equipamientosSeleccionados[existeIndex].id : Date.now(),
       id_equipamiento: equipo.id,
       nombre: equipo.nombre,
       tipo: equipo.tipo,
       cantidad,
       costo: equipo.valor_asignado,
       precio_facturar: equipo.valor_facturar,
-      tiene_acuerdo: equipo.tiene_acuerdo,
-      genera_alerta: equipo.genera_alerta,
-      umbral_alerta: equipo.umbral_alerta || undefined,
-      mensaje_alerta: equipo.mensaje_alerta || undefined,
-      color_alerta: equipo.color_alerta
+      tiene_acuerdo: equipo.tiene_acuerdo
     };
 
-    setEquipamientosSeleccionados([...equipamientosSeleccionados, nuevo]);
-    setEquipamientoSeleccionado(null);
+    if (existeIndex >= 0) {
+      const nuevos = [...equipamientosSeleccionados];
+      nuevos[existeIndex] = nuevo;
+      setEquipamientosSeleccionados(nuevos);
+    } else {
+      setEquipamientosSeleccionados([...equipamientosSeleccionados, nuevo]);
+    }
+
     setCantidad(1);
-  };
+    setEquipamientoSeleccionado(null);
 
-  const eliminarEquipamiento = (id: number) => {
-    setEquipamientosSeleccionados(equipamientosSeleccionados.filter(e => e.id !== id));
-  };
-
-  const actualizarCantidad = (id: number, nuevaCantidad: number | string) => {
-    const cantidad = Number(nuevaCantidad) || 0;
-    setEquipamientosSeleccionados(
-      equipamientosSeleccionados.map(e => e.id === id ? { ...e, cantidad } : e)
-    );
-  };
-
-  const actualizarCosto = (id: number, nuevoCosto: number | string) => {
-    const costo = Number(nuevoCosto) || 0;
-    setEquipamientosSeleccionados(
-      equipamientosSeleccionados.map(e => e.id === id ? { ...e, costo } : e)
-    );
-  };
-
-  const actualizarPrecio = (id: number, nuevoPrecio: number | string) => {
-    const precio = Number(nuevoPrecio) || 0;
-    setEquipamientosSeleccionados(
-      equipamientosSeleccionados.map(e => e.id === id ? { ...e, precio_facturar: precio } : e)
-    );
-  };
-
-  const calcularTotales = () => {
-    const totalCosto = equipamientosSeleccionados.reduce(
-      (sum, e) => sum + (e.cantidad * e.costo), 0
-    );
-    const totalFacturar = equipamientosSeleccionados.reduce(
-      (sum, e) => sum + (e.cantidad * e.precio_facturar), 0
-    );
-    onTotalChange(totalCosto, totalFacturar);
-  };
-
-  const verificarAlertas = () => {
-    const alertas: Alerta[] = [];
-    
-    equipamientosSeleccionados.forEach(equipo => {
-      if (equipo.genera_alerta && equipo.umbral_alerta) {
-        if (equipo.cantidad >= equipo.umbral_alerta) {
-          alertas.push({
-            mensaje: equipo.mensaje_alerta || 'Alerta de equipamiento',
-            color: equipo.color_alerta || 'orange',
-            equipamiento: equipo.nombre,
-            cantidad: equipo.cantidad
-          });
-        }
-      }
+    notifications.show({
+      title: 'Equipamiento agregado',
+      message: `Se agregó ${equipo.nombre}`,
+      color: 'blue'
     });
-    
-    setAlertasActivas(alertas);
+  };
+
+  const eliminarEquipamiento = (index: number) => {
+    const nuevos = equipamientosSeleccionados.filter((_, i) => i !== index);
+    setEquipamientosSeleccionados(nuevos);
+    notifications.show({
+      title: 'Equipamiento Eliminado',
+      message: 'Se eliminó el equipamiento seleccionado',
+      color: 'blue'
+    });
+  };
+
+  const actualizarEquipamiento = (index: number) => {
+    if (nuevaCantidad <= 0 || nuevoCosto <= 0 || nuevoPrecio <= 0) return;
+
+    const nuevos = [...equipamientosSeleccionados];
+    nuevos[index] = {
+      ...nuevos[index],
+      cantidad: nuevaCantidad,
+      costo: nuevoCosto,
+      precio_facturar: nuevoPrecio
+    };
+    setEquipamientosSeleccionados(nuevos);
+    setEditandoIndex(null);
+
+    notifications.show({
+      title: 'Equipamiento Actualizado',
+      message: 'Valores modificados correctamente',
+      color: 'green'
+    });
   };
 
   const formatPeso = (value: number): string => {
@@ -182,167 +179,228 @@ export default function Equipamiento({
 
   if (!financiadorId) {
     return (
-      <Alert color="blue" title="Seleccione un financiador">
-        Debe seleccionar un financiador antes de agregar equipamiento
-      </Alert>
+      <Paper p="md" withBorder>
+        <Text size="sm" c="dimmed" ta="center">
+          Debe seleccionar un financiador antes de agregar equipamiento
+        </Text>
+      </Paper>
     );
   }
 
   return (
-    <Stack gap="md">
-      {/* Alertas Activas */}
-      {alertasActivas.length > 0 && (
-        <Paper p="md" withBorder style={{ backgroundColor: '#fff3cd' }}>
-          <Group gap="xs" mb="xs">
-            <ExclamationTriangleIcon style={{ width: 20, height: 20 }} />
-            <Text fw={600} c="orange">ALERTAS ACTIVAS</Text>
-          </Group>
-          <Stack gap="xs">
-            {alertasActivas.map((alerta, idx) => (
-              <Badge key={idx} color={alerta.color} size="lg">
-                {alerta.equipamiento}: {alerta.mensaje} ({alerta.cantidad} unidades)
-              </Badge>
-            ))}
-          </Stack>
-        </Paper>
-      )}
-
-      {/* Formulario Agregar */}
-      {!soloLectura && (
-        <Paper p="md" withBorder>
-          <Text size="sm" fw={500} mb="sm">Agregar Equipamiento</Text>
-          <Group align="flex-end">
-            <select
-              value={equipamientoSeleccionado || ''}
-              onChange={(e) => setEquipamientoSeleccionado(Number(e.target.value) || null)}
-              style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ced4da' }}
-            >
-              <option value="">Seleccione un equipamiento...</option>
-              {equipamientosDisponibles.map(eq => (
-                <option key={eq.id} value={eq.id}>
-                  {eq.nombre} - {formatPeso(eq.valor_facturar)} 
-                  {eq.tiene_acuerdo ? ' (Con acuerdo)' : ' (Sin acuerdo)'}
-                </option>
-              ))}
-            </select>
-            <NumberInput
-              label="Cantidad"
-              value={cantidad}
-              onChange={(val) => setCantidad(Number(val) || 1)}
-              min={1}
-              style={{ width: 100 }}
-            />
-            <Button onClick={agregarEquipamiento}>Agregar</Button>
-          </Group>
-        </Paper>
-      )}
-
-      {/* Tabla de Equipamientos Seleccionados */}
-      {equipamientosSeleccionados.length > 0 && (
-        <Paper withBorder>
-          <Table striped highlightOnHover>
-            <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
-              <Table.Tr>
-                <Table.Th>Equipo</Table.Th>
-                <Table.Th>Tipo</Table.Th>
-                <Table.Th style={{ width: 100 }}>Cantidad</Table.Th>
-                <Table.Th style={{ width: 140 }}>Costo Unit.</Table.Th>
-                <Table.Th style={{ width: 140 }}>Precio Facturar</Table.Th>
-                <Table.Th style={{ width: 120 }}>Subtotal Costo</Table.Th>
-                <Table.Th style={{ width: 140 }}>Subtotal Facturar</Table.Th>
-                {!soloLectura && <Table.Th style={{ width: 80 }}>Acciones</Table.Th>}
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {equipamientosSeleccionados.map((eq) => (
-                <Table.Tr key={eq.id}>
-                  <Table.Td>
-                    <div>
-                      <Text size="sm">{eq.nombre}</Text>
-                      {eq.tiene_acuerdo && (
-                        <Badge size="xs" color="green">Con acuerdo</Badge>
-                      )}
-                    </div>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="xs" tt="capitalize">{eq.tipo}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {soloLectura ? (
-                      <Text size="sm">{eq.cantidad}</Text>
-                    ) : (
-                      <NumberInput
-                        value={eq.cantidad}
-                        onChange={(val) => actualizarCantidad(eq.id, val)}
-                        min={1}
-                        size="xs"
-                      />
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    {soloLectura ? (
-                      <Text size="sm">{formatPeso(eq.costo)}</Text>
-                    ) : (
-                      <NumberInput
-                        value={eq.costo}
-                        onChange={(val) => actualizarCosto(eq.id, val)}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        prefix="$ "
-                        size="xs"
-                      />
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    {soloLectura ? (
-                      <Text size="sm">{formatPeso(eq.precio_facturar)}</Text>
-                    ) : (
-                      <NumberInput
-                        value={eq.precio_facturar}
-                        onChange={(val) => actualizarPrecio(eq.id, val)}
-                        decimalScale={2}
-                        fixedDecimalScale
-                        thousandSeparator="."
-                        decimalSeparator=","
-                        prefix="$ "
-                        size="xs"
-                      />
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>{formatPeso(eq.cantidad * eq.costo)}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" fw={500}>{formatPeso(eq.cantidad * eq.precio_facturar)}</Text>
-                  </Table.Td>
-                  {!soloLectura && (
-                    <Table.Td>
-                      <Button
-                        variant="subtle"
-                        color="red"
-                        size="xs"
-                        onClick={() => eliminarEquipamiento(eq.id)}
-                      >
-                        <TrashIcon style={{ width: 16, height: 16 }} />
-                      </Button>
-                    </Table.Td>
-                  )}
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Paper>
-      )}
-
-      {equipamientosSeleccionados.length === 0 && (
-        <Paper p="xl" withBorder>
-          <Text size="sm" c="dimmed" ta="center">
-            No hay equipamiento agregado
+    <Stack gap="lg" mb={25}>
+      {soloLectura && (
+        <Paper p="xs" withBorder style={{ backgroundColor: '#e7f5ff' }}>
+          <Text size="sm" c="blue" fw={500} ta="center">
+            Modo solo lectura - No se pueden realizar modificaciones
           </Text>
         </Paper>
       )}
+
+      <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
+        <Stack gap="xl">
+          {equipamientosDisponibles.length > 0 && (
+            <Grid>
+              <Grid.Col span={6}>
+                <Stack gap="xs">
+                  <Title order={5}>Equipamientos Disponibles</Title>
+                  <Table.ScrollContainer minWidth={700} h={400}>
+                    <Table striped="odd" highlightOnHover stickyHeader>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Equipamiento</Table.Th>
+                          <Table.Th style={{ width: '100px', fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
+                          <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo</Table.Th>
+                          <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Precio</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {equipamientosDisponibles.map((eq) => (
+                          <Table.Tr key={eq.id}>
+                            <Table.Td>
+                              <Group gap="xs">
+                                <Checkbox
+                                  size="sm"
+                                  checked={equipamientoSeleccionado === eq.id}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      handleEquipamientoChange(eq.id);
+                                    } else {
+                                      setEquipamientoSeleccionado(null);
+                                      setCantidad(1);
+                                    }
+                                  }}
+                                  disabled={soloLectura}
+                                />
+                                <span>{eq.nombre}</span>
+                              </Group>
+                            </Table.Td>
+                            <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{eq.tipo}</Table.Td>
+                            <Table.Td>{formatPeso(eq.valor_asignado)}</Table.Td>
+                            <Table.Td>{formatPeso(eq.valor_facturar)}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
+                </Stack>
+              </Grid.Col>
+
+              <Grid.Col span={6}>
+                <Stack gap="xs" style={{ backgroundColor: equipamientoSeleccionado ? '#f8f9fa' : '#f5f5f5', opacity: (equipamientoSeleccionado && !soloLectura) ? 1 : 0.6, padding: '1rem', borderRadius: '8px' }}>
+                  <Title order={5}>Agregar al Presupuesto</Title>
+                  <Text size="sm" fw={400}>Equipamiento</Text>
+                  <Text size="sm" c="dimmed">
+                    {equipamientoSeleccionadoData?.nombre || 'Seleccione un equipamiento de la tabla'}
+                  </Text>
+                  <NumberInput
+                    label={<Text size="sm" fw={400}>Cantidad</Text>}
+                    value={cantidad}
+                    onChange={(val) => setCantidad(Number(val) || 1)}
+                    min={1}
+                    size="sm"
+                    disabled={!equipamientoSeleccionado || soloLectura}
+                  />
+                  <Group>
+                    <Button size="sm" onClick={agregarEquipamiento} disabled={!equipamientoSeleccionado || soloLectura}>
+                      Agregar
+                    </Button>
+                    <Button size="sm" variant="outline" color="gray" disabled={!equipamientoSeleccionado || soloLectura} onClick={() => {
+                      setEquipamientoSeleccionado(null);
+                      setCantidad(1);
+                    }}>
+                      Cancelar
+                    </Button>
+                  </Group>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+          )}
+
+          <Stack gap="xs">
+            <Title order={5}>Equipamientos Seleccionados</Title>
+            <Table.ScrollContainer minWidth={1000}>
+              <Table striped="odd" highlightOnHover stickyHeader>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '13px' }}>Equipamiento</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Unit.</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Precio Unit.</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Costo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Facturar</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {equipamientosSeleccionados.map((eq, i) => {
+                    const subtotalCosto = eq.cantidad * eq.costo;
+                    const subtotalFacturar = eq.cantidad * eq.precio_facturar;
+
+                    return (
+                      <Table.Tr key={`${eq.id_equipamiento}-${i}`}>
+                        <Table.Td>{eq.nombre}</Table.Td>
+                        <Table.Td style={{ textTransform: 'capitalize' }}>{eq.tipo}</Table.Td>
+                        <Table.Td>
+                          {editandoIndex === i ? (
+                            <NumberInput
+                              value={nuevaCantidad}
+                              onChange={(value) => setNuevaCantidad(Number(value) || 1)}
+                              min={1}
+                              w={80}
+                              size="xs"
+                              hideControls
+                            />
+                          ) : (
+                            eq.cantidad
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          {editandoIndex === i ? (
+                            <NumberInput
+                              value={nuevoCosto}
+                              onChange={(value) => setNuevoCosto(Number(value) || 0)}
+                              min={0}
+                              step={0.01}
+                              decimalScale={2}
+                              w={100}
+                              size="xs"
+                              hideControls
+                              prefix="$"
+                            />
+                          ) : (
+                            formatPeso(eq.costo)
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          {editandoIndex === i ? (
+                            <NumberInput
+                              value={nuevoPrecio}
+                              onChange={(value) => setNuevoPrecio(Number(value) || 0)}
+                              min={0}
+                              step={0.01}
+                              decimalScale={2}
+                              w={100}
+                              size="xs"
+                              hideControls
+                              prefix="$"
+                            />
+                          ) : (
+                            formatPeso(eq.precio_facturar)
+                          )}
+                        </Table.Td>
+                        <Table.Td>{formatPeso(subtotalCosto)}</Table.Td>
+                        <Table.Td>{formatPeso(subtotalFacturar)}</Table.Td>
+                        <Table.Td>
+                          {!soloLectura && (
+                            editandoIndex === i ? (
+                              <Group gap="xs" justify="left">
+                                <Button size="xs" onClick={() => actualizarEquipamiento(i)}>
+                                  OK
+                                </Button>
+                                <Button size="xs" variant="outline" onClick={() => setEditandoIndex(null)}>
+                                  Cancelar
+                                </Button>
+                              </Group>
+                            ) : (
+                              <Group gap="xs" justify="left">
+                                <ActionIcon
+                                  variant="transparent"
+                                  onClick={() => {
+                                    setEditandoIndex(i);
+                                    setNuevaCantidad(eq.cantidad);
+                                    setNuevoCosto(eq.costo);
+                                    setNuevoPrecio(eq.precio_facturar);
+                                  }}
+                                >
+                                  <PencilSquareIcon width={20} height={20} />
+                                </ActionIcon>
+                                <ActionIcon
+                                  variant="transparent"
+                                  color="red"
+                                  onClick={() => eliminarEquipamiento(i)}
+                                >
+                                  <TrashIcon width={20} height={20} />
+                                </ActionIcon>
+                              </Group>
+                            )
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+            {equipamientosSeleccionados.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                No hay equipamientos seleccionados
+              </div>
+            )}
+          </Stack>
+        </Stack>
+      </Paper>
     </Stack>
   );
 }

@@ -48,8 +48,8 @@ try {
 
 app.use(cors({ 
   origin: (origin, callback) => {
-    // En desarrollo, permitir cualquier origen localhost
-    if (!origin || allowedOrigins.includes(origin) || (process.env.NODE_ENV === 'development' && origin?.includes('localhost'))) {
+    // En desarrollo, permitir cualquier origen localhost o 172.26.x.x (WSL)
+    if (!origin || allowedOrigins.includes(origin) || (process.env.NODE_ENV === 'development' && (origin?.includes('localhost') || origin?.includes('172.26.')))) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
