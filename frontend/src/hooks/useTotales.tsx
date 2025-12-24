@@ -9,7 +9,14 @@ import {
   calcularRentabilidadConPlazo,
 } from '../utils/calculations';
 
-export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSeleccionadas: Prestacion[] = [], porcentajeInsumos: number = 0, soloLectura: boolean = false) => {
+export const useTotales = (
+  financiadorInfo?: FinanciadorInfo, 
+  prestacionesSeleccionadas: Prestacion[] = [], 
+  porcentajeInsumos: number = 0, 
+  soloLectura: boolean = false,
+  totalCostoEquipamiento: number = 0,
+  totalFacturarEquipamiento: number = 0
+) => {
   const [totalInsumos, setTotalInsumos] = useState(0);
   const [totalPrestaciones, setTotalPrestaciones] = useState(0);
   const [totalFacturarPrestaciones, setTotalFacturarPrestaciones] = useState(0);
@@ -19,15 +26,15 @@ export const useTotales = (financiadorInfo?: FinanciadorInfo, prestacionesSelecc
     if (totalesDesdeDB) {
       return Number(totalesDesdeDB.costoTotal) || 0;
     }
-    return calcularCostoTotal(totalInsumos, totalPrestaciones);
-  }, [totalInsumos, totalPrestaciones, totalesDesdeDB]);
+    return calcularCostoTotal(totalInsumos, totalPrestaciones) + totalCostoEquipamiento;
+  }, [totalInsumos, totalPrestaciones, totalCostoEquipamiento, totalesDesdeDB]);
 
   const totalFacturar = useMemo(() => {
     if (totalesDesdeDB) {
       return Number(totalesDesdeDB.totalFacturar) || 0;
     }
-    return calcularTotalFacturar(totalInsumos, totalFacturarPrestaciones, porcentajeInsumos);
-  }, [totalInsumos, totalFacturarPrestaciones, porcentajeInsumos, totalesDesdeDB]);
+    return calcularTotalFacturar(totalInsumos, totalFacturarPrestaciones, porcentajeInsumos) + totalFacturarEquipamiento;
+  }, [totalInsumos, totalFacturarPrestaciones, porcentajeInsumos, totalFacturarEquipamiento, totalesDesdeDB]);
 
   const rentabilidad = useMemo(() => {
     if (totalesDesdeDB) {

@@ -24,6 +24,7 @@ import { ModalValidacionItems } from "../components/ModalValidacionItems";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
+import Equipamiento from "../components/Equipamiento";
 import ListaPresupuestos from "./ListaPresupuestos";
 import {
   DocumentArrowDownIcon,
@@ -64,6 +65,9 @@ export default function UserDashboard() {
   const [prestacionesSeleccionadas, setPrestacionesSeleccionadas] = useState<
     any[]
   >([]);
+  const [equipamientosSeleccionados, setEquipamientosSeleccionados] = useState<any[]>([]);
+  const [totalCostoEquipamiento, setTotalCostoEquipamiento] = useState(0);
+  const [totalFacturarEquipamiento, setTotalFacturarEquipamiento] = useState(0);
 
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
@@ -121,7 +125,9 @@ export default function UserDashboard() {
     financiadorInfo,
     prestacionesSeleccionadas,
     porcentajeInsumos,
-    soloLectura
+    soloLectura,
+    totalCostoEquipamiento,
+    totalFacturarEquipamiento
   );
 
   useFinanciador(financiadorId, setFinanciadorInfo);
@@ -151,6 +157,9 @@ export default function UserDashboard() {
     resetTotales();
     setInsumosSeleccionados([]);
     setPrestacionesSeleccionadas([]);
+    setEquipamientosSeleccionados([]);
+    setTotalCostoEquipamiento(0);
+    setTotalFacturarEquipamiento(0);
     setEsCargaHistorial(false);
     setDatosHistorial(undefined);
     setSoloLectura(false);
@@ -495,6 +504,15 @@ export default function UserDashboard() {
                           {formatCurrency(totalPrestaciones)}
                         </Text>
                       </Flex>
+
+                      <Flex justify="space-between" align="center">
+                        <Text fw={500} size="sm">
+                          Equipamiento:
+                        </Text>
+                        <Text fw={500} size="sm">
+                          {formatCurrency(totalFacturarEquipamiento)}
+                        </Text>
+                      </Flex>
                     </Flex>
                   </Grid.Col>
 
@@ -668,6 +686,16 @@ export default function UserDashboard() {
               Prestaciones
             </Group>
           </Tabs.Tab>
+          <Tabs.Tab
+            value="equipamiento"
+            style={TAB_HOVER_STYLE}
+            disabled={!presupuestoId || !financiadorId}
+          >
+            <Group gap="xs">
+              <BeakerIcon style={ICON_SIZE} />
+              Equipamiento
+            </Group>
+          </Tabs.Tab>
           <Tabs.Tab value="historial" style={TAB_HOVER_STYLE}>
             <Group gap="xs">
               <ClockIcon style={ICON_SIZE} />
@@ -714,6 +742,20 @@ export default function UserDashboard() {
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
             onFinanciadorChange={handleFinanciadorChange}
+            soloLectura={soloLectura}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="equipamiento" pt="md">
+          <Equipamiento
+            presupuestoId={presupuestoId}
+            financiadorId={financiadorId}
+            equipamientosSeleccionados={equipamientosSeleccionados}
+            setEquipamientosSeleccionados={setEquipamientosSeleccionados}
+            onTotalChange={(costo, facturar) => {
+              setTotalCostoEquipamiento(costo);
+              setTotalFacturarEquipamiento(facturar);
+            }}
             soloLectura={soloLectura}
           />
         </Tabs.Panel>

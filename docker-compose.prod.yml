@@ -8,8 +8,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports:
-      - "3306:3306"
+    # NO exponer puerto 3306 en producción (solo interno)
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -17,13 +16,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - presupuestador-network
 
   backend:
     build: ./backend
     container_name: presupuestador-backend
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "8500:4000"  # Puerto no estándar
     environment:
       DB_HOST: mysql
       DB_USER: root
@@ -32,21 +33,29 @@ services:
       PORT: 4000
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
-      FRONTEND_URL: http://localhost,http://192.168.1.197,http://presupuestador.local
+      FRONTEND_URL: https://tu-dominio.com,http://TU_IP_PRODUCCION:8080
     depends_on:
       mysql:
         condition: service_healthy
     volumes:
       - ./backend/logs:/app/logs
+    networks:
+      - presupuestador-network
 
   frontend:
     build: ./frontend
     container_name: presupuestador-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"  # Puerto no estándar
     depends_on:
       - backend
+    networks:
+      - presupuestador-network
 
 volumes:
   mysql_data:
+
+networks:
+  presupuestador-network:
+    driver: bridge

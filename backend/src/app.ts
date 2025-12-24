@@ -48,7 +48,8 @@ try {
 
 app.use(cors({ 
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // En desarrollo, permitir cualquier origen localhost
+    if (!origin || allowedOrigins.includes(origin) || (process.env.NODE_ENV === 'development' && origin?.includes('localhost'))) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -63,13 +64,15 @@ app.use(cors({
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
 app.use(express.json({ limit: '10mb' }));
-app.use(csrfProtection);
 
-// Auth routes (public)
+// Auth routes (public - sin CSRF)
 app.use('/api/auth', authRoutes);
 
-// Health check (public)
+// Health check (public - sin CSRF)
 app.use('/api/health', healthRoutes);
+
+// CSRF protection para rutas protegidas
+app.use(csrfProtection);
 
 // SSE routes (protected, but handles auth internally)
 app.use('/api/stream', sseRoutes);
