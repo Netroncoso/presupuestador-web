@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Title, Checkbox, ActionIcon } from '@mantine/core';
+import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Title, Checkbox, ActionIcon, Tooltip } from '@mantine/core';
 import { TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../api/api';
@@ -350,8 +350,16 @@ export default function Equipamiento({
                     <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '13px' }}>Equipamiento</Table.Th>
                     <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
                     <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Unit.</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Precio Unit.</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
+                      <Tooltip label="Valores mensuales">
+                        <span style={{ cursor: 'help' }}>Costo</span>
+                      </Tooltip>
+                    </Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
+                      <Tooltip label="Valores mensuales">
+                        <span style={{ cursor: 'help' }}>Precio a Facturar</span>
+                      </Tooltip>
+                    </Table.Th>
                     <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Costo</Table.Th>
                     <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Facturar</Table.Th>
                     <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>

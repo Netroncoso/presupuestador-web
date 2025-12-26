@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput, Text, Switch } from '@mantine/core';
+import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput, Text, Switch, Tooltip } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -203,7 +203,11 @@ export default function GestionEquipamientosBase() {
           <Table.Tr>
             <Table.Th>Equipamiento</Table.Th>
             <Table.Th style={{ width: '120px' }}>Tipo</Table.Th>
-            <Table.Th style={{ width: '140px' }}>Precio Referencia</Table.Th>
+            <Table.Th style={{ width: '140px' }}>
+              <Tooltip label="Valores mensuales">
+                <span style={{ cursor: 'help' }}>Precio Referencia</span>
+              </Tooltip>
+            </Table.Th>
             <Table.Th style={{ width: '100px' }}>Estado</Table.Th>
             <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
           </Table.Tr>
@@ -258,7 +262,11 @@ export default function GestionEquipamientosBase() {
             required
           />
           <NumberInput
-            label="Precio Referencia"
+            label={
+              <Tooltip label="Valor mensual">
+                <span style={{ cursor: 'help' }}>Precio Referencia</span>
+              </Tooltip>
+            }
             value={formData.precio_referencia}
             onChange={(val) => setFormData({ ...formData, precio_referencia: Number(val) || 0 })}
             decimalScale={2}

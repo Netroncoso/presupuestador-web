@@ -290,9 +290,21 @@ export default function GestionEquipamientos() {
               <Table.Tr>
                 <Table.Th>Equipamiento</Table.Th>
                 <Table.Th style={{ width: '100px' }}>Tipo</Table.Th>
-                <Table.Th style={{ width: '140px' }}>Precio Referencia</Table.Th>
-                <Table.Th style={{ width: '140px' }}>Costo Acuerdo</Table.Th>
-                <Table.Th style={{ width: '140px' }}>Precio Acuerdo</Table.Th>
+                <Table.Th style={{ width: '140px' }}>
+                  <Tooltip label="Valores mensuales">
+                    <span style={{ cursor: 'help' }}>Precio Referencia</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th style={{ width: '140px' }}>
+                  <Tooltip label="Valores mensuales">
+                    <span style={{ cursor: 'help' }}>Costo Acuerdo</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th style={{ width: '140px' }}>
+                  <Tooltip label="Valores mensuales">
+                    <span style={{ cursor: 'help' }}>Precio Acuerdo</span>
+                  </Tooltip>
+                </Table.Th>
                 <Table.Th style={{ width: '100px' }}>Estado</Table.Th>
                 <Table.Th style={{ width: '90px' }}>Acciones</Table.Th>
               </Table.Tr>
@@ -435,7 +447,11 @@ export default function GestionEquipamientos() {
                       clearable
                     />
                     <NumberInput
-                      label="Costo"
+                      label={
+                        <Tooltip label="Valor mensual">
+                          <span style={{ cursor: 'help' }}>Costo</span>
+                        </Tooltip>
+                      }
                       value={valor.valor_asignado ? Number(valor.valor_asignado) : undefined}
                       onChange={(val) => {
                         const updated = [...nuevosValores];
@@ -450,7 +466,11 @@ export default function GestionEquipamientos() {
                       style={{ flex: 1 }}
                     />
                     <NumberInput
-                      label="Precio"
+                      label={
+                        <Tooltip label="Valor mensual">
+                          <span style={{ cursor: 'help' }}>Precio</span>
+                        </Tooltip>
+                      }
                       value={valor.valor_facturar ? Number(valor.valor_facturar) : undefined}
                       onChange={(val) => {
                         const updated = [...nuevosValores];

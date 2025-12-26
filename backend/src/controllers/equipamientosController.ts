@@ -94,7 +94,7 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
          FROM financiador_equipamiento_valores v
          JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
          WHERE fe.idobra_social = ? AND fe.id_equipamiento = e.id),
-        999
+        DATEDIFF(CURDATE(), e.created_at)
       ) AS dias_sin_actualizar
      FROM equipamientos e
      WHERE e.activo = 1

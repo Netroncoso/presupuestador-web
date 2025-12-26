@@ -1,6 +1,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { Express } from 'express';
+import basicAuth from 'express-basic-auth';
 
 const options = {
   definition: {
@@ -81,7 +82,16 @@ const options = {
 const specs = swaggerJsdoc(options);
 
 export const setupSwagger = (app: Express) => {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  // Autenticación básica para Swagger
+  const swaggerAuth = basicAuth({
+    users: { 
+      'admin': process.env.SWAGGER_PASSWORD || 'swagger2025' 
+    },
+    challenge: true,
+    realm: 'Swagger Documentation'
+  });
+
+  app.use('/api-docs', swaggerAuth, swaggerUi.serve, swaggerUi.setup(specs, {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Presupuestador API Docs',
   }));
