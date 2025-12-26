@@ -47,37 +47,37 @@ export default function AdminDashboard() {
           <Tabs.Tab value="insumos">
             <Group gap="xs">
               <BeakerIcon style={ICON_SIZE} />
-              Gestión de Insumos
+              Insumos
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="prestadores">
             <Group gap="xs">
               <BanknotesIcon style={ICON_SIZE} />
-              Gestión de Financiador
+              Financiadores
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="servicios">
+            <Group gap="xs">
+              <NewspaperIcon style={ICON_SIZE} />
+              Servicios
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="equipamientos-base">
+            <Group gap="xs">
+              <LifebuoyIcon style={ICON_SIZE} />
+              Equipamientos
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="sucursales">
+            <Group gap="xs">
+              <BuildingStorefrontIcon style={ICON_SIZE} />
+              Sucursales
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="servicios-prestador">
             <Group gap="xs">
               <BriefcaseIcon style={ICON_SIZE} />
               Servicios por Financiador
-            </Group>
-          </Tabs.Tab>
-          <Tabs.Tab value="servicios">
-            <Group gap="xs">
-              <NewspaperIcon style={ICON_SIZE} />
-              Gestión de Servicios
-            </Group>
-          </Tabs.Tab>
-          <Tabs.Tab value="sucursales">
-            <Group gap="xs">
-              <BuildingStorefrontIcon style={ICON_SIZE} />
-              Gestión de Sucursales
-            </Group>
-          </Tabs.Tab>
-          <Tabs.Tab value="equipamientos-base">
-            <Group gap="xs">
-              <LifebuoyIcon style={ICON_SIZE} />
-              Gestión de Equipamientos
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="equipamientos">
@@ -87,18 +87,18 @@ export default function AdminDashboard() {
             </Group>
           </Tabs.Tab>
           {user?.username === 'admin' && (
-            <Tabs.Tab value="reglas">
+            <Tabs.Tab value="alertas">
               <Group gap="xs">
-                <CurrencyDollarIcon style={ICON_SIZE} />
-                Reglas de Negocio
+                <BellAlertIcon style={ICON_SIZE} />
+                Alertas por Tipo
               </Group>
             </Tabs.Tab>
           )}
           {user?.username === 'admin' && (
-            <Tabs.Tab value="alertas">
+            <Tabs.Tab value="reglas">
               <Group gap="xs">
-                <BellAlertIcon style={ICON_SIZE} />
-                Alertas de Servicios
+                <CurrencyDollarIcon style={ICON_SIZE} />
+                Reglas de Negocio
               </Group>
             </Tabs.Tab>
           )}

@@ -9,6 +9,7 @@ interface Insumo {
   idInsumos: number;
   producto: string;
   costo: number;
+  codigo_producto?: string;
 }
 
 export default function GestionInsumos() {
@@ -19,7 +20,7 @@ export default function GestionInsumos() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null);
   const [deletingInsumo, setDeletingInsumo] = useState<Insumo | null>(null);
-  const [formData, setFormData] = useState({ producto: '', costo: 0 });
+  const [formData, setFormData] = useState({ producto: '', costo: 0, codigo_producto: '' });
   const [loading, setLoading] = useState(false);
 
   const formatProductName = (name: string) => {
@@ -27,7 +28,8 @@ export default function GestionInsumos() {
   };
 
   const insumosFiltrados = insumos.filter(insumo =>
-    insumo.producto.toLowerCase().includes(filtro.toLowerCase())
+    insumo.producto.toLowerCase().includes(filtro.toLowerCase()) ||
+    (insumo.codigo_producto && insumo.codigo_producto.toLowerCase().includes(filtro.toLowerCase()))
   );
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function GestionInsumos() {
       
       setModalOpen(false);
       setEditingInsumo(null);
-      setFormData({ producto: '', costo: 0 });
+      setFormData({ producto: '', costo: 0, codigo_producto: '' });
       cargarInsumos();
     } catch (error: any) {
       notifications.show({
@@ -92,7 +94,7 @@ export default function GestionInsumos() {
 
   const handleEdit = (insumo: Insumo) => {
     setEditingInsumo(insumo);
-    setFormData({ producto: insumo.producto, costo: insumo.costo });
+    setFormData({ producto: insumo.producto, costo: insumo.costo, codigo_producto: insumo.codigo_producto || '' });
     setModalOpen(true);
   };
 
@@ -128,7 +130,7 @@ export default function GestionInsumos() {
 
   const openNewModal = () => {
     setEditingInsumo(null);
-    setFormData({ producto: '', costo: 0 });
+    setFormData({ producto: '', costo: 0, codigo_producto: '' });
     setModalOpen(true);
   };
 
@@ -136,7 +138,7 @@ export default function GestionInsumos() {
     <Stack gap="md">
       <Group style={{ justifyContent: 'space-between' }}>
         <TextInput
-          placeholder="Buscar insumos..."
+          placeholder="Buscar por nombre o código..."
           leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
@@ -159,6 +161,7 @@ export default function GestionInsumos() {
           <Table.Tr>
             <Table.Th style={{ width: '50px' }}>Sel.</Table.Th>
             <Table.Th>Producto</Table.Th>
+            <Table.Th style={{ width: '150px' }}>Código</Table.Th>
             <Table.Th style={{ width: '120px' }}>Costo</Table.Th>
             <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
           </Table.Tr>
@@ -173,6 +176,11 @@ export default function GestionInsumos() {
                 />
               </Table.Td>
               <Table.Td>{formatProductName(insumo.producto)}</Table.Td>
+              <Table.Td>
+                <Text size="sm" c={insumo.codigo_producto ? 'dark' : 'dimmed'}>
+                  {insumo.codigo_producto || '-'}
+                </Text>
+              </Table.Td>
               <Table.Td>$ {Number(insumo.costo).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
@@ -201,6 +209,12 @@ export default function GestionInsumos() {
             value={formData.producto}
             onChange={(e) => setFormData({ ...formData, producto: e.target.value })}
             required
+          />
+          <TextInput
+            label="Código de Producto (EAN/SKU)"
+            value={formData.codigo_producto}
+            onChange={(e) => setFormData({ ...formData, codigo_producto: e.target.value })}
+            placeholder="Opcional"
           />
           <NumberInput
             label="Costo"

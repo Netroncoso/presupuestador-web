@@ -5,13 +5,13 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler';
 
 export const getAllInsumos = asyncHandler(async (req: Request, res: Response) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT idInsumos, producto, costo FROM insumos ORDER BY producto'
+    'SELECT idInsumos, producto, costo, codigo_producto FROM insumos ORDER BY producto'
   );
   res.json(rows);
 });
 
 export const createInsumo = asyncHandler(async (req: Request, res: Response) => {
-  const { producto, costo } = req.body;
+  const { producto, costo, codigo_producto } = req.body;
 
   if (!producto || costo === undefined) {
     throw new AppError(400, 'Producto y costo son requeridos');
@@ -19,14 +19,15 @@ export const createInsumo = asyncHandler(async (req: Request, res: Response) => 
 
   try {
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO insumos (producto, costo) VALUES (?, ?)',
-      [producto, costo]
+      'INSERT INTO insumos (producto, costo, codigo_producto) VALUES (?, ?, ?)',
+      [producto, costo, codigo_producto || null]
     );
 
     res.status(201).json({
       id: result.insertId,
       producto,
       costo,
+      codigo_producto,
       message: 'Insumo creado correctamente'
     });
   } catch (err: any) {
@@ -39,7 +40,7 @@ export const createInsumo = asyncHandler(async (req: Request, res: Response) => 
 
 export const updateInsumo = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { producto, costo } = req.body;
+  const { producto, costo, codigo_producto } = req.body;
 
   if (!producto || costo === undefined) {
     throw new AppError(400, 'Producto y costo son requeridos');
@@ -47,8 +48,8 @@ export const updateInsumo = asyncHandler(async (req: Request, res: Response) => 
 
   try {
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE insumos SET producto = ?, costo = ? WHERE idInsumos = ?',
-      [producto, costo, id]
+      'UPDATE insumos SET producto = ?, costo = ?, codigo_producto = ? WHERE idInsumos = ?',
+      [producto, costo, codigo_producto || null, id]
     );
 
     if (result.affectedRows === 0) {

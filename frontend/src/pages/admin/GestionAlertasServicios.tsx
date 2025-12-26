@@ -14,11 +14,23 @@ interface AlertaServicio {
   activo: number;
 }
 
+interface AlertaEquipamiento {
+  id: number;
+  nombre: string;
+  activo_alerta: number;
+  cantidad_maxima: number | null;
+  mensaje_alerta: string | null;
+  color_alerta: string;
+}
+
 export default function GestionAlertasServicios() {
   const [alertas, setAlertas] = useState<AlertaServicio[]>([]);
+  const [alertasEquipamientos, setAlertasEquipamientos] = useState<AlertaEquipamiento[]>([]);
   const [tiposUnidad, setTiposUnidad] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalEquipamientoOpen, setModalEquipamientoOpen] = useState(false);
   const [editingAlerta, setEditingAlerta] = useState<AlertaServicio | null>(null);
+  const [editingEquipamiento, setEditingEquipamiento] = useState<AlertaEquipamiento | null>(null);
   const [formData, setFormData] = useState({
     tipo_unidad: '',
     cantidad_maxima: 0,
@@ -26,12 +38,32 @@ export default function GestionAlertasServicios() {
     color_alerta: 'orange',
     activo: 1
   });
+  const [formDataEquipamiento, setFormDataEquipamiento] = useState({
+    activo_alerta: 0,
+    cantidad_maxima: 0,
+    mensaje_alerta: '',
+    color_alerta: 'orange'
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     cargarAlertas();
+    cargarAlertasEquipamientos();
     cargarTiposUnidad();
   }, []);
+
+  const cargarAlertasEquipamientos = async () => {
+    try {
+      const { data } = await api.get('/alertas-equipamientos');
+      setAlertasEquipamientos(data);
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Error al cargar alertas de equipamientos',
+        color: 'red'
+      });
+    }
+  };
 
   const cargarTiposUnidad = async () => {
     try {
@@ -111,6 +143,44 @@ export default function GestionAlertasServicios() {
     }
   };
 
+  const handleEditEquipamiento = (alerta: AlertaEquipamiento) => {
+    setEditingEquipamiento(alerta);
+    setFormDataEquipamiento({
+      activo_alerta: alerta.activo_alerta,
+      cantidad_maxima: alerta.cantidad_maxima || 0,
+      mensaje_alerta: alerta.mensaje_alerta || '',
+      color_alerta: alerta.color_alerta || 'orange'
+    });
+    setModalEquipamientoOpen(true);
+  };
+
+  const handleSubmitEquipamiento = async () => {
+    if (!editingEquipamiento) return;
+
+    setLoading(true);
+    try {
+      await api.put(`/alertas-equipamientos/${editingEquipamiento.id}`, formDataEquipamiento);
+      notifications.show({
+        title: 'Éxito',
+        message: 'Alerta actualizada correctamente',
+        color: 'green'
+      });
+      
+      setModalEquipamientoOpen(false);
+      setEditingEquipamiento(null);
+      setFormDataEquipamiento({ activo_alerta: 0, cantidad_maxima: 0, mensaje_alerta: '', color_alerta: 'orange' });
+      cargarAlertasEquipamientos();
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Error al guardar alerta',
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openNewModal = () => {
     setEditingAlerta(null);
     setFormData({ tipo_unidad: '', cantidad_maxima: 0, mensaje_alerta: '', color_alerta: 'orange', activo: 1 });
@@ -119,16 +189,18 @@ export default function GestionAlertasServicios() {
   };
 
   return (
-    <Stack gap="md">
-      <Group justify="space-between">
-        <div>
-          <Title order={3}>Alertas por Tipo de Unidad</Title>
-          <Text size="sm" c="dimmed">Configuración de alertas estándar por tipo de unidad (horas, sesiones, días, etc.)</Text>
-        </div>
-        <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
-          Nueva Alerta
-        </Button>
-      </Group>
+    <Stack gap="xl">
+      {/* Alertas de Servicios */}
+      <Stack gap="md">
+        <Group justify="space-between">
+          <div>
+            <Title order={3}>Alertas por Tipo de Unidad (Servicios)</Title>
+            <Text size="sm" c="dimmed">Configuración de alertas estándar por tipo de unidad (horas, sesiones, días, etc.)</Text>
+          </div>
+          <Button leftSection={<PlusIcon width={16} height={16} />} onClick={openNewModal}>
+            Nueva Alerta
+          </Button>
+        </Group>
 
       <AdminTable isEmpty={alertas.length === 0} emptyMessage="No hay alertas configuradas" minWidth={900}>
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
@@ -173,6 +245,59 @@ export default function GestionAlertasServicios() {
           ))}
         </Table.Tbody>
       </AdminTable>
+      </Stack>
+
+      {/* Alertas de Equipamientos */}
+      <Stack gap="md">
+        <div>
+          <Title order={3}>Alertas por Tipo de Equipamiento</Title>
+          <Text size="sm" c="dimmed">Configuración de alertas por tipo de equipamiento (oxigenoterapia, mobiliario, etc.)</Text>
+        </div>
+
+        <AdminTable isEmpty={alertasEquipamientos.length === 0} emptyMessage="No hay tipos de equipamiento" minWidth={900}>
+          <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
+            <Table.Tr>
+              <Table.Th>Tipo de Equipamiento</Table.Th>
+              <Table.Th style={{ width: '150px' }}>Cantidad Máxima</Table.Th>
+              <Table.Th>Mensaje</Table.Th>
+              <Table.Th style={{ width: '100px' }}>Color</Table.Th>
+              <Table.Th style={{ width: '80px' }}>Estado</Table.Th>
+              <Table.Th style={{ width: '80px' }}>Acciones</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {alertasEquipamientos.map((alerta) => (
+              <Table.Tr key={alerta.id}>
+                <Table.Td style={{ textTransform: 'capitalize' }}>{alerta.nombre}</Table.Td>
+                <Table.Td>{alerta.cantidad_maxima || '-'}</Table.Td>
+                <Table.Td style={{ maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {alerta.mensaje_alerta || '-'}
+                </Table.Td>
+                <Table.Td>
+                  <div style={{
+                    marginLeft: '0px', 
+                    width: '20px', 
+                    height: '20px', 
+                    backgroundColor: alerta.color_alerta, 
+                    borderRadius: '100px',
+                    border: 'none'
+                  }} />
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" c={alerta.activo_alerta ? 'green' : 'gray'}>
+                    {alerta.activo_alerta ? 'Activo' : 'Inactivo'}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <ActionIcon variant="transparent" onClick={() => handleEditEquipamiento(alerta)}>
+                    <PencilSquareIcon width={20} height={20} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </AdminTable>
+      </Stack>
 
       <Modal
         opened={modalOpen}
@@ -232,6 +357,61 @@ export default function GestionAlertasServicios() {
             </Button>
             <Button onClick={handleSubmit} loading={loading}>
               {editingAlerta ? 'Actualizar' : 'Crear'}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Modal Equipamientos */}
+      <Modal
+        opened={modalEquipamientoOpen}
+        onClose={() => setModalEquipamientoOpen(false)}
+        title={`Editar Alerta: ${editingEquipamiento?.nombre || ''}`}
+        size="lg"
+      >
+        <Stack gap="md">
+          <Switch
+            label="Alerta Activa"
+            checked={formDataEquipamiento.activo_alerta === 1}
+            onChange={(e) => setFormDataEquipamiento({ ...formDataEquipamiento, activo_alerta: e.target.checked ? 1 : 0 })}
+          />
+          
+          <NumberInput
+            label="Cantidad Máxima"
+            value={formDataEquipamiento.cantidad_maxima}
+            onChange={(value) => setFormDataEquipamiento({ ...formDataEquipamiento, cantidad_maxima: Number(value) || 0 })}
+            min={0}
+            step={1}
+            disabled={formDataEquipamiento.activo_alerta === 0}
+          />
+
+          <Textarea
+            label="Mensaje de Alerta"
+            value={formDataEquipamiento.mensaje_alerta}
+            onChange={(e) => setFormDataEquipamiento({ ...formDataEquipamiento, mensaje_alerta: e.target.value })}
+            placeholder="Mensaje que se mostrará cuando se exceda la cantidad"
+            minRows={3}
+            disabled={formDataEquipamiento.activo_alerta === 0}
+          />
+
+          <Select
+            label="Color de Alerta"
+            value={formDataEquipamiento.color_alerta}
+            onChange={(value) => setFormDataEquipamiento({ ...formDataEquipamiento, color_alerta: value || 'orange' })}
+            data={[
+              { value: 'orange', label: 'Naranja (Advertencia)' },
+              { value: 'red', label: 'Rojo (Crítico)' },
+              { value: 'yellow', label: 'Amarillo (Información)' }
+            ]}
+            disabled={formDataEquipamiento.activo_alerta === 0}
+          />
+
+          <Group justify="flex-end">
+            <Button variant="outline" onClick={() => setModalEquipamientoOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmitEquipamiento} loading={loading}>
+              Actualizar
             </Button>
           </Group>
         </Stack>
