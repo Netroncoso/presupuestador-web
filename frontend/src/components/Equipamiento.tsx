@@ -109,6 +109,7 @@ export default function Equipamiento({
     if (!equipo) return;
 
     const existeIndex = equipamientosSeleccionados.findIndex(e => e.id_equipamiento === equipamientoSeleccionado);
+    const equipamientosAnteriores = [...equipamientosSeleccionados];
 
     const nuevo: Equipamiento = {
       id: existeIndex >= 0 ? equipamientosSeleccionados[existeIndex].id : Date.now(),
@@ -129,6 +130,26 @@ export default function Equipamiento({
       setEquipamientosSeleccionados([...equipamientosSeleccionados, nuevo]);
     }
 
+    if (presupuestoId) {
+      api.post(`/presupuestos/${presupuestoId}/equipamientos`, {
+        id_equipamiento: equipo.id,
+        nombre: equipo.nombre,
+        tipo: equipo.tipo,
+        cantidad,
+        costo: equipo.valor_asignado,
+        precio_facturar: equipo.valor_facturar
+      }).catch((err: any) => {
+        console.error('Error saving equipamiento:', err);
+        setEquipamientosSeleccionados(equipamientosAnteriores);
+        notifications.show({
+          title: 'Error',
+          message: 'No se pudo guardar el equipamiento',
+          color: 'red'
+        });
+        return;
+      });
+    }
+
     setCantidad(1);
     setEquipamientoSeleccionado(null);
 
@@ -140,8 +161,26 @@ export default function Equipamiento({
   };
 
   const eliminarEquipamiento = (index: number) => {
+    const equipamiento = equipamientosSeleccionados[index];
+    const equipamientosAnteriores = [...equipamientosSeleccionados];
     const nuevos = equipamientosSeleccionados.filter((_, i) => i !== index);
     setEquipamientosSeleccionados(nuevos);
+
+    if (presupuestoId) {
+      api.delete(`/presupuestos/${presupuestoId}/equipamientos`, {
+        data: { id_equipamiento: equipamiento.id_equipamiento }
+      }).catch((err: any) => {
+        console.error('Error deleting equipamiento:', err);
+        setEquipamientosSeleccionados(equipamientosAnteriores);
+        notifications.show({
+          title: 'Error',
+          message: 'No se pudo eliminar el equipamiento',
+          color: 'red'
+        });
+        return;
+      });
+    }
+
     notifications.show({
       title: 'Equipamiento Eliminado',
       message: 'Se eliminó el equipamiento seleccionado',
@@ -160,6 +199,18 @@ export default function Equipamiento({
       precio_facturar: nuevoPrecio
     };
     setEquipamientosSeleccionados(nuevos);
+
+    if (presupuestoId) {
+      api.post(`/presupuestos/${presupuestoId}/equipamientos`, {
+        id_equipamiento: nuevos[index].id_equipamiento,
+        nombre: nuevos[index].nombre,
+        tipo: nuevos[index].tipo,
+        cantidad: nuevaCantidad,
+        costo: nuevoCosto,
+        precio_facturar: nuevoPrecio
+      }).catch((err: any) => console.error('Error updating equipamiento:', err));
+    }
+
     setEditandoIndex(null);
 
     notifications.show({

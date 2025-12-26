@@ -41,16 +41,18 @@ export const usePresupuesto = () => {
     setPrestacionesSeleccionadas: (prestaciones: any[]) => void,
     setEsCargaHistorial?: (esHistorial: boolean) => void,
     soloLectura: boolean = true,
-    setTotalesDesdeDB?: (totales: any) => void
+    setTotalesDesdeDB?: (totales: any) => void,
+    setEquipamientosSeleccionados?: (equipamientos: any[]) => void
   ) => {
     try {
       setPresupuestoId(id);
       setClienteNombre(nombre);
 
-      const [presupuestoData, insumos, prestaciones] = await Promise.all([
+      const [presupuestoData, insumos, prestaciones, equipamientos] = await Promise.all([
         presupuestoService.obtener(id),
         presupuestoService.obtenerInsumos(id, soloLectura),
-        presupuestoService.obtenerPrestaciones(id, soloLectura)
+        presupuestoService.obtenerPrestaciones(id, soloLectura),
+        presupuestoService.obtenerEquipamientos(id)
       ]);
 
       // Cargar financiador desde el presupuesto (prioridad) o parámetro
@@ -74,9 +76,12 @@ export const usePresupuesto = () => {
         setPorcentajeInsumos(presupuestoData.porcentaje_insumos);
       }
 
-      // Siempre cargar insumos y prestaciones existentes
+      // Siempre cargar insumos, prestaciones y equipamientos existentes
       setInsumosSeleccionados(insumos);
       setPrestacionesSeleccionadas(prestaciones);
+      if (setEquipamientosSeleccionados) {
+        setEquipamientosSeleccionados(equipamientos);
+      }
       
       // Cargar totales desde BD SOLO en modo solo lectura
       // En modo edición, dejar que se recalculen automáticamente desde los items

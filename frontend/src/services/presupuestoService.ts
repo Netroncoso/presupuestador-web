@@ -60,5 +60,18 @@ export const presupuestoService = {
   obtenerPrestaciones: async (id: number, soloLectura: boolean = false): Promise<Prestacion[]> => {
     const res = await api.get(`/presupuestos/${id}/prestaciones?soloLectura=${soloLectura}`);
     return res.data;
+  },
+
+  /**
+   * Obtiene equipamientos de un presupuesto
+   */
+  obtenerEquipamientos: async (id: number): Promise<any[]> => {
+    try {
+      const res = await api.get(`/presupuestos/${id}/equipamientos`);
+      return res.data;
+    } catch (error) {
+      console.error('Error loading equipamientos:', error);
+      return [];
+    }
   }
 };

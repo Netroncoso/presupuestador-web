@@ -242,7 +242,8 @@ export default function UserDashboard() {
           setPrestacionesSeleccionadas,
           setEsCargaHistorial,
           true,
-          setTotalesDesdeBaseDatos
+          setTotalesDesdeBaseDatos,
+          setEquipamientosSeleccionados
         );
       } else {
         try {
@@ -274,7 +275,8 @@ export default function UserDashboard() {
             setPrestacionesSeleccionadas,
             setEsCargaHistorial,
             false,
-            setTotalesDesdeBaseDatos
+            setTotalesDesdeBaseDatos,
+            setEquipamientosSeleccionados
           );
         } catch (error) {
           console.error("Error al preparar edición:", error);
@@ -417,7 +419,8 @@ export default function UserDashboard() {
         setPrestacionesSeleccionadas,
         setEsCargaHistorial,
         false,
-        setTotalesDesdeBaseDatos
+        setTotalesDesdeBaseDatos,
+        setEquipamientosSeleccionados
       );
 
       cerrarModalEdicion();
