@@ -72,14 +72,15 @@ export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res
       COALESCE(
         (SELECT DATEDIFF(CURDATE(), MAX(fecha_inicio))
          FROM prestador_servicio_valores v
-         WHERE v.id_prestador_servicio = ps.id_prestador_servicio),
+         WHERE v.id_prestador_servicio = ps.id_prestador_servicio
+           AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)),
         999
       ) AS dias_sin_actualizar
      FROM prestador_servicio AS ps
      JOIN servicios AS s ON ps.id_servicio = s.id_servicio
      WHERE ps.idobra_social = ? AND ps.activo = 1
      HAVING valor_facturar IS NOT NULL`, 
-    [sucursalId, fecha, fecha, sucursalId, fecha, fecha, id]
+    [sucursalId, fecha, fecha, sucursalId, fecha, fecha, sucursalId, id]
   );
   res.json(rows);
 });
