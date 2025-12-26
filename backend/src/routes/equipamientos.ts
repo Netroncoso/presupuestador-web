@@ -4,6 +4,22 @@ import * as equipamientosController from '../controllers/equipamientosController
 
 const router = Router();
 
+// Rutas admin CRUD base
+router.get('/admin', authenticateToken, requireAdmin, equipamientosController.getAllEquipamientos);
+router.post('/admin', authenticateToken, requireAdmin, equipamientosController.crearEquipamiento);
+router.put('/admin/:id', authenticateToken, requireAdmin, equipamientosController.actualizarEquipamiento);
+router.delete('/admin/:id', authenticateToken, requireAdmin, equipamientosController.eliminarEquipamiento);
+
+// Rutas tipos
+router.get('/tipos', authenticateToken, equipamientosController.getTiposEquipamiento);
+router.post('/tipos', authenticateToken, requireAdmin, equipamientosController.crearTipoEquipamiento);
+
+// Rutas admin acuerdos
+router.get('/admin/financiador/:id', authenticateToken, requireAdmin, equipamientosController.getEquipamientosPorFinanciadorAdmin);
+router.put('/admin/acuerdo/:id', authenticateToken, requireAdmin, equipamientosController.actualizarAcuerdoEquipamiento);
+router.post('/admin/:id/valores', authenticateToken, requireAdmin, equipamientosController.agregarValorEquipamientoAdmin);
+router.get('/admin/:id/valores', authenticateToken, requireAdmin, equipamientosController.getValoresEquipamientoAdmin);
+
 // Rutas públicas (requieren autenticación)
 router.get('/', authenticateToken, equipamientosController.getEquipamientos);
 router.get('/financiador/:id', authenticateToken, equipamientosController.getEquipamientosPorFinanciador);

@@ -38,6 +38,7 @@ import {
   ClockIcon,
   BellIcon,
   ShieldCheckIcon,
+  LifebuoyIcon,
 } from "@heroicons/react/24/outline";
 import { ShieldExclamationIcon } from "@heroicons/react/24/solid";
 import { useAlertaCotizador } from "../hooks/useAlertaCotizador";
@@ -695,7 +696,7 @@ export default function UserDashboard() {
             disabled={!presupuestoId || !financiadorId}
           >
             <Group gap="xs">
-              <BeakerIcon style={ICON_SIZE} />
+              <LifebuoyIcon style={ICON_SIZE} />
               Equipamiento
             </Group>
           </Tabs.Tab>

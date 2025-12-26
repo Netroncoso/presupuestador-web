@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
-import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon } from '@heroicons/react/24/outline';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon, LifebuoyIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,6 +14,8 @@ import GestionSucursales from './admin/GestionSucursales';
 import GestionUsuarios from './admin/GestionUsuarios';
 import GestionReglasNegocio from './admin/GestionReglasNegocio';
 import GestionAlertasServicios from './admin/GestionAlertasServicios';
+import GestionEquipamientos from './admin/GestionEquipamientos';
+import GestionEquipamientosBase from './admin/GestionEquipamientosBase';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -72,6 +74,18 @@ export default function AdminDashboard() {
               Gestión de Sucursales
             </Group>
           </Tabs.Tab>
+          <Tabs.Tab value="equipamientos-base">
+            <Group gap="xs">
+              <LifebuoyIcon style={ICON_SIZE} />
+              Gestión de Equipamientos
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="equipamientos">
+            <Group gap="xs">
+              <LifebuoyIcon style={ICON_SIZE} />
+              Equipamientos por Financiador
+            </Group>
+          </Tabs.Tab>
           {user?.username === 'admin' && (
             <Tabs.Tab value="reglas">
               <Group gap="xs">
@@ -108,6 +122,14 @@ export default function AdminDashboard() {
 
         <Tabs.Panel value="sucursales" pt="md">
           <GestionSucursales />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="equipamientos-base" pt="md">
+          <GestionEquipamientosBase />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="equipamientos" pt="md">
+          <GestionEquipamientos />
         </Tabs.Panel>
 
         {user?.username === 'admin' && (
