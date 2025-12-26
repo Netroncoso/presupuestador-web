@@ -31,6 +31,20 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   useEffect(() => {
     api.get('/insumos').then(res => {
       setInsumosDisponibles(res.data)
+      
+      // Verificar insumos desactualizados
+      const desactualizados = res.data.filter((ins: any) => ins.dias_sin_actualizar > 45);
+      if (desactualizados.length > 0) {
+        notifications.show({
+          id: 'insumos-desactualizados',
+          title: '⚠️ Valores Desactualizados',
+          message: `${desactualizados.length} insumo(s) sin actualizar hace más de 45 días`,
+          color: 'yellow',
+          autoClose: false,
+          withCloseButton: true,
+          position: 'top-center'
+        });
+      }
     })
   }, [])
 
