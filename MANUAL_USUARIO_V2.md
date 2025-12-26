@@ -8,22 +8,26 @@
 4. [Crear Presupuesto](#crear-presupuesto)
 5. [Gestión de Insumos](#gestión-de-insumos)
 6. [Gestión de Prestaciones](#gestión-de-prestaciones)
-7. [Finalizar Presupuesto](#finalizar-presupuesto)
-8. [Historial](#historial)
-9. [Notificaciones](#notificaciones)
-10. [Dashboard Auditor](#dashboard-auditor)
-11. [Preguntas Frecuentes](#preguntas-frecuentes)
+7. [Gestión de Equipamientos](#gestión-de-equipamientos)
+8. [Finalizar Presupuesto](#finalizar-presupuesto)
+9. [Historial](#historial)
+10. [Notificaciones](#notificaciones)
+11. [Dashboard Gerencias](#dashboard-gerencias)
+12. [Dashboard Administrador](#dashboard-administrador)
+13. [Preguntas Frecuentes](#preguntas-frecuentes)
 
 ---
 
 ## Introducción
 
-El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma integral, con control de versiones, auditoría automatizada y notificaciones en tiempo real.
+El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma integral, con control de versiones, auditoría multi-gerencial automatizada y notificaciones en tiempo real.
 
 ### Roles del Sistema
 
 - **Usuario Normal**: Crea y gestiona presupuestos
-- **Auditor Médico**: Revisa y aprueba/rechaza presupuestos
+- **Gerencia Administrativa**: Primera línea de auditoría
+- **Gerencia Prestacional**: Segunda línea de auditoría técnica
+- **Gerencia General**: Última línea de auditoría y decisión final
 - **Administrador**: Gestión completa del sistema
 
 ---
@@ -49,6 +53,7 @@ El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma i
 **Panel de Totales:**
 - Insumos
 - Prestaciones
+- Equipamientos
 - Costo Total
 - Total a Facturar
 - Rentabilidad (con y sin plazo)
@@ -57,11 +62,13 @@ El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma i
 - Datos Paciente
 - Insumos
 - Prestaciones
+- Equipamiento
 - Historial
 - Notificaciones
 
 **Alertas Inteligentes:**
 - Se muestran automáticamente si el presupuesto cumple reglas de auditoría
+- Alertas de valores desactualizados (>45 días sin actualizar)
 - Colores: Rojo (crítico), Naranja (advertencia), Azul (información)
 
 ---
@@ -83,13 +90,19 @@ El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma i
 - Cargar presupuesto existente
 - Crear nuevo presupuesto
 
-### Paso 2: Agregar Insumos
+### Paso 2: Seleccionar Financiador
 
-Ver sección [Gestión de Insumos](#gestión-de-insumos)
+1. Ir a pestaña **"Prestaciones"**
+2. Seleccionar **financiador** del dropdown
+3. El sistema guarda automáticamente el financiador
 
-### Paso 3: Agregar Prestaciones
+**⚠️ Importante:** Si cambias el financiador después de agregar prestaciones, todas las prestaciones seleccionadas se eliminarán automáticamente.
 
-Ver sección [Gestión de Prestaciones](#gestión-de-prestaciones)
+### Paso 3: Agregar Items
+
+- Ver sección [Gestión de Insumos](#gestión-de-insumos)
+- Ver sección [Gestión de Prestaciones](#gestión-de-prestaciones)
+- Ver sección [Gestión de Equipamientos](#gestión-de-equipamientos)
 
 ### Paso 4: Finalizar
 
@@ -102,10 +115,17 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
 ### Agregar Insumo
 
 1. Ir a pestaña **"Insumos"**
-2. Buscar insumo en la tabla izquierda
+2. Buscar insumo en la tabla izquierda (por nombre o código de producto)
 3. Hacer clic en el **checkbox** del insumo deseado
 4. Ingresar **cantidad** en el panel derecho
 5. Hacer clic en **"Agregar"**
+
+### Alertas de Valores Desactualizados
+
+Al seleccionar un insumo con más de 45 días sin actualizar, aparecerá una alerta persistente en la parte superior indicando:
+- Nombre del insumo
+- Días sin actualizar
+- Botón X para cerrar
 
 ### Modificar Cantidad
 
@@ -122,6 +142,7 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
 
 ### Información Mostrada
 
+- **Código**: Código de producto (EAN/SKU) si existe
 - **Costo Unit.**: Costo base del insumo
 - **Precio a Facturar**: Costo + margen de sucursal
 - **Subtotal Costo**: Costo unitario × cantidad
@@ -131,23 +152,6 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
 
 ## Gestión de Prestaciones
 
-### Seleccionar Financiador
-
-1. Ir a pestaña **"Prestaciones"**
-2. Seleccionar **financiador** del dropdown
-3. El sistema:
-   - Guarda automáticamente el financiador
-   - Carga prestaciones disponibles
-   - Muestra información del financiador
-
-**⚠️ Importante:** Si cambias el financiador después de agregar prestaciones, todas las prestaciones seleccionadas se eliminarán automáticamente.
-
-**Información del Financiador:**
-- Tasa Mensual
-- Días Cobranza Teórico
-- Días Cobranza Real
-- Acuerdo Asignado
-
 ### Agregar Prestación
 
 1. Buscar prestación en la tabla izquierda
@@ -156,6 +160,10 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
    - **Cantidad**: Ajustar si es necesario
    - **Valor**: Seleccionar del dropdown (80%, 90%, 100%, 110%, 120%, 150%)
 4. Hacer clic en **"Agregar"**
+
+### Alertas de Valores Desactualizados
+
+Similar a insumos, se muestran alertas para prestaciones con >45 días sin actualizar.
 
 ### Modificar Prestación
 
@@ -178,6 +186,41 @@ Ver sección [Finalizar Presupuesto](#finalizar-presupuesto)
 
 ---
 
+## Gestión de Equipamientos
+
+### Agregar Equipamiento
+
+1. Ir a pestaña **"Equipamiento"**
+2. Buscar equipamiento en la tabla izquierda
+3. Hacer clic en el **checkbox** del equipamiento deseado
+4. Ingresar **cantidad** en el panel derecho
+5. Hacer clic en **"Agregar"**
+
+### Tipos de Equipamiento
+
+- **Oxigenoterapia**: Tubos de oxígeno, concentradores
+- **Mobiliario**: Camas, colchones
+- **Monitoreo**: Monitores, oxímetros
+- **Ventilación**: Nebulizadores, ventiladores
+- **Otro**: Otros equipos médicos
+
+### Valores de Equipamiento
+
+- **Con acuerdo**: Usa valor negociado con el financiador
+- **Sin acuerdo**: Usa precio_referencia (valor general)
+- Todos los equipamientos activos están disponibles para todos los financiadores
+
+### Alertas por Tipo
+
+Algunos tipos de equipamiento generan alertas automáticas al superar umbrales configurados:
+- Ejemplo: "5+ tubos de oxígeno → Alto consumo - Paciente complejo"
+
+### Modificar/Eliminar
+
+Similar a insumos y prestaciones, usar íconos de lápiz y papelera.
+
+---
+
 ## Finalizar Presupuesto
 
 ### Proceso
@@ -192,16 +235,19 @@ El sistema evalúa **4 reglas automáticas**:
 
 1. **Rentabilidad < 15%** → Va a auditoría
 2. **Costo Total > $150,000** → Va a auditoría
-3. **Difícil Acceso = 'SI'** → Va a auditoría
-4. **Rentabilidad con Plazo > 25%** → Va a auditoría
+3. **Rentabilidad con Plazo > 25%** → Posible sobreprecio
+4. **Utilidad > $50,000** → Alta utilidad
+
+**Nota:** Todos los umbrales son configurables por el administrador.
 
 **Si cumple alguna regla:**
 - Estado: **Pendiente**
-- Se notifica a auditores médicos
+- Se notifica a gerencias
 - Esperar aprobación/rechazo
+- Asignación FCFS (primer gerente disponible)
 
 **Si NO cumple ninguna regla:**
-- Estado: **Borrador**
+- Estado: **Aprobado**
 - Listo para usar
 - No requiere auditoría
 
@@ -232,11 +278,13 @@ El sistema evalúa **4 reglas automáticas**:
 - Carga el presupuesto en modo **solo lectura**
 - No se pueden hacer modificaciones
 - Banner azul indica modo visualización
+- Muestra valores históricos de la fecha del presupuesto
 
 **Lápiz (Editar):**
 - Si es **borrador**: Edita directamente
 - Si está **finalizado/aprobado**: Muestra modal de confirmación
 - Crea nueva versión si es necesario
+- Actualiza valores a precios actuales
 
 ### Modo Solo Lectura
 
@@ -245,6 +293,7 @@ Cuando se visualiza un presupuesto:
 - Campos deshabilitados
 - Sin botones de edición/eliminación
 - Solo visualización de datos
+- Valores de época (precios vigentes en esa fecha)
 
 ---
 
@@ -252,41 +301,79 @@ Cuando se visualiza un presupuesto:
 
 ### Tipos de Notificaciones
 
-1. **Aprobado** (verde): Presupuesto aprobado por auditor
-2. **Rechazado** (rojo): Presupuesto rechazado por auditor
-3. **Pendiente** (amarillo): Presupuesto requiere auditoría
+1. **Aprobado** (verde): Presupuesto aprobado por gerencia
+2. **Rechazado** (rojo): Presupuesto rechazado
+3. **Observado** (amarillo): Requiere correcciones
+4. **En Revisión** (azul): Gerencia está revisando
+5. **Pendiente** (naranja): Requiere auditoría
 
 ### Ver Notificaciones
 
 1. Ir a pestaña **"Notificaciones"**
 2. Ver lista de notificaciones recientes
-3. Hacer clic en **"Ir a Auditoría"** para ver detalles
+3. Hacer clic en **"Ver Detalle"** para más información
 
 ### Indicador de Notificaciones
 
 - Número en badge rojo en la pestaña
-- Se actualiza en tiempo real
+- Se actualiza en tiempo real (SSE)
 - Desaparece al marcar como leída
 
 ---
 
-## Dashboard Auditor
+## Dashboard Gerencias
 
 ### Acceso
 
-Solo usuarios con rol **"auditor_medico"** tienen acceso.
+Usuarios con roles:
+- **gerencia_administrativa**
+- **gerencia_prestacional**
+- **gerencia_general**
+
+### Sistema Multi-Gerencial
+
+**Flujo de Auditoría:**
+
+1. **Gerencia Administrativa** (Primera línea)
+   - Aprobar directamente
+   - Rechazar con motivo
+   - Derivar a Gerencia Prestacional
+   - Aprobación condicional (casos estratégicos)
+
+2. **Gerencia Prestacional** (Segunda línea)
+   - Aprobar directamente
+   - Rechazar con motivo
+   - Observar (devolver a usuario para correcciones)
+   - Escalar a Gerencia General
+   - Aprobación condicional
+
+3. **Gerencia General** (Última línea)
+   - Aprobar directamente
+   - Rechazar con motivo
+   - Devolver a otras gerencias
+   - Aprobación condicional
+   - Decisión final
+
+### Asignación FCFS
+
+- **First Come First Served**: Primer gerente disponible toma el caso
+- Al hacer clic en "Tomar Caso", el presupuesto se asigna
+- Otros gerentes no pueden ver casos asignados
+- Auto-liberación: Casos inactivos >30 min vuelven a disponibles
 
 ### Pestañas
 
-1. **Presupuestos Pendientes**: Lista de presupuestos para revisar
-2. **Historial**: Todos los presupuestos (solo lectura)
-3. **Notificaciones**: Alertas del sistema
+1. **Presupuestos Pendientes**: Lista de casos para revisar
+2. **Mis Casos**: Casos asignados a mí
+3. **Historial**: Todos los presupuestos (solo lectura)
+4. **Notificaciones**: Alertas del sistema
 
 ### Revisar Presupuesto
 
 1. En **"Presupuestos Pendientes"**
-2. Hacer clic en ícono de **ojo** para ver detalle
-3. Hacer clic en ícono de **escudo** para auditar
+2. Hacer clic en **"Tomar Caso"**
+3. Revisar detalle completo
+4. Elegir acción según rol
 
 ### Modal de Auditoría
 
@@ -295,26 +382,21 @@ Solo usuarios con rol **"auditor_medico"** tienen acceso.
 - Versión del presupuesto
 - Costo Total
 - Rentabilidad
+- Historial de auditoría humanizado
 
-**Acciones:**
-- **Aprobar**: Escribe "APROBADO: [comentario opcional]"
-- **Rechazar**: Escribe "RECHAZADO: [motivo]"
-- **En Revisión**: Escribe comentario sin prefijo
+**Acciones Disponibles:**
+- **Aprobar**: Finaliza el proceso
+- **Rechazar**: Requiere motivo
+- **Derivar/Escalar**: Envía a otra gerencia
+- **Observar**: Devuelve a usuario (solo G. Prestacional)
+- **Aprobación Condicional**: Para casos políticos/estratégicos
 
-### Ver Detalle
+### Historial de Auditoría
 
-Modal muestra:
-- Información del paciente
-- Totales del presupuesto
-- Lista de prestaciones
-- Lista de insumos
-- Estado y versión
-
-### Historial (Auditor)
-
-- Solo botón de **ojo** (ver detalle)
-- Sin opciones de edición
-- Acceso a todos los presupuestos del sistema
+Muestra en lenguaje natural:
+- "Hace 2 horas, Juan Pérez (G. Administrativa) derivó a G. Prestacional"
+- "Hace 1 día, María García (G. Prestacional) observó: Revisar cantidad de insumos"
+- Fechas relativas (hace X minutos/horas/días)
 
 ---
 
@@ -326,34 +408,29 @@ Solo usuarios con rol **"admin"** tienen acceso completo.
 
 ### Pestañas Disponibles
 
-1. **Usuarios**: Gestión de usuarios del sistema
-2. **Insumos**: Administración de catálogo de insumos
-3. **Prestadores**: Gestión de financiadores/obras sociales
-4. **Servicios**: Administración de servicios médicos
-5. **Servicios por Prestador**: Gestión de valores históricos
-6. **Sucursales**: Administración de sucursales
-7. **Historial**: Todos los presupuestos del sistema
-8. **Notificaciones**: Alertas del sistema
+1. **Insumos**: Administración de catálogo de insumos
+2. **Financiadores**: Gestión de financiadores/obras sociales
+3. **Servicios**: Administración de servicios médicos
+4. **Equipamientos**: Gestión de equipamientos base
+5. **Sucursales**: Administración de sucursales
+6. **Serv/ Financiador**: Gestión de valores históricos de servicios
+7. **Equip/ Financiador**: Gestión de valores históricos de equipamientos
+8. **Alertas/ Tipo**: Configuración de alertas por tipo
+9. **Reglas de Negocio**: Configuración de umbrales de auditoría
 
 ### Gestión de Usuarios
 
 **Crear Usuario:**
-1. Hacer clic en **"Nuevo Usuario"**
+1. Hacer clic en ícono de **usuario +** en barra superior
 2. Completar formulario:
    - Username
    - Password
-   - Rol (user, auditor_medico, admin)
+   - Rol (user, gerencia_administrativa, gerencia_prestacional, gerencia_general, admin)
    - Sucursal asignada
 3. Hacer clic en **"Crear"**
 
-**Editar Usuario:**
-1. Hacer clic en ícono de **lápiz**
-2. Modificar datos
-3. Guardar cambios
-
-**Eliminar Usuario:**
-1. Hacer clic en ícono de **papelera**
-2. Confirmar eliminación
+**Editar/Eliminar:**
+- Usar íconos de lápiz y papelera en cada fila
 
 ### Gestión de Insumos
 
@@ -361,163 +438,96 @@ Solo usuarios con rol **"admin"** tienen acceso completo.
 1. Hacer clic en **"Nuevo Insumo"**
 2. Completar:
    - Nombre del producto
+   - Código de producto (EAN/SKU) - opcional
    - Costo base
    - Categoría
 3. Guardar
 
-**Editar/Eliminar:**
-- Usar íconos de lápiz y papelera en cada fila
+**Filtrado:**
+- Por nombre O código de producto
+- Búsqueda en tiempo real
 
-### Gestión de Prestadores
+### Gestión de Equipamientos Base
 
-**Agregar Financiador:**
-1. Hacer clic en **"Nuevo Prestador"**
+**Agregar Equipamiento:**
+1. Hacer clic en **"Nuevo Equipamiento"**
 2. Completar:
-   - Nombre del financiador
-   - Tasa mensual (%)
-   - Días cobranza teórico
-   - Días cobranza real
-   - Acuerdo asignado
+   - Nombre
+   - Tipo (oxigenoterapia, mobiliario, monitoreo, ventilacion, otro)
+   - Precio referencia (valor general)
+   - Estado activo/inactivo
 3. Guardar
 
-**Información Importante:**
-- La tasa mensual se usa para calcular rentabilidad con plazo
-- Los días de cobranza afectan el cálculo de valor presente
+**Gestionar Tipos:**
+- Modal para ver y agregar tipos de equipamiento
+- Tipos predefinidos del sistema
 
-### Gestión de Servicios
-
-**Agregar Servicio:**
-1. Hacer clic en **"Nuevo Servicio"**
-2. Completar:
-   - Nombre del servicio
-   - Tipo de unidad (horas, sesiones, días, etc.)
-   - Máximo de unidades sugerido
-3. Guardar
-
-**Tipos de Unidad:**
-- horas
-- sesiones
-- días
-- unidades
-- visitas
-
-### Servicios por Prestador (Valores Históricos)
-
-**¿Qué es?**
-
-Permite gestionar precios de servicios por períodos de vigencia, manteniendo un historial completo de cambios de precios.
+### Servicios por Financiador (Valores Históricos)
 
 **Seleccionar Financiador:**
-1. Ir a pestaña **"Servicios por Prestador"**
+1. Ir a pestaña **"Serv/ Financiador"**
 2. Seleccionar financiador del dropdown
 3. Ver lista de todos los servicios disponibles
 
-**Activar/Desactivar Servicio:**
-1. Usar el **switch** en la columna "Estado"
-2. Verde = Activo, Gris = Inactivo
-3. Solo servicios activos aparecen al crear presupuestos
-
 **Editar Valores del Servicio:**
 
-1. Hacer clic en ícono de **lápiz** en la columna "Acciones"
-2. Se abre modal con tres secciones:
+1. Hacer clic en ícono de **lápiz**
+2. Modal con tres secciones:
 
-**Sección 1: Valores Actuales del Servicio**
-- **Valor Sugerido**: Costo base del servicio ($ formato argentino)
-- **Valor a Facturar**: Precio al financiador ($ formato argentino)
-- **Cantidad Sugerida**: Cantidad inicial recomendada
-- **Estado del Servicio**: Switch para activar/desactivar
-- Botón **"Guardar Cambios"**: Actualiza valores en `prestador_servicio`
+**Sección 1: Estado del Servicio**
+- Switch para activar/desactivar
+- Solo servicios activos aparecen al crear presupuestos
 
 **Sección 2: Agregar Valores con Fecha de Vigencia**
-- **Valor Sugerido**: Nuevo costo base
+- **Valor Asignado**: Nuevo costo base
 - **Valor a Facturar**: Nuevo precio al financiador
-- **Fecha Inicio**: Fecha desde la cual aplica el nuevo valor
-- **Sucursal**: "Todas las sucursales" o específica
+- **Fecha Inicio**: Fecha desde la cual aplica
+- **Sucursal**: "Todas" o específica
 - Botón **"+"**: Agregar más valores futuros
 - Botón **"-"**: Eliminar fila
-- Botón **"Guardar Valor(es)"**: Guarda en `prestador_servicio_valores`
-
-⚠️ **Importante - Actualización de Valores Generales:**
-Al guardar un valor general (Todas las sucursales), el sistema cierra automáticamente valores específicos con más de 30 días de antigüedad para evitar inconsistencias de precios.
+- Formato monetario argentino ($ 1.234,56)
 
 **Sección 3: Histórico de Valores**
 - Tabla con todos los períodos de vigencia
-- Columnas:
-  - Sucursal (Todas / CABA / Córdoba)
-  - Fecha Inicio
-  - Fecha Fin ("Vigente" si es NULL)
-  - Valor Sugerido
-  - Valor Facturar
-  - Estado (Badge verde = Vigente, gris = Histórico)
-- Botón **"Ver/Actualizar Histórico"**: Recarga la tabla
+- Columnas: Sucursal, Fecha Inicio, Fecha Fin, Valor Asignado, Valor Facturar, Estado
+- Badge verde = Vigente, gris = Histórico
 
-**Formato Monetario:**
-- Todos los valores usan formato argentino: **$ 1.234,56**
-- Separador de miles: punto (.)
-- Separador de decimales: coma (,)
-- Siempre 2 decimales
+**Sistema Anti-Obsolescencia:**
+Al guardar un valor general (Todas las sucursales), el sistema cierra automáticamente valores específicos con >30 días de antigüedad.
 
-**Comportamiento del Sistema:**
+### Equipamientos por Financiador
 
-1. **Al agregar nuevo valor con fecha futura:**
-   - El sistema cierra automáticamente el período vigente
-   - `fecha_fin` del período anterior = `fecha_inicio` del nuevo - 1 día
-   - Solo puede haber UN período vigente (fecha_fin = NULL) por servicio
+Similar a Servicios por Financiador:
+- Acuerdos específicos con valores históricos
+- Valores diferenciados por sucursal
+- Si no hay acuerdo, usa precio_referencia
 
-2. **Al crear presupuesto:**
-   - Usa valores vigentes HOY
-   - `valor_asignado` = Usuario elige
-   - `valor_facturar` = Valor vigente de la tabla histórica
+### Alertas por Tipo
 
-3. **Al ver presupuesto histórico:**
-   - Muestra valores guardados en BD
-   - Lista de prestaciones disponibles usa valores de la fecha del presupuesto
+**Dos Secciones:**
 
-4. **Al editar presupuesto (nueva versión):**
-   - Mantiene `valor_asignado` original
-   - Actualiza `valor_facturar` con valores vigentes HOY
+1. **Alertas por Tipo de Unidad (Servicios)**
+   - Configurar cantidad_maxima, mensaje, color, estado
+   - Ejemplo: "Sesiones > 30 → Tratamiento prolongado"
 
-**Ejemplo de Uso:**
+2. **Alertas por Tipo de Equipamiento**
+   - Configurar cantidad_maxima, mensaje, color, estado
+   - Ejemplo: "Tubos O2 > 5 → Alto consumo - Paciente complejo"
 
-```
-Servicio: "Enfermería Domiciliaria"
-Financiador: "OSDE"
+**Editar Alerta:**
+1. Hacer clic en ícono de **lápiz**
+2. Modificar parámetros
+3. Guardar cambios
 
-Histórico:
-- 01/01/2024 → 31/05/2024: $3.000 / $5.000 (Histórico)
-- 01/06/2024 → 30/11/2024: $3.500 / $5.500 (Histórico)
-- 01/12/2024 → Vigente: $4.000 / $6.000 (Vigente)
+### Reglas de Negocio
 
-Agregar valor futuro:
-- Fecha Inicio: 01/03/2025
-- Valor Sugerido: $4.500
-- Valor Facturar: $6.500
+**Configurar Umbrales:**
+- Rentabilidad mínima (%)
+- Costo total máximo ($)
+- Rentabilidad con plazo máxima (%)
+- Utilidad máxima ($)
 
-Resultado:
-- 01/12/2024 → 28/02/2025: $4.000 / $6.000 (Histórico)
-- 01/03/2025 → Vigente: $4.500 / $6.500 (Vigente)
-```
-
-**Ventajas del Sistema:**
-- ✅ Historial completo de cambios de precios
-- ✅ Presupuestos históricos muestran valores correctos de su época
-- ✅ Planificación de aumentos futuros
-- ✅ Trazabilidad total de precios
-- ✅ Cierre automático de períodos
-
-### Gestión de Sucursales
-
-**Agregar Sucursal:**
-1. Hacer clic en **"Nueva Sucursal"**
-2. Completar:
-   - Nombre de la sucursal
-   - Porcentaje de margen para insumos
-3. Guardar
-
-**Porcentaje de Insumos:**
-- Se aplica automáticamente al calcular precio de facturación
-- Ejemplo: Costo $100 + 20% = Precio Facturar $120
+Todos los valores son editables y se aplican inmediatamente.
 
 ---
 
@@ -525,19 +535,15 @@ Resultado:
 
 ### ¿Puedo editar un presupuesto finalizado?
 
-Sí, pero se creará una **nueva versión**. El sistema muestra un modal de confirmación explicando esto.
+Sí, pero se creará una **nueva versión**. El sistema muestra un modal de confirmación explicando esto. Los valores se actualizan a precios actuales.
 
 ### ¿Qué pasa si el presupuesto está en $0?
 
-El sistema recalcula automáticamente los totales desde los insumos y prestaciones guardados.
+El sistema recalcula automáticamente los totales desde los insumos, prestaciones y equipamientos guardados.
 
 ### ¿Cómo sé si mi presupuesto fue a auditoría?
 
 Recibirás una notificación y el estado será **"Pendiente"**. También verás alertas en el panel superior.
-
-### ¿Puedo solicitar auditoría manualmente?
-
-Sí, hay un botón **"Pedir Auditoría"** en el dashboard que permite enviar cualquier presupuesto a revisión.
 
 ### ¿Qué es la rentabilidad con plazo?
 
@@ -552,33 +558,33 @@ Sí, desde el historial puedes ver todas las versiones. Cada versión tiene su p
 - **Verde**: Conectado al servidor, notificaciones en tiempo real activas
 - **Rojo**: Desconectado, intentando reconectar
 
-### ¿Cómo descargo un presupuesto en PDF?
-
-Hay un botón **"Descargar PDF"** en el dashboard que genera un PDF con todos los detalles del presupuesto.
-
 ### ¿Puedo modificar el financiador después de agregarlo?
 
-Sí, el selector de financiador siempre está disponible mientras el presupuesto sea un borrador. Al cambiar el financiador, el sistema eliminará automáticamente todas las prestaciones agregadas y mostrará una notificación.
-
-### ¿Qué pasa si cierro el navegador sin finalizar?
-
-Los datos se guardan automáticamente en la base de datos. Puedes continuar desde donde lo dejaste cargando el presupuesto desde el historial.
+Sí, el selector de financiador siempre está disponible mientras el presupuesto sea un borrador. Al cambiar el financiador, el sistema eliminará automáticamente todas las prestaciones agregadas.
 
 ### ¿Cómo funcionan los valores históricos?
 
-El sistema mantiene un registro de todos los cambios de precios por fecha. Cuando creas un presupuesto, usa los valores vigentes HOY. Cuando ves un presupuesto antiguo, muestra los valores que estaban vigentes en esa fecha.
+El sistema mantiene un registro de todos los cambios de precios por fecha y sucursal. Cuando creas un presupuesto, usa los valores vigentes HOY. Cuando ves un presupuesto antiguo, muestra los valores que estaban vigentes en esa fecha.
 
 ### ¿Puedo programar aumentos de precios futuros?
 
-Sí, desde "Servicios por Prestador" puedes agregar valores con fecha de inicio futura. El sistema los aplicará automáticamente cuando llegue esa fecha.
+Sí, desde "Serv/ Financiador" o "Equip/ Financiador" puedes agregar valores con fecha de inicio futura. El sistema los aplicará automáticamente cuando llegue esa fecha.
 
-### ¿Qué pasa si activo un servicio que no tiene valores históricos?
+### ¿Qué pasa con los equipamientos sin acuerdo?
 
-El sistema crea automáticamente un registro inicial con los valores actuales y fecha de hoy.
+Todos los equipamientos activos están disponibles para todos los financiadores. Si no hay acuerdo específico, el sistema usa el precio_referencia (valor general) del catálogo.
 
-### ¿Puedo tener múltiples valores vigentes para el mismo servicio?
+### ¿Qué son las alertas de valores desactualizados?
 
-No, el sistema garantiza que solo haya UN período vigente (fecha_fin = NULL) por servicio. Al agregar un nuevo valor, cierra automáticamente el anterior.
+Al seleccionar insumos, prestaciones o equipamientos con más de 45 días sin actualizar, aparece una alerta persistente indicando el nombre del item y los días sin actualizar. Esto ayuda a mantener los precios actualizados.
+
+### ¿Cómo funciona la asignación FCFS?
+
+First Come First Served: El primer gerente que hace clic en "Tomar Caso" se lo asigna. Otros gerentes no pueden ver ese caso. Si el gerente no actúa en 30 minutos, el caso se libera automáticamente.
+
+### ¿Qué es la aprobación condicional?
+
+Es una aprobación especial para casos políticos o estratégicos que requieren consideraciones especiales. Solo disponible para gerencias.
 
 ---
 
@@ -587,5 +593,5 @@ No, el sistema garantiza que solo haya UN período vigente (fecha_fin = NULL) po
 Para asistencia adicional, contactar al equipo de desarrollo o administrador del sistema.
 
 **Última actualización:** Enero 2025  
-**Versión:** 2.5  
-**Incluye:** Sistema de Valores Históricos (Timelapse) + Sistema Anti-Obsolescencia + Flujo Simplificado de Financiador
+**Versión:** 3.1  
+**Incluye:** Sistema Multi-Gerencial v3.0 + Equipamientos + Alertas por Tipo + Código de Producto

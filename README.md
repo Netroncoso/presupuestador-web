@@ -4,13 +4,14 @@ Sistema integral de gestión de presupuestos médicos con auditoría automatizad
 
 ## 🚀 Características Principales
 
-- **Cotizador Inteligente**: Gestión completa de insumos y prestaciones médicas
+- **Cotizador Inteligente**: Gestión completa de insumos, prestaciones y equipamientos médicos
 - **Sistema de Versiones**: Control de cambios con historial completo
-- **Valores Históricos (Timelapse)**: Gestión de precios por períodos de vigencia
+- **Valores Históricos (Timelapse)**: Gestión de precios por períodos de vigencia y sucursal
 - **Auditoría Automatizada**: 4 reglas automáticas para validación de presupuestos
 - **Notificaciones en Tiempo Real**: SSE (Server-Sent Events) para actualizaciones instantáneas
 - **Modo Solo Lectura**: Visualización segura de presupuestos históricos con valores de época
 - **Sistema Multi-Gerencial**: 4 gerencias especializadas con flujo FCFS y auto-liberación
+- **Alertas Inteligentes**: Alertas de valores desactualizados y configurables por tipo
 - **Roles de Usuario**: Usuario normal, Gerencias (Administrativa, Prestacional, Financiera, General), Administrador
 
 ## 📋 Requisitos
@@ -39,20 +40,26 @@ npm run dev
 
 ### Migraciones
 ```bash
-# Migración de valores históricos (si no está aplicada)
+# Migración de valores históricos
 mysql -u root -p mh_1 < backend/migrations/create_prestador_servicio_valores.sql
 
-# Migración de valores por sucursal (NUEVA)
+# Migración de valores por sucursal
 mysql -u root -p mh_1 < backend/migrations/add_sucursal_to_valores.sql
 
 # Migración de índices de performance
 mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
 
-# Migración de tipos de datos y FKs (COMPLETADA)
-# Ver: backend/migrations/MIGRACION_SUCURSAL_COMPLETADA.md
-
-# Migración sistema multi-gerencial v3.0 (NUEVA)
+# Migración sistema multi-gerencial v3.0
 mysql -u root -p mh_1 < backend/migrations/001_migrate_multi_gerencial.sql
+
+# Migración tipos de equipamiento
+mysql -u root -p mh_1 < backend/migrations/006_create_tipos_equipamiento.sql
+
+# Migración alertas a tipos
+mysql -u root -p mh_1 < backend/migrations/007_move_alertas_to_tipos.sql
+
+# Estandarización nombres de alertas
+mysql -u root -p mh_1 < backend/migrations/008_estandarizar_nombres_alertas.sql
 ```
 
 ## 🔑 Variables de Entorno
@@ -67,7 +74,7 @@ PORT=3000
 JWT_SECRET=tu_secret_key
 ```
 
-**Nota**: El nombre de la base de datos es `mh_1`. Reemplazar en todos los comandos SQL donde aparezca `presupuestador`.
+**Nota**: El nombre de la base de datos es `mh_1`.
 
 ### Frontend (.env)
 ```env
@@ -81,8 +88,8 @@ VITE_API_URL=http://localhost:3000
 - [API REST](./backend/RUTAS_API.md) - Documentación de endpoints
 - [Sistema de Notificaciones](./SISTEMA_NOTIFICACIONES.md) - SSE y notificaciones en tiempo real
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos y sucursales
-- [Alertas Configurables](./ALERTAS_CONFIGURABLES_IMPLEMENTACION.md) - Sistema de umbrales dinámicos
 - [Sistema Multi-Gerencial](./SISTEMA_MULTI_GERENCIAL_V3.md) - Auditoría con 4 gerencias y FCFS
+- [Módulo Equipamiento](./MODULO_EQUIPAMIENTO_ESPECIFICACION.md) - Especificación de equipamientos
 
 ## 🏗️ Arquitectura
 
@@ -91,20 +98,32 @@ presupuestador-web/
 ├── backend/          # API REST + SSE
 │   ├── src/
 │   │   ├── controllers/
-│   │   │   ├── prestadorValoresController.ts  # Valores históricos
-│   │   │   ├── prestacionesController.ts      # Prestaciones con histórico
-│   │   │   └── presupuestosControllerV2.ts    # Versionado
+│   │   │   ├── prestadorValoresController.ts     # Valores históricos servicios
+│   │   │   ├── equipamientosController.ts        # Equipamientos y valores
+│   │   │   ├── prestacionesController.ts         # Prestaciones con histórico
+│   │   │   ├── presupuestosControllerV2.ts       # Versionado
+│   │   │   └── alertasEquipamientosController.ts # Alertas equipamientos
 │   │   ├── routes/
 │   │   ├── middleware/
 │   │   └── db.ts
 │   └── migrations/
-│       └── create_prestador_servicio_valores.sql
+│       ├── create_prestador_servicio_valores.sql
+│       ├── 006_create_tipos_equipamiento.sql
+│       ├── 007_move_alertas_to_tipos.sql
+│       └── 008_estandarizar_nombres_alertas.sql
 ├── frontend/         # React + TypeScript + Vite + Mantine
 │   └── src/
 │       ├── pages/
-│       │   ├── admin/ServiciosPorPrestador.tsx  # Gestión valores
-│       │   └── Prestaciones.tsx                 # Integración histórico
+│       │   ├── admin/
+│       │   │   ├── ServiciosPorPrestador.tsx      # Gestión valores servicios
+│       │   │   ├── GestionEquipamientos.tsx       # Acuerdos equipamientos
+│       │   │   ├── GestionEquipamientosBase.tsx   # CRUD equipamientos
+│       │   │   ├── GestionAlertasServicios.tsx    # Alertas por tipo
+│       │   │   └── GestionInsumos.tsx             # Gestión insumos
+│       │   └── Prestaciones.tsx                   # Integración histórico
 │       ├── components/
+│       │   ├── Equipamiento.tsx                   # Selector equipamientos
+│       │   └── Insumos.tsx                        # Selector insumos
 │       ├── hooks/
 │       └── services/
 └── docs/            # Documentación adicional
@@ -140,14 +159,16 @@ presupuestador-web/
 
 ### Administrador
 - Gestión de usuarios
-- Gestión de financiadores y prestaciones
-- **Gestión de valores históricos por sucursal** (nuevo)
+- Gestión de financiadores, prestaciones, equipamientos e insumos
+- Gestión de valores históricos por sucursal
+- Configuración de alertas por tipo
+- Configuración de reglas de negocio
 - Acceso completo al sistema
 
 ## 📊 Flujo de Trabajo
 
-1. **Crear Presupuesto**: Usuario ingresa datos del paciente
-2. **Agregar Insumos/Prestaciones**: Selección con valores vigentes actuales
+1. **Crear Presupuesto**: Usuario ingresa datos del paciente y selecciona financiador
+2. **Agregar Items**: Selección de insumos, prestaciones y equipamientos con valores vigentes
 3. **Finalizar**: Sistema calcula totales y evalúa reglas automáticas
 4. **Auditoría Multi-Gerencial** (si aplica):
    - G. Administrativa: Primera revisión, puede aprobar o derivar
@@ -174,18 +195,19 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 - Solo la última versión está activa (`es_ultima_version = 1`)
 - Editar un presupuesto finalizado crea una nueva versión
 - Historial completo de cambios con trazabilidad
-- **Nueva versión actualiza `valor_facturar` con precios actuales**
-- **Mantiene `valor_asignado` original (costo negociado)**
+- Nueva versión actualiza `valor_facturar` con precios actuales
+- Mantiene `valor_asignado` original (costo negociado)
 
 ## 💰 Sistema de Valores Históricos (Timelapse)
 
 ### Características
 - Gestión de precios por períodos de vigencia
-- ⭐ **Valores diferenciados por sucursal** (general o específico)
+- Valores diferenciados por sucursal (general o específico)
 - Cierre automático de períodos al agregar nuevos valores
 - Consulta de valores vigentes por fecha y sucursal
 - Integración con presupuestos históricos
 - Prioridad: Valor específico > Valor general
+- Sistema anti-obsolescencia (30 días)
 
 ### Comportamiento de Prestaciones
 | Escenario | `valor_asignado` | `valor_facturar` |
@@ -201,13 +223,20 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 | **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD |
 | **Editar → Nueva versión** | Actualiza a precio actual | Recalcula con porcentaje original |
 
+### Comportamiento de Equipamientos
+| Escenario | `costo` | `precio_facturar` |
+|-----------|---------|-------------------|
+| **Crear presupuesto nuevo** | Valor acuerdo o precio_referencia | Valor acuerdo o precio_referencia |
+| **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD |
+| **Editar → Nueva versión** | Actualiza a valores actuales | Actualiza a valores actuales |
+
 ### Gestión (Admin)
 - Modal unificado para gestión de valores históricos
-- ⭐ **Selector de sucursal** ("Todas" o específica)
+- Selector de sucursal ("Todas" o específica)
 - Agregar múltiples valores futuros (con sucursal por fila)
 - Tabla de histórico con columna "Sucursal"
 - Formato monetario argentino ($ 1.234,56)
-- ⭐ **Sistema anti-obsolescencia**: Limpieza automática de valores específicos con > 30 días de antigüedad
+- Sistema anti-obsolescencia: Limpieza automática de valores específicos con > 30 días de antigüedad
 
 ### Valores por Sucursal
 | Configuración | Comportamiento |
@@ -222,6 +251,50 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 - Al guardar valor general, cierra automáticamente valores específicos con > 30 días de antigüedad
 - En consultas, valores específicos obsoletos (> 30 días diferencia con general) pierden prioridad
 - Garantiza que actualizaciones de precios generales se apliquen a todas las sucursales
+
+## 🚨 Sistema de Alertas
+
+### Alertas de Valores Desactualizados
+- Se disparan al seleccionar items con > 45 días sin actualizar
+- Alertas persistentes (autoClose=false) con botón X
+- Posición top-center
+- Muestran nombre específico del item y días sin actualizar
+
+### Alertas Configurables por Tipo
+- **Alertas por Tipo de Unidad (Servicios)**: Configurables desde tipos_unidad
+- **Alertas por Tipo de Equipamiento**: Configurables desde tipos_equipamiento
+- Parámetros: cantidad_maxima, mensaje_alerta, color_alerta, activo_alerta
+- Gestión centralizada desde Panel Admin > Alertas/ Tipo
+
+## 📦 Gestión de Insumos
+
+### Características
+- CRUD completo de insumos
+- Campo opcional `codigo_producto` (EAN/SKU)
+- Filtrado por nombre O código de producto
+- Precio de referencia actualizable
+- Estado activo/inactivo
+
+## 🛠️ Gestión de Equipamientos
+
+### Dos Paneles de Gestión
+
+#### 1. Gestión Base de Equipamientos
+- CRUD simple con precio_referencia
+- Gestión de tipos de equipamiento
+- Estado activo/inactivo
+
+#### 2. Equipamientos por Financiador
+- Acuerdos específicos con valores históricos
+- Valores diferenciados por sucursal
+- Similar a ServiciosPorPrestador
+- Todos los equipamientos activos disponibles para todos los financiadores
+- Si no hay acuerdo específico, usa precio_referencia (valor general)
+
+### Normalización de Tipos
+- Tabla `tipos_equipamiento` con FK desde `equipamientos.tipo_equipamiento_id`
+- Tipos predefinidos: oxigenoterapia, mobiliario, monitoreo, ventilacion, otro
+- Alertas configurables por tipo (no por equipamiento individual)
 
 ## 📱 Notificaciones en Tiempo Real
 
@@ -256,6 +329,9 @@ mysql -u root -p mh_1 < backend/migrations/create_prestador_servicio_valores.sql
 
 # Migración de índices de performance
 mysql -u root -p mh_1 < backend/migrations/add_performance_indexes.sql
+
+# Migración tipos de equipamiento
+mysql -u root -p mh_1 < backend/migrations/006_create_tipos_equipamiento.sql
 
 # Otras migraciones
 mysql -u root -p mh_1 < backend/migrations/[archivo].sql
@@ -292,8 +368,8 @@ ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC;
 - Comprobar firewall/antivirus
 
 ### Totales en $0
-- Sistema recalcula automáticamente desde insumos/prestaciones
-- Verificar que existan insumos/prestaciones asociados
+- Sistema recalcula automáticamente desde insumos/prestaciones/equipamientos
+- Verificar que existan items asociados
 
 ### Problemas de Autenticación
 - Verificar JWT_SECRET en .env
@@ -302,50 +378,13 @@ ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC;
 
 ### Valores Históricos no se Muestran
 - Verificar que la migración se ejecutó correctamente
-- Revisar endpoint: `GET /api/prestaciones/servicio/:id/valores`
-- Verificar que existe registro en `prestador_servicio_valores`
+- Revisar endpoint correspondiente
+- Verificar que existe registro en tabla de valores
 
 ### Presupuestos Históricos Muestran Valores Actuales
 - **Comportamiento esperado**: En modo solo lectura, muestra valores de la fecha del presupuesto
-- Verificar que `soloLectura=true` en componente Prestaciones
+- Verificar que `soloLectura=true` en componentes
 - Revisar que se pasa `fecha` al endpoint
-
-## 🚀 Nuevas Funcionalidades (v2.0)
-
-### Sistema de Valores Históricos
-- ✅ Tabla `prestador_servicio_valores` con períodos de vigencia
-- ✅ Migración automática de valores actuales
-- ✅ ⭐ **Columna `sucursal_id` para valores diferenciados**
-- ✅ Cierre automático de períodos (por sucursal)
-- ✅ Consulta de valores por fecha y sucursal
-- ✅ ⭐ **Prioridad: específico > general**
-- ✅ Modal de gestión con edición rápida
-- ✅ ⭐ **Selector de sucursal en formulario**
-- ✅ Múltiples valores futuros
-- ✅ ⭐ **Tabla histórico con columna "Sucursal"**
-- ✅ Formato monetario argentino
-
-### Integración con Presupuestos
-- ✅ Validación automática de `valor_facturar` según fecha
-- ✅ Visualización histórica en modo solo lectura
-- ✅ Actualización automática de precios al cargar para edición
-- ✅ Mantenimiento de costos negociados originales (valor_asignado)
-- ✅ Recalculo de totales en modo edición, congelados en modo solo lectura
-
-### Mejoras de Base de Datos (v2.1)
-- ✅ Migración `Sucursal` (VARCHAR) → `sucursal_id` (INT) con FK
-- ✅ Tipos de datos corregidos (DECIMAL para montos, VARCHAR para DNI)
-- ✅ Foreign Keys agregadas para integridad referencial
-- ✅ Primary Keys limpiadas (sin PKs compuestas innecesarias)
-- ✅ Normalización de datos (eliminación de duplicación)
-
-### Sistema de Alertas Configurables (v2.2)
-- ✅ Umbrales de alertas configurables desde BD
-- ✅ 11 parámetros editables (rentabilidad, monto, financiador)
-- ✅ Cache de 1 minuto para optimizar performance
-- ✅ Tabla maestra `tipos_unidad` con FKs
-- ✅ Gestión de tipos de unidad desde UI
-- ✅ Alertas por tipo_unidad con mensaje y color personalizables
 
 ## 🤝 Contribuir
 
@@ -369,11 +408,31 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 3.0  
+**Versión:** 3.1  
 **Última actualización:** Enero 2025  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v3.1 (Enero 2025)
+- ⭐ **Sistema Completo de Equipamientos**
+- Gestión base de equipamientos con precio_referencia
+- Acuerdos por financiador con valores históricos por sucursal
+- Normalización de tipos de equipamiento (tabla tipos_equipamiento)
+- Alertas configurables por tipo de equipamiento
+- Equipamientos disponibles para todos los financiadores (usa precio_referencia si no hay acuerdo)
+- ⭐ **Alertas de Valores Desactualizados**
+- Alertas al seleccionar items con > 45 días sin actualizar
+- Alertas persistentes con nombre específico y días sin actualizar
+- ⭐ **Código de Producto en Insumos**
+- Campo opcional codigo_producto (EAN/SKU)
+- Filtrado por nombre O código de producto
+- ⭐ **Estandarización de Alertas**
+- Nombres de columnas consistentes (cantidad_maxima, activo_alerta)
+- Panel unificado "Alertas/ Tipo" para servicios y equipamientos
+- ⭐ **Mejoras de UI**
+- Tabs abreviados en AdminDashboard (Serv/ Financiador, Equip/ Financiador, Alertas/ Tipo)
+- Orden optimizado de tabs por prioridad de uso
 
 ### v3.0 (Enero 2025)
 - ⭐ **Sistema Multi-Gerencial de Auditoría**

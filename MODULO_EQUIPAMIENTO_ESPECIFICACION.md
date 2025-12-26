@@ -1,9 +1,8 @@
-# Módulo de Equipamiento - Especificación Técnica v1.0
+# Módulo de Equipamiento - Documentación Técnica v3.1
 
 **Fecha:** Enero 2025  
-**Estado:** 📋 Planificación  
-**Prioridad:** Media  
-**Esfuerzo Estimado:** 13-17 horas
+**Estado:** ✅ Implementado  
+**Versión:** 3.1
 
 ---
 
@@ -17,27 +16,31 @@
 6. [Panel de Administración](#panel-de-administración)
 7. [Sistema de Alertas](#sistema-de-alertas)
 8. [Integración con Presupuestos](#integración-con-presupuestos)
-9. [Migraciones](#migraciones)
-10. [Plan de Implementación](#plan-de-implementación)
 
 ---
 
 ## 1. Resumen Ejecutivo
 
-### Objetivo
-Agregar una nueva pestaña "Equipamiento" al sistema de presupuestos para gestionar equipos médicos de alquiler mensual (camas, concentradores de oxígeno, monitores, etc.) con soporte para:
-- Precios con acuerdo por financiador (valores históricos)
-- Precios sin acuerdo (carga manual)
-- Alertas por tipo de equipo (ej: "5+ tubos O2 → Paciente complejo")
-- Gestión desde panel de administrador
+### Objetivo Cumplido
 
-### Alcance
+Módulo completo de equipamientos médicos de alquiler mensual (camas, concentradores de oxígeno, monitores, etc.) con:
+- ✅ Precios con acuerdo por financiador (valores históricos)
+- ✅ Precios sin acuerdo (precio_referencia como fallback)
+- ✅ Alertas configurables por tipo de equipamiento
+- ✅ Gestión completa desde panel de administrador
+- ✅ Valores históricos por sucursal
+- ✅ Sistema anti-obsolescencia (30 días)
+
+### Características Implementadas
+
 - ✅ CRUD completo de equipamientos
-- ✅ Valores históricos por financiador (timelapse)
+- ✅ Valores históricos por financiador y sucursal
 - ✅ Gestión de acuerdos desde admin
-- ✅ Sistema de alertas configurable
+- ✅ Sistema de alertas por tipo (no por equipamiento individual)
 - ✅ Integración con cálculo de totales
 - ✅ Modo solo lectura para históricos
+- ✅ Todos los equipamientos disponibles para todos los financiadores
+- ✅ Normalización de tipos con tabla maestra
 
 ---
 
@@ -50,38 +53,55 @@ CREATE TABLE equipamientos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(255) NOT NULL,
   descripcion TEXT,
-  tipo ENUM('oxigenoterapia', 'mobiliario', 'monitoreo', 'ventilacion', 'otro') DEFAULT 'otro',
+  tipo VARCHAR(50) DEFAULT 'otro',
+  tipo_equipamiento_id INT DEFAULT NULL,
   precio_referencia DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Precio por defecto si no hay acuerdo',
   unidad_tiempo ENUM('mensual', 'diario', 'semanal') DEFAULT 'mensual',
-  genera_alerta BOOLEAN DEFAULT FALSE,
-  umbral_alerta INT DEFAULT NULL COMMENT 'Cantidad que dispara alerta',
-  mensaje_alerta VARCHAR(255) DEFAULT NULL,
-  color_alerta VARCHAR(20) DEFAULT 'orange',
   activo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (tipo_equipamiento_id) REFERENCES tipos_equipamiento(id) ON DELETE SET NULL,
   INDEX idx_activo (activo),
-  INDEX idx_tipo (tipo)
+  INDEX idx_tipo (tipo),
+  INDEX idx_tipo_equipamiento (tipo_equipamiento_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-**Ejemplos de datos:**
+**Nota:** Las columnas de alertas (genera_alerta, umbral_alerta, mensaje_alerta, color_alerta) fueron movidas a `tipos_equipamiento`.
+
+### 2.2 Tabla: `tipos_equipamiento` (Tipos Normalizados)
+
 ```sql
-INSERT INTO equipamientos (nombre, tipo, precio_referencia, genera_alerta, umbral_alerta, mensaje_alerta) VALUES
-('Tubo de Oxígeno 10m³', 'oxigenoterapia', 5000.00, TRUE, 5, 'Alto consumo de oxígeno - Paciente complejo'),
-('Cama Articulada Eléctrica', 'mobiliario', 15000.00, FALSE, NULL, NULL),
-('Concentrador de Oxígeno 5L', 'oxigenoterapia', 12000.00, TRUE, 2, 'Múltiples concentradores - Verificar necesidad'),
-('Monitor de Signos Vitales', 'monitoreo', 8000.00, FALSE, NULL, NULL);
+CREATE TABLE tipos_equipamiento (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL UNIQUE,
+  descripcion TEXT,
+  cantidad_maxima INT DEFAULT NULL COMMENT 'Umbral que dispara alerta',
+  mensaje_alerta VARCHAR(255) DEFAULT NULL,
+  color_alerta VARCHAR(20) DEFAULT 'orange',
+  activo_alerta BOOLEAN DEFAULT FALSE,
+  activo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_nombre (nombre),
+  INDEX idx_activo (activo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-### 2.2 Tabla: `financiador_equipamiento` (Acuerdos)
+**Tipos predefinidos:**
+- oxigenoterapia
+- mobiliario
+- monitoreo
+- ventilacion
+- otro
+
+### 2.3 Tabla: `financiador_equipamiento` (Acuerdos)
 
 ```sql
 CREATE TABLE financiador_equipamiento (
   id INT AUTO_INCREMENT PRIMARY KEY,
   idobra_social INT NOT NULL,
   id_equipamiento INT NOT NULL,
-  valor_asignado DECIMAL(10,2) NOT NULL COMMENT 'Precio negociado con financiador',
   activo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -94,13 +114,14 @@ CREATE TABLE financiador_equipamiento (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-### 2.3 Tabla: `financiador_equipamiento_valores` (Valores Históricos)
+### 2.4 Tabla: `financiador_equipamiento_valores` (Valores Históricos)
 
 ```sql
 CREATE TABLE financiador_equipamiento_valores (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_financiador_equipamiento INT NOT NULL,
   valor_asignado DECIMAL(10,2) NOT NULL,
+  valor_facturar DECIMAL(10,2) NOT NULL,
   fecha_inicio DATE NOT NULL,
   fecha_fin DATE DEFAULT NULL,
   sucursal_id INT DEFAULT NULL COMMENT 'NULL = todas las sucursales',
@@ -115,7 +136,7 @@ CREATE TABLE financiador_equipamiento_valores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-### 2.4 Tabla: `presupuesto_equipamiento` (Equipos en Presupuesto)
+### 2.5 Tabla: `presupuesto_equipamiento` (Equipos en Presupuesto)
 
 ```sql
 CREATE TABLE presupuesto_equipamiento (
@@ -124,8 +145,8 @@ CREATE TABLE presupuesto_equipamiento (
   id_equipamiento INT NOT NULL,
   nombre VARCHAR(255) NOT NULL,
   cantidad INT NOT NULL DEFAULT 1,
-  costo DECIMAL(10,2) NOT NULL COMMENT 'Precio usado: acuerdo o manual',
-  precio_facturar DECIMAL(10,2) NOT NULL COMMENT 'costo + margen',
+  costo DECIMAL(10,2) NOT NULL COMMENT 'Precio usado: acuerdo o precio_referencia',
+  precio_facturar DECIMAL(10,2) NOT NULL,
   tiene_acuerdo BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -140,33 +161,58 @@ CREATE TABLE presupuesto_equipamiento (
 
 ## 3. Backend - API REST
 
-### 3.1 Rutas Principales
+### 3.1 Rutas Implementadas
 
 ```
-GET    /api/equipamientos                           # Listar todos
-GET    /api/equipamientos/:id                       # Obtener uno
-POST   /api/equipamientos                           # Crear (admin)
-PUT    /api/equipamientos/:id                       # Actualizar (admin)
-DELETE /api/equipamientos/:id                       # Eliminar (admin)
+# Admin CRUD base
+GET    /api/equipamientos/admin                     # Listar todos (admin)
+POST   /api/equipamientos/admin                     # Crear (admin)
+PUT    /api/equipamientos/admin/:id                 # Actualizar (admin)
+DELETE /api/equipamientos/admin/:id                 # Eliminar (admin)
 
-GET    /api/equipamientos/financiador/:id           # Por financiador
+# Tipos
+GET    /api/equipamientos/tipos                     # Listar tipos
+POST   /api/equipamientos/tipos                     # Crear tipo (admin)
+
+# Admin acuerdos
+GET    /api/equipamientos/admin/financiador/:id     # Por financiador (admin)
+PUT    /api/equipamientos/admin/acuerdo/:id         # Toggle activo
+POST   /api/equipamientos/admin/:id/valores         # Agregar valor
+GET    /api/equipamientos/admin/:id/valores         # Ver valores
+
+# Públicas (requieren autenticación)
+GET    /api/equipamientos                           # Catálogo completo
+GET    /api/equipamientos/financiador/:id           # Por financiador con valores
+
+# Valores históricos
 GET    /api/equipamientos/acuerdo/:id/valores       # Valores históricos
 POST   /api/equipamientos/acuerdo/:id/valores       # Agregar valor
 
-POST   /api/presupuestos/:id/equipamiento           # Agregar a presupuesto
-DELETE /api/presupuestos/:id/equipamiento           # Eliminar de presupuesto
-GET    /api/presupuestos/:id/equipamiento           # Listar equipamiento
+# Presupuesto
+POST   /api/presupuestos/:id/equipamientos          # Agregar a presupuesto
+DELETE /api/presupuestos/:id/equipamientos/:equipId # Eliminar de presupuesto
+GET    /api/presupuestos/:id/equipamientos          # Listar equipamiento
 ```
 
 ### 3.2 Controller: `equipamientosController.ts`
 
 **Funciones principales:**
-- `obtenerEquipamientos()` - Lista catálogo completo
-- `obtenerEquipamientosPorFinanciador()` - Con valores vigentes por fecha/sucursal
+
+- `getAllEquipamientos()` - Lista catálogo completo (admin)
+- `getEquipamientos()` - Catálogo activo
+- `getEquipamientosPorFinanciador()` - Con valores vigentes por fecha/sucursal
+- `getEquipamientosPorFinanciadorAdmin()` - Para panel admin
 - `crearEquipamiento()` - Admin crea nuevo equipo
 - `actualizarEquipamiento()` - Admin edita equipo
-- `obtenerValoresHistoricos()` - Historial de precios
-- `agregarValorHistorico()` - Nuevo precio con cierre automático de anteriores
+- `eliminarEquipamiento()` - Admin elimina equipo
+- `getTiposEquipamiento()` - Lista tipos
+- `crearTipoEquipamiento()` - Crea nuevo tipo
+- `actualizarAcuerdoEquipamiento()` - Toggle activo
+- `agregarValorEquipamientoAdmin()` - Nuevo valor histórico
+- `getValoresEquipamientoAdmin()` - Histórico de valores
+- `agregarEquipamientoPresupuesto()` - Agrega a presupuesto
+- `eliminarEquipamientoPresupuesto()` - Quita de presupuesto
+- `getEquipamientosPresupuesto()` - Lista equipamiento de presupuesto
 
 ### 3.3 Lógica de Valores Vigentes
 
@@ -175,7 +221,9 @@ GET    /api/presupuestos/:id/equipamiento           # Listar equipamiento
 COALESCE(
   (SELECT valor_asignado FROM financiador_equipamiento_valores
    WHERE fecha BETWEEN fecha_inicio AND fecha_fin
-   AND sucursal_id = ? LIMIT 1),  -- Específico
+   AND sucursal_id = ? 
+   AND DATEDIFF(fecha_inicio, general.fecha_inicio) >= -30
+   LIMIT 1),  -- Específico reciente
   (SELECT valor_asignado FROM financiador_equipamiento_valores
    WHERE fecha BETWEEN fecha_inicio AND fecha_fin
    AND sucursal_id IS NULL LIMIT 1),  -- General
@@ -183,11 +231,19 @@ COALESCE(
 )
 ```
 
+**Comportamiento:**
+- Todos los equipamientos activos están disponibles para todos los financiadores
+- Si hay acuerdo específico con valores, usa esos valores
+- Si no hay acuerdo, usa `precio_referencia` del catálogo
+- Sistema anti-obsolescencia: valores específicos >30 días pierden prioridad
+
 ---
 
 ## 4. Frontend - Componentes
 
 ### 4.1 Componente: `Equipamiento.tsx`
+
+**Ubicación:** `frontend/src/components/Equipamiento.tsx`
 
 **Props:**
 ```typescript
@@ -201,18 +257,14 @@ interface Props {
 }
 ```
 
-**Estados:**
-- `equipamientosDisponibles` - Catálogo filtrado por financiador
-- `equipamientoSeleccionado` - Equipo actual en formulario
-- `cantidad` - Cantidad a agregar
-- `costoManual` - Para equipos sin acuerdo
-- `alertasActivas` - Alertas disparadas
-
-**Funciones:**
-- `cargarEquipamientosPorFinanciador()` - Carga catálogo
-- `agregarEquipamiento()` - Agrega al presupuesto
-- `eliminarEquipamiento()` - Quita del presupuesto
-- `verificarAlertas()` - Evalúa umbrales
+**Funcionalidades:**
+- Carga equipamientos disponibles por financiador
+- Selector con checkbox
+- Formulario de cantidad
+- Alertas de valores desactualizados (>45 días)
+- Tabla de equipamientos seleccionados
+- Edición inline de cantidad y precios
+- Cálculo automático de subtotales
 
 ### 4.2 Layout Visual
 
@@ -223,19 +275,16 @@ interface Props {
 │ Grid 2 columnas:                                            │
 │                                                             │
 │ [Equipos Disponibles]      [Agregar al Presupuesto]       │
-│ - Tabla con checkbox       - Formulario con:              │
-│ - Muestra tipo             - Nombre (readonly)            │
-│ - Precio (acuerdo/manual)  - Cantidad                     │
-│ - Badge "Con acuerdo"      - Costo (auto/manual)          │
-│                            - Margen %                      │
-│                            - Precio facturar              │
-│                                                             │
-│ [Alertas Activas] (si hay)                                 │
-│ - Badge naranja con mensaje                                │
+│ - Tabla con checkbox       - Nombre (readonly)            │
+│ - Tipo (capitalizado)      - Cantidad                     │
+│ - Costo                    - Botón Agregar                │
+│ - Precio                                                   │
 │                                                             │
 │ [Equipamientos Seleccionados]                              │
 │ - Tabla con edición inline                                 │
-│ - Subtotales por fila                                      │
+│ - Columnas: Nombre, Tipo, Cantidad, Costo Unit.,          │
+│   Precio Unit., Subtotal Costo, Subtotal Facturar         │
+│ - Acciones: Editar, Eliminar                               │
 │ - Total general                                            │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -246,18 +295,18 @@ interface Props {
 
 ### 5.1 Comportamiento (Igual que Prestaciones)
 
-| Escenario | `costo` | Origen |
-|-----------|---------|--------|
-| **Crear presupuesto nuevo** | Valor vigente actual | `financiador_equipamiento_valores` |
-| **Ver histórico (solo lectura)** | Guardado en BD | `presupuesto_equipamiento` |
-| **Editar → Nueva versión** | Actualiza a valor actual | Reconsulta valores vigentes |
+| Escenario | `costo` | `precio_facturar` | Origen |
+|-----------|---------|-------------------|--------|
+| **Crear presupuesto nuevo** | Valor vigente actual | Valor vigente actual | `financiador_equipamiento_valores` o `precio_referencia` |
+| **Ver histórico (solo lectura)** | Guardado en BD | Guardado en BD | `presupuesto_equipamiento` |
+| **Editar → Nueva versión** | Actualiza a valor actual | Actualiza a valor actual | Reconsulta valores vigentes |
 
 ### 5.2 Prioridad de Valores
 
 ```
 1. Valor específico de sucursal (≤ 30 días diferencia con general)
 2. Valor general (todas las sucursales)
-3. Precio de referencia del catálogo
+3. Precio de referencia del catálogo (fallback)
 ```
 
 ### 5.3 Sistema Anti-Obsolescencia
@@ -265,114 +314,115 @@ interface Props {
 - Al guardar valor general, cierra valores específicos con > 30 días
 - Valores específicos obsoletos pierden prioridad
 - Garantiza consistencia entre sucursales
+- Ventana de tiempo: 30 días (configurable)
 
 ---
 
 ## 6. Panel de Administración
 
-### 6.1 Página: Gestión de Equipamientos
+### 6.1 Página: Gestión Base de Equipamientos
 
-**Ruta:** `/admin/equipamientos`
+**Componente:** `GestionEquipamientosBase.tsx`  
+**Ruta:** Tab "Equipamientos" en AdminDashboard
 
 **Funcionalidades:**
 - Tabla con todos los equipamientos
-- Filtros: Tipo, Activo/Inactivo, Con/Sin alertas
+- Columnas: Nombre, Tipo, Precio Referencia, Estado
 - Botón "Nuevo Equipamiento"
-- Modal de edición con campos:
-  - Nombre, Descripción, Tipo
-  - Precio referencia
-  - Genera alerta (checkbox)
-  - Umbral alerta (número)
-  - Mensaje alerta (texto)
-  - Color alerta (select)
+- Modal de edición:
+  - Nombre, Tipo (select de tipos_equipamiento)
+  - Precio referencia (formato argentino)
+  - Switch activo/inactivo
+- Botón "Gestionar Tipos"
+  - Modal con lista de tipos existentes
+  - Opción de agregar nuevos tipos
 
-### 6.2 Página: Acuerdos por Financiador
+### 6.2 Página: Equipamientos por Financiador
 
-**Ruta:** `/admin/equipamientos-financiador`
+**Componente:** `GestionEquipamientos.tsx`  
+**Ruta:** Tab "Equip/ Financiador" en AdminDashboard
 
 **Funcionalidades:**
-- Selector de financiador
-- Tabla de equipamientos con columna "Tiene Acuerdo"
-- Botón "Gestionar Valores Históricos" por fila
+- Selector de financiador (primero)
+- Tabla de equipamientos con:
+  - Nombre, Tipo, Precio Referencia
+  - Valor vigente (si hay acuerdo)
+  - Ícono de múltiples valores (SwatchIcon)
+  - Switch de estado
+  - Botón editar
 - Modal de valores históricos:
-  - Selector de sucursal (Todas / Específica)
-  - Formulario: Valor, Fecha inicio, Sucursal
-  - Tabla histórico con columnas: Valor, Fecha inicio, Fecha fin, Sucursal
-  - Formato monetario argentino
+  - Switch de estado del acuerdo
+  - Formulario de valores múltiples:
+    - Sucursal (select: Todas / específica)
+    - Valor Asignado (costo)
+    - Valor Facturar (precio)
+    - Fecha Inicio
+    - Botones +/- para agregar/quitar filas
+  - Tabla de histórico vigente:
+    - Columnas: Sucursal, Valor Asignado, Valor Facturar, Fecha Inicio, Fecha Fin
+    - Badge verde = Vigente, gris = Histórico
+  - Formato monetario argentino ($ 1.234,56)
 
 ---
 
 ## 7. Sistema de Alertas
 
-### 7.1 Configuración en BD
+### 7.1 Configuración en BD (Tabla tipos_equipamiento)
 
 ```sql
--- Ejemplo: Tubo de Oxígeno
-genera_alerta = TRUE
-umbral_alerta = 5
+-- Ejemplo: Oxigenoterapia
+cantidad_maxima = 5
 mensaje_alerta = 'Alto consumo de oxígeno - Paciente complejo'
 color_alerta = 'orange'
+activo_alerta = TRUE
 ```
 
-### 7.2 Evaluación en Frontend
+**Nota:** Las alertas se configuran por TIPO, no por equipamiento individual.
+
+### 7.2 Gestión de Alertas
+
+**Componente:** `GestionAlertasServicios.tsx` (unificado)  
+**Ruta:** Tab "Alertas/ Tipo" en AdminDashboard
+
+**Dos Secciones:**
+
+1. **Alertas por Tipo de Unidad (Servicios)**
+   - Lista de tipos_unidad con alertas configurables
+   - Columnas: Tipo, Cantidad Máxima, Mensaje, Color, Estado
+
+2. **Alertas por Tipo de Equipamiento**
+   - Lista de tipos_equipamiento con alertas configurables
+   - Columnas: Tipo, Cantidad Máxima, Mensaje, Color, Estado
+
+**Modal de Edición:**
+- Switch "Alerta Activa"
+- Cantidad Máxima (número)
+- Mensaje de Alerta (texto)
+- Color de Alerta (select: orange, red, yellow)
+
+### 7.3 Evaluación en Frontend
+
+Las alertas se evalúan al agregar equipamientos, sumando cantidades por tipo:
 
 ```typescript
-const verificarAlertas = () => {
-  const alertas: Alerta[] = [];
-  
-  equipamientosSeleccionados.forEach(equipo => {
-    const equipoData = equipamientosDisponibles.find(
-      e => e.id_equipamiento === equipo.id_equipamiento
-    );
-    
-    if (equipoData?.genera_alerta && equipoData.umbral_alerta) {
-      if (equipo.cantidad >= equipoData.umbral_alerta) {
-        alertas.push({
-          tipo: 'equipamiento',
-          mensaje: equipoData.mensaje_alerta,
-          color: equipoData.color_alerta,
-          equipamiento: equipo.nombre,
-          cantidad: equipo.cantidad
-        });
-      }
-    }
-  });
-  
-  setAlertasActivas(alertas);
-};
+// Ejemplo: Si hay 3 tubos de O2 + 2 concentradores = 5 items de oxigenoterapia
+// Y el tipo "oxigenoterapia" tiene cantidad_maxima = 5
+// → Se dispara alerta
 ```
 
-### 7.3 Visualización
+### 7.4 Alertas de Valores Desactualizados
 
-```tsx
-{alertasActivas.length > 0 && (
-  <Paper p="md" withBorder style={{ backgroundColor: '#fff3cd' }}>
-    <Group gap="xs" mb="xs">
-      <ExclamationTriangleIcon style={{ width: 20, height: 20 }} />
-      <Text fw={600} c="orange">ALERTAS ACTIVAS</Text>
-    </Group>
-    <Stack gap="xs">
-      {alertasActivas.map((alerta, idx) => (
-        <Badge key={idx} color={alerta.color} size="lg">
-          {alerta.mensaje} ({alerta.cantidad} unidades)
-        </Badge>
-      ))}
-    </Stack>
-  </Paper>
-)}
-```
-
-### 7.4 Integración con Auditoría
-
-- Alertas de equipamiento → Presupuesto va a auditoría
-- Gerencias ven alertas en detalle
-- Comentario automático: "Alerta de equipamiento: [mensaje]"
+**Implementación:**
+- Se disparan al seleccionar equipamiento con >45 días sin actualizar
+- Alertas persistentes (autoClose=false) con botón X
+- Posición top-center
+- Mensaje: "[Nombre equipamiento]: sin actualizar hace X días"
 
 ---
 
 ## 8. Integración con Presupuestos
 
-### 8.1 Modificar Cálculo de Totales
+### 8.1 Modificación de Cálculo de Totales
 
 ```typescript
 // En recalcularTotales()
@@ -391,18 +441,10 @@ const costoTotal = totalInsumos + totalPrestaciones + totalEquipamientoCosto;
 const totalFacturar = totalInsumosFacturar + totalPrestacionesFacturar + totalEquipamientoFacturar;
 ```
 
-### 8.2 Agregar Columna en `presupuestos`
-
-```sql
-ALTER TABLE presupuestos 
-ADD COLUMN total_equipamiento DECIMAL(10,2) DEFAULT 0.00 
-AFTER total_prestaciones;
-```
-
-### 8.3 Modificar `CrearPresupuesto.tsx`
+### 8.2 Integración en CrearPresupuesto.tsx
 
 ```tsx
-// Agregar pestaña
+// Pestaña agregada
 <Tabs.Tab value="equipamiento">
   <Group gap="xs">
     <WrenchScrewdriverIcon style={{ width: 20, height: 20 }} />
@@ -410,7 +452,7 @@ AFTER total_prestaciones;
   </Group>
 </Tabs.Tab>
 
-// Agregar panel
+// Panel agregado
 <Tabs.Panel value="equipamiento" pt="md">
   <Equipamiento
     equipamientosSeleccionados={equipamientosSeleccionados}
@@ -423,198 +465,69 @@ AFTER total_prestaciones;
 </Tabs.Panel>
 ```
 
-### 8.4 Mostrar en Detalle de Presupuesto
+### 8.3 Visualización en Detalle de Presupuesto
 
-```tsx
-// En ModalDetallePresupuesto.tsx
-{presupuesto.equipamientos && presupuesto.equipamientos.length > 0 && (
-  <Paper p="md" withBorder>
-    <Title order={4} mb="sm">Equipamiento ({presupuesto.equipamientos.length})</Title>
-    <Table striped>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Equipo</Table.Th>
-          <Table.Th>Cantidad</Table.Th>
-          <Table.Th>Costo Unit.</Table.Th>
-          <Table.Th>Precio Facturar</Table.Th>
-          <Table.Th>Subtotal</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {presupuesto.equipamientos.map((eq: any, idx: number) => (
-          <Table.Tr key={idx}>
-            <Table.Td>{eq.nombre}</Table.Td>
-            <Table.Td>{eq.cantidad}</Table.Td>
-            <Table.Td>${Number(eq.costo).toFixed(2)}</Table.Td>
-            <Table.Td>${Number(eq.precio_facturar).toFixed(2)}</Table.Td>
-            <Table.Td>${(eq.cantidad * eq.precio_facturar).toFixed(2)}</Table.Td>
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
-  </Paper>
-)}
-```
+Los equipamientos se muestran en el modal de detalle junto con insumos y prestaciones, con tabla completa de cantidades, costos y subtotales.
 
 ---
 
-## 9. Migraciones
+## 📊 Estado de Implementación
 
-### 9.1 Migración Principal
-
-**Archivo:** `backend/migrations/004_create_equipamiento_module.sql`
-
-```sql
--- 1. Crear tabla equipamientos
-CREATE TABLE equipamientos (...);
-
--- 2. Crear tabla financiador_equipamiento
-CREATE TABLE financiador_equipamiento (...);
-
--- 3. Crear tabla financiador_equipamiento_valores
-CREATE TABLE financiador_equipamiento_valores (...);
-
--- 4. Crear tabla presupuesto_equipamiento
-CREATE TABLE presupuesto_equipamiento (...);
-
--- 5. Agregar columna a presupuestos
-ALTER TABLE presupuestos 
-ADD COLUMN total_equipamiento DECIMAL(10,2) DEFAULT 0.00 
-AFTER total_prestaciones;
-
--- 6. Crear índices de performance
-CREATE INDEX idx_presupuesto_equipamiento_presupuesto 
-ON presupuesto_equipamiento(idPresupuestos);
-
-CREATE INDEX idx_financiador_equipamiento_valores_vigencia 
-ON financiador_equipamiento_valores(fecha_inicio, fecha_fin);
-```
-
-### 9.2 Datos Iniciales
-
-**Archivo:** `backend/migrations/004_seed_equipamientos.sql`
-
-```sql
-INSERT INTO equipamientos (nombre, tipo, precio_referencia, genera_alerta, umbral_alerta, mensaje_alerta) VALUES
-('Tubo de Oxígeno 10m³', 'oxigenoterapia', 5000.00, TRUE, 5, 'Alto consumo de oxígeno - Paciente complejo'),
-('Tubo de Oxígeno 6m³', 'oxigenoterapia', 3500.00, TRUE, 8, 'Alto consumo de oxígeno - Paciente complejo'),
-('Concentrador de Oxígeno 5L', 'oxigenoterapia', 12000.00, TRUE, 2, 'Múltiples concentradores - Verificar necesidad'),
-('Concentrador de Oxígeno 10L', 'oxigenoterapia', 18000.00, TRUE, 1, 'Concentrador de alto flujo - Paciente crítico'),
-('Cama Articulada Eléctrica', 'mobiliario', 15000.00, FALSE, NULL, NULL),
-('Cama Ortopédica Manual', 'mobiliario', 8000.00, FALSE, NULL, NULL),
-('Colchón Antiescaras', 'mobiliario', 6000.00, FALSE, NULL, NULL),
-('Monitor de Signos Vitales', 'monitoreo', 8000.00, FALSE, NULL, NULL),
-('Oxímetro de Pulso', 'monitoreo', 2000.00, FALSE, NULL, NULL),
-('Nebulizador Ultrasónico', 'ventilacion', 3500.00, FALSE, NULL, NULL);
-```
+| Componente | Estado | Notas |
+|------------|--------|-------|
+| Base de Datos | ✅ Completo | 5 tablas creadas |
+| Migraciones | ✅ Completo | 3 migraciones ejecutadas |
+| Backend API | ✅ Completo | 15 endpoints |
+| Frontend Componente | ✅ Completo | Equipamiento.tsx |
+| Frontend Admin Base | ✅ Completo | GestionEquipamientosBase.tsx |
+| Frontend Admin Acuerdos | ✅ Completo | GestionEquipamientos.tsx |
+| Sistema de Alertas | ✅ Completo | Por tipo, no individual |
+| Valores Históricos | ✅ Completo | Con sucursales |
+| Integración Presupuestos | ✅ Completo | Cálculo de totales |
+| Modo Solo Lectura | ✅ Completo | Valores de época |
 
 ---
 
-## 10. Plan de Implementación
+## 🎯 Características Destacadas
 
-### Fase 1: Base de Datos (2-3 horas)
-- ✅ Crear 4 tablas nuevas
-- ✅ Agregar columna `total_equipamiento` a presupuestos
-- ✅ Crear índices de performance
-- ✅ Insertar datos iniciales (10 equipamientos comunes)
-- ✅ Probar queries de valores históricos
+### 1. Disponibilidad Universal
+- Todos los equipamientos activos disponibles para todos los financiadores
+- Si no hay acuerdo, usa precio_referencia (valor general)
+- Facilita la cotización sin restricciones
 
-### Fase 2: Backend (4-5 horas)
-- ✅ Crear `equipamientosController.ts`
-- ✅ Implementar CRUD completo
-- ✅ Endpoint de valores históricos con cierre automático
-- ✅ Endpoint por financiador con prioridad sucursal
-- ✅ Integrar en `recalcularTotales()`
-- ✅ Agregar equipamiento a query de detalle de presupuesto
-- ✅ Testing de endpoints
+### 2. Normalización de Tipos
+- Tabla maestra `tipos_equipamiento` con FK
+- Alertas configurables por tipo, no por item individual
+- Facilita gestión centralizada
 
-### Fase 3: Frontend - Componente Principal (5-6 horas)
-- ✅ Crear `Equipamiento.tsx`
-- ✅ Tabla de equipos disponibles
-- ✅ Formulario de agregar (con costo manual para sin acuerdo)
-- ✅ Tabla de equipos seleccionados
-- ✅ Sistema de alertas visual
-- ✅ Integración con `CrearPresupuesto.tsx`
-- ✅ Modo solo lectura para históricos
+### 3. Sistema Anti-Obsolescencia
+- Ventana de 30 días para valores específicos
+- Cierre automático de valores obsoletos
+- Garantiza consistencia de precios
 
-### Fase 4: Frontend - Panel Admin (3-4 horas)
-- ✅ Página `admin/Equipamientos.tsx`
-- ✅ CRUD de equipamientos
-- ✅ Página `admin/EquipamientosPorFinanciador.tsx`
-- ✅ Modal de valores históricos (reutilizar de prestaciones)
-- ✅ Selector de sucursal
-- ✅ Tabla de histórico
+### 4. Alertas Inteligentes
+- Alertas de valores desactualizados (>45 días)
+- Alertas por tipo de equipamiento
+- Mensajes personalizables por tipo
 
-### Fase 5: Testing & Ajustes (2-3 horas)
-- ✅ Probar flujo completo: crear presupuesto con equipamiento
-- ✅ Verificar cálculo de totales
-- ✅ Probar alertas con diferentes umbrales
-- ✅ Verificar valores históricos por sucursal
-- ✅ Probar modo solo lectura
-- ✅ Ajustes de UI/UX
+### 5. Valores Históricos Completos
+- Por financiador y sucursal
+- Cierre automático de períodos
+- Prioridad inteligente (específico > general > referencia)
 
 ---
 
-## 📊 Resumen de Esfuerzo
+## 📚 Documentación Relacionada
 
-| Fase | Tiempo Estimado | Complejidad |
-|------|-----------------|-------------|
-| Base de Datos | 2-3 horas | Baja |
-| Backend | 4-5 horas | Media |
-| Frontend - Componente | 5-6 horas | Media |
-| Frontend - Admin | 3-4 horas | Media |
-| Testing & Ajustes | 2-3 horas | Baja |
-| **TOTAL** | **16-21 horas** | **Media** |
+- [README.md](./README.md) - Información general del sistema
+- [MANUAL_USUARIO_V2.md](./MANUAL_USUARIO_V2.md) - Manual de usuario actualizado
+- [ARCHITECTURE_V2.md](./ARCHITECTURE_V2.md) - Arquitectura del sistema
+- [Migración 006](./backend/migrations/006_create_tipos_equipamiento.sql) - Tipos de equipamiento
+- [Migración 007](./backend/migrations/007_move_alertas_to_tipos.sql) - Alertas a tipos
+- [Migración 008](./backend/migrations/008_estandarizar_nombres_alertas.sql) - Estandarización
 
 ---
 
-## ✅ Checklist de Implementación
-
-### Base de Datos
-- [ ] Ejecutar migración `004_create_equipamiento_module.sql`
-- [ ] Ejecutar seed `004_seed_equipamientos.sql`
-- [ ] Verificar FKs y índices
-- [ ] Probar queries de valores históricos
-
-### Backend
-- [ ] Crear `equipamientosController.ts`
-- [ ] Crear rutas en `routes/equipamientos.ts`
-- [ ] Modificar `recalcularTotales()` en helpers
-- [ ] Agregar equipamiento a query de detalle
-- [ ] Testing con Postman/Thunder Client
-
-### Frontend - Componente
-- [ ] Crear `Equipamiento.tsx`
-- [ ] Integrar en `CrearPresupuesto.tsx`
-- [ ] Implementar sistema de alertas
-- [ ] Probar modo solo lectura
-
-### Frontend - Admin
-- [ ] Crear `admin/Equipamientos.tsx`
-- [ ] Crear `admin/EquipamientosPorFinanciador.tsx`
-- [ ] Reutilizar modal de valores históricos
-- [ ] Agregar rutas en router
-
-### Testing
-- [ ] Crear presupuesto con equipamiento
-- [ ] Verificar totales
-- [ ] Probar alertas
-- [ ] Verificar valores históricos
-- [ ] Probar edición → nueva versión
-
----
-
-## 🚀 Próximos Pasos
-
-1. **Revisar y aprobar especificación**
-2. **Ejecutar migraciones en entorno de desarrollo**
-3. **Implementar backend (endpoints + lógica)**
-4. **Desarrollar componente frontend**
-5. **Integrar con panel de administración**
-6. **Testing exhaustivo**
-7. **Documentar en README.md**
-8. **Deploy a producción**
-
----
-
-**Fin del documento**
+**Fin del documento**  
+**Versión:** 3.1  
+**Estado:** ✅ Implementado y en Producción

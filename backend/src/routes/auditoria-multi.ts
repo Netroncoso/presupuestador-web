@@ -24,6 +24,21 @@ router.use((req, res, next) => {
 // ============================================================================
 
 /**
+ * @swagger
+ * /api/auditoria-multi/pendientes:
+ *   get:
+ *     summary: Obtener casos pendientes
+ *     description: Lista presupuestos pendientes de auditoría para la gerencia del usuario
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de casos pendientes
+ *       403:
+ *         description: Acceso denegado - Solo gerencias
+ */
+/**
  * GET /api/auditoria-multi/pendientes
  * Obtiene casos pendientes para la gerencia del usuario
  */
@@ -71,6 +86,19 @@ router.get('/pendientes', requireAnyGerencia, async (req: Request & { user?: any
   }
 });
 
+/**
+ * @swagger
+ * /api/auditoria-multi/mis-casos:
+ *   get:
+ *     summary: Obtener mis casos asignados
+ *     description: Lista casos actualmente asignados al usuario (FCFS)
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de casos asignados
+ */
 /**
  * GET /api/auditoria-multi/mis-casos
  * Obtiene casos actualmente asignados al usuario
@@ -133,6 +161,27 @@ router.get('/mis-auditorias', requireAnyGerencia, async (req: Request & { user?:
 });
 
 /**
+ * @swagger
+ * /api/auditoria-multi/tomar/{id}:
+ *   put:
+ *     summary: Tomar caso para revisión (FCFS)
+ *     description: Asigna un caso pendiente al usuario (First Come First Served)
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Caso asignado exitosamente
+ *       409:
+ *         description: Caso ya asignado a otro usuario
+ */
+/**
  * PUT /api/auditoria-multi/tomar/:id
  * Toma un caso para revisión (First Come, First Served)
  */
@@ -155,6 +204,82 @@ router.put('/tomar/:id', requireAnyGerencia, async (req: Request & { user?: any 
 // ============================================================================
 // GERENCIA ADMINISTRATIVA
 // ============================================================================
+
+/**
+ * @swagger
+ * /api/auditoria-multi/administrativa/aprobar/{id}:
+ *   put:
+ *     summary: Aprobar presupuesto (G. Administrativa)
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               comentario:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Presupuesto aprobado
+ * /api/auditoria-multi/administrativa/derivar/{id}:
+ *   put:
+ *     summary: Derivar a G. Prestacional
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               comentario:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Derivado a G. Prestacional
+ * /api/auditoria-multi/administrativa/rechazar/{id}:
+ *   put:
+ *     summary: Rechazar presupuesto (G. Administrativa)
+ *     tags: [Auditoría Multi-Gerencial]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - comentario
+ *             properties:
+ *               comentario:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Presupuesto rechazado
+ */
 
 router.put('/administrativa/aprobar/:id', requireGerenciaAdministrativa, async (req: Request & { user?: any }, res: Response, next) => {
   try {

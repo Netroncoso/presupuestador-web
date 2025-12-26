@@ -4,6 +4,37 @@ import { cacheService } from '../services/cacheService';
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     tags: [Sistema - Health]
+ *     summary: Health check del sistema
+ *     description: Verifica estado de base de datos y cache
+ *     responses:
+ *       200:
+ *         description: Sistema operativo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 services:
+ *                   type: object
+ *                   properties:
+ *                     database:
+ *                       type: string
+ *                     cache:
+ *                       type: string
+ *       503:
+ *         description: Error en servicios
+ */
 router.get('/', async (req, res) => {
   try {
     const [dbCheck] = await pool.query('SELECT 1');

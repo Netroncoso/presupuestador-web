@@ -77,20 +77,20 @@ export default function AdminDashboard() {
           <Tabs.Tab value="servicios-prestador">
             <Group gap="xs">
               <BriefcaseIcon style={ICON_SIZE} />
-              Servicios por Financiador
+              Serv/ Financiador
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="equipamientos">
             <Group gap="xs">
               <LifebuoyIcon style={ICON_SIZE} />
-              Equipamientos por Financiador
+              Equip/ Financiador
             </Group>
           </Tabs.Tab>
           {user?.username === 'admin' && (
             <Tabs.Tab value="alertas">
               <Group gap="xs">
                 <BellAlertIcon style={ICON_SIZE} />
-                Alertas por Tipo
+                Alertas/ Tipo
               </Group>
             </Tabs.Tab>
           )}

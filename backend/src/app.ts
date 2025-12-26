@@ -32,6 +32,7 @@ import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { iniciarCronJobs } from './services/cronJobs';
+import { setupSwagger } from './swagger';
 
 dotenv.config();
 const app = express();
@@ -65,6 +66,9 @@ app.use(cors({
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
 app.use(express.json({ limit: '10mb' }));
+
+// Swagger documentation (public)
+setupSwagger(app);
 
 // Auth routes (public - sin CSRF)
 app.use('/api/auth', authRoutes);

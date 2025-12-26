@@ -33,10 +33,6 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
       e.tipo,
       e.precio_referencia,
       e.unidad_tiempo,
-      e.genera_alerta,
-      e.umbral_alerta,
-      e.mensaje_alerta,
-      e.color_alerta,
       COALESCE(
         (SELECT valor_asignado 
          FROM financiador_equipamiento_valores v
