@@ -68,7 +68,13 @@ export const getPrestacionesPorPrestador = asyncHandler(async (req: Request, res
            v.fecha_inicio DESC
          LIMIT 1),
         ps.valor_facturar
-      ) AS valor_facturar
+      ) AS valor_facturar,
+      COALESCE(
+        (SELECT DATEDIFF(CURDATE(), MAX(fecha_inicio))
+         FROM prestador_servicio_valores v
+         WHERE v.id_prestador_servicio = ps.id_prestador_servicio),
+        999
+      ) AS dias_sin_actualizar
      FROM prestador_servicio AS ps
      JOIN servicios AS s ON ps.id_servicio = s.id_servicio
      WHERE ps.idobra_social = ? AND ps.activo = 1

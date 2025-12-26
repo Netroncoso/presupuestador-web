@@ -78,20 +78,6 @@ export default function Equipamiento({
     try {
       const response = await api.get(`/equipamientos/financiador/${financiadorId}`);
       setEquipamientosDisponibles(response.data);
-      
-      // Verificar equipamientos desactualizados
-      const desactualizados = response.data.filter((eq: any) => eq.dias_sin_actualizar > 45);
-      if (desactualizados.length > 0) {
-        notifications.show({
-          id: `equipamientos-desactualizados-${financiadorId}`,
-          title: '⚠️ Valores Desactualizados',
-          message: `${desactualizados.length} equipamiento(s) sin actualizar hace más de 45 días`,
-          color: 'yellow',
-          autoClose: false,
-          withCloseButton: true,
-          position: 'top-center'
-        });
-      }
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -106,6 +92,19 @@ export default function Equipamiento({
     const equipo = equipamientosDisponibles.find(e => e.id === id);
     if (equipo) {
       setCantidad(1);
+      
+      // Alerta si el equipamiento está desactualizado
+      if ((equipo as any).dias_sin_actualizar > 45) {
+        notifications.show({
+          id: `equipamiento-desactualizado-${equipo.id}`,
+          title: '⚠️ Valor Desactualizado',
+          message: `${equipo.nombre}: sin actualizar hace ${(equipo as any).dias_sin_actualizar} días`,
+          color: 'yellow',
+          autoClose: false,
+          withCloseButton: true,
+          position: 'top-center'
+        });
+      }
     }
   };
 

@@ -22,6 +22,7 @@ interface PrestacionDisponible {
   cant_total: number
   valor_sugerido: number
   tipo_unidad?: string
+  dias_sin_actualizar?: number
 }
 
 interface Financiador {
@@ -254,6 +255,19 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       if (prestacionData) {
         setCantidad(String(prestacionData.cant_total || 1))
         setValorAsignado(String(prestacionData.valor_sugerido || 0))
+        
+        // Alerta si la prestación está desactualizada
+        if (prestacionData.dias_sin_actualizar && prestacionData.dias_sin_actualizar > 45) {
+          notifications.show({
+            id: `prestacion-desactualizada-${prestacionData.id_servicio}`,
+            title: '⚠️ Valor Desactualizado',
+            message: `${prestacionData.nombre}: sin actualizar hace ${prestacionData.dias_sin_actualizar} días`,
+            color: 'yellow',
+            autoClose: false,
+            withCloseButton: true,
+            position: 'top-center'
+          });
+        }
       }
     } else {
       setCantidad('1')
