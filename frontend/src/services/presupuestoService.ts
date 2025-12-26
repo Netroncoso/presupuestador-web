@@ -64,10 +64,11 @@ export const presupuestoService = {
 
   /**
    * Obtiene equipamientos de un presupuesto
+   * @param soloLectura - Si es true, trae valores guardados. Si es false, actualiza precio_facturar con valores actuales
    */
-  obtenerEquipamientos: async (id: number): Promise<any[]> => {
+  obtenerEquipamientos: async (id: number, soloLectura: boolean = false): Promise<any[]> => {
     try {
-      const res = await api.get(`/presupuestos/${id}/equipamientos`);
+      const res = await api.get(`/presupuestos/${id}/equipamientos?soloLectura=${soloLectura}`);
       return res.data;
     } catch (error) {
       console.error('Error loading equipamientos:', error);

@@ -52,7 +52,7 @@ export const usePresupuesto = () => {
         presupuestoService.obtener(id),
         presupuestoService.obtenerInsumos(id, soloLectura),
         presupuestoService.obtenerPrestaciones(id, soloLectura),
-        presupuestoService.obtenerEquipamientos(id)
+        presupuestoService.obtenerEquipamientos(id, soloLectura)
       ]);
 
       // Cargar financiador desde el presupuesto (prioridad) o parámetro

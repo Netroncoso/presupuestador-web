@@ -237,11 +237,52 @@ export const eliminarEquipamientoPresupuesto = asyncHandler(async (req: Request,
 // Obtener equipamientos de un presupuesto
 export const getEquipamientosPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = req.params.id;
+  const soloLectura = req.query.soloLectura === 'true';
 
-  const [rows] = await pool.query(
-    `SELECT * FROM presupuesto_equipamiento WHERE idPresupuestos = ? ORDER BY nombre`,
-    [presupuestoId]
-  );
+  if (soloLectura) {
+    // Modo solo lectura: devolver valores guardados tal cual
+    const [rows] = await pool.query(
+      `SELECT * FROM presupuesto_equipamiento WHERE idPresupuestos = ? ORDER BY nombre`,
+      [presupuestoId]
+    );
+    res.json(rows);
+  } else {
+    // Modo edición: actualizar precio_facturar con valores actuales
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT 
+        pe.*,
+        p.idobra_social,
+        p.sucursal_id
+       FROM presupuesto_equipamiento pe
+       JOIN presupuestos p ON pe.idPresupuestos = p.idPresupuestos
+       WHERE pe.idPresupuestos = ?
+       ORDER BY pe.nombre`,
+      [presupuestoId]
+    );
 
-  res.json(rows);
+    // Actualizar precio_facturar con valores actuales
+    const equipamientosActualizados = await Promise.all(
+      rows.map(async (eq: any) => {
+        const [valores] = await pool.query<RowDataPacket[]>(
+          `SELECT valor_facturar
+           FROM financiador_equipamiento_valores v
+           JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
+           WHERE fe.idobra_social = ?
+             AND fe.id_equipamiento = ?
+             AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+             AND CURDATE() BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
+           ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC
+           LIMIT 1`,
+          [eq.idobra_social, eq.id_equipamiento, eq.sucursal_id]
+        );
+
+        return {
+          ...eq,
+          precio_facturar: valores.length > 0 ? valores[0].valor_facturar : eq.precio_facturar
+        };
+      })
+    );
+
+    res.json(equipamientosActualizados);
+  }
 });
