@@ -84,11 +84,18 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
       EXISTS(
         SELECT 1 FROM financiador_equipamiento fe
         WHERE fe.idobra_social = ? AND fe.id_equipamiento = e.id
-      ) AS tiene_acuerdo
+      ) AS tiene_acuerdo,
+      COALESCE(
+        (SELECT DATEDIFF(CURDATE(), MAX(v.fecha_inicio))
+         FROM financiador_equipamiento_valores v
+         JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
+         WHERE fe.idobra_social = ? AND fe.id_equipamiento = e.id),
+        999
+      ) AS dias_sin_actualizar
      FROM equipamientos e
      WHERE e.activo = 1
      ORDER BY e.tipo, e.nombre`, 
-    [financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId]
+    [financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, financiadorId]
   );
   
   res.json(rows);
