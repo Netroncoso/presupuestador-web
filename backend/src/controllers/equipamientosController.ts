@@ -6,7 +6,10 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 // GET /api/equipamientos - Obtener todos los equipamientos (admin)
 export const getAllEquipamientos = asyncHandler(async (req: Request, res: Response) => {
   const [rows] = await pool.query(
-    'SELECT id, nombre, tipo, precio_referencia, activo FROM equipamientos ORDER BY nombre'
+    `SELECT e.id, e.nombre, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
+     FROM equipamientos e
+     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
+     ORDER BY e.nombre`
   );
   res.json(rows);
 });
@@ -14,7 +17,11 @@ export const getAllEquipamientos = asyncHandler(async (req: Request, res: Respon
 // Obtener todos los equipamientos activos (catálogo)
 export const getEquipamientos = asyncHandler(async (req: Request, res: Response) => {
   const [rows] = await pool.query(
-    `SELECT * FROM equipamientos WHERE activo = 1 ORDER BY tipo, nombre`
+    `SELECT e.*, te.nombre as tipo 
+     FROM equipamientos e
+     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
+     WHERE e.activo = 1 
+     ORDER BY te.nombre, e.nombre`
   );
   res.json(rows);
 });
@@ -30,7 +37,12 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
       e.id,
       e.nombre,
       e.descripcion,
-      e.tipo,
+      te.nombre as tipo,
+      e.tipo_equipamiento_id,
+      te.cantidad_maxima,
+      te.mensaje_alerta,
+      te.color_alerta,
+      te.activo_alerta,
       e.precio_referencia,
       e.unidad_tiempo,
       COALESCE(
@@ -97,8 +109,9 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
         DATEDIFF(CURDATE(), e.created_at)
       ) AS dias_sin_actualizar
      FROM equipamientos e
+     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
      WHERE e.activo = 1
-     ORDER BY e.tipo, e.nombre`, 
+     ORDER BY te.nombre, e.nombre`, 
     [financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, financiadorId]
   );
   
@@ -217,11 +230,11 @@ export const guardarValorEquipamiento = asyncHandler(async (req: Request, res: R
 // PUT /api/equipamientos/:id - Actualizar equipamiento
 export const actualizarEquipamiento = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { nombre, tipo, precio_referencia, activo } = req.body;
+  const { nombre, tipo_equipamiento_id, precio_referencia, activo } = req.body;
 
   await pool.query(
-    'UPDATE equipamientos SET nombre = ?, tipo = ?, precio_referencia = ?, activo = ? WHERE id = ?',
-    [nombre, tipo, precio_referencia, activo, id]
+    'UPDATE equipamientos SET nombre = ?, tipo_equipamiento_id = ?, precio_referencia = ?, activo = ? WHERE id = ?',
+    [nombre, tipo_equipamiento_id, precio_referencia, activo, id]
   );
 
   res.json({ success: true });
@@ -310,11 +323,11 @@ export const getValoresEquipamientoAdmin = asyncHandler(async (req: Request, res
 
 // POST /api/equipamientos/admin - Crear equipamiento
 export const crearEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const { nombre, tipo, precio_referencia, activo } = req.body;
+  const { nombre, tipo_equipamiento_id, precio_referencia, activo } = req.body;
 
   const [result]: any = await pool.query(
-    'INSERT INTO equipamientos (nombre, tipo, precio_referencia, activo) VALUES (?, ?, ?, ?)',
-    [nombre, tipo, precio_referencia, activo]
+    'INSERT INTO equipamientos (nombre, tipo_equipamiento_id, precio_referencia, activo) VALUES (?, ?, ?, ?)',
+    [nombre, tipo_equipamiento_id, precio_referencia, activo]
   );
 
   res.json({ success: true, id: result.insertId });
@@ -357,7 +370,7 @@ export const getEquipamientosPorFinanciadorAdmin = asyncHandler(async (req: Requ
     `SELECT 
       e.id,
       e.nombre,
-      e.tipo,
+      te.nombre as tipo,
       e.precio_referencia,
       e.activo,
       fe.id as id_financiador_equipamiento,
@@ -393,9 +406,10 @@ export const getEquipamientosPorFinanciadorAdmin = asyncHandler(async (req: Requ
         LIMIT 1
       ) as sucursal_id_vigente
      FROM equipamientos e
+     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
      LEFT JOIN financiador_equipamiento fe ON e.id = fe.id_equipamiento AND fe.idobra_social = ?
      WHERE e.activo = 1
-     ORDER BY e.tipo, e.nombre`,
+     ORDER BY te.nombre, e.nombre`,
     [financiadorId]
   );
   

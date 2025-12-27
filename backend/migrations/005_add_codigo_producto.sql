@@ -1,6 +1,8 @@
 -- Agregar columna codigo_producto a insumos y equipamientos
 -- Para sincronización con sistemas externos (EAN, SKU, etc)
 
+USE mh_1;
+
 DELIMITER $$
 
 -- Agregar codigo_producto a insumos si no existe

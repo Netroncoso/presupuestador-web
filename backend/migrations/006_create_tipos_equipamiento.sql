@@ -1,4 +1,6 @@
 -- Crear tabla tipos_equipamiento
+USE mh_1;
+
 CREATE TABLE IF NOT EXISTS tipos_equipamiento (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(50) NOT NULL UNIQUE,

@@ -1,4 +1,6 @@
 -- Agregar columnas de alertas a tipos_equipamiento (solo si no existen)
+USE mh_1;
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS add_alertas_tipos$$
