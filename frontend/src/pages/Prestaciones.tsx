@@ -45,6 +45,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
+  const [alertasConfig, setAlertasConfig] = useState<any[]>([])
   const [cantidad, setCantidad] = useState('1')
   const [valorAsignado, setValorAsignado] = useState('')
   const [prestacionSeleccionada, setPrestacionSeleccionada] = useState<string | null>(null)
@@ -85,7 +86,17 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
   useEffect(() => {
     cargarFinanciadores()
+    cargarAlertasConfig()
   }, [])
+
+  const cargarAlertasConfig = async () => {
+    try {
+      const response = await api.get('/alertas-servicios')
+      setAlertasConfig(response.data)
+    } catch (error) {
+      console.error('Error cargando alertas:', error)
+    }
+  }
 
   useEffect(() => {
     if (presupuestoId && financiadorId) {
@@ -312,6 +323,20 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
 
     const existeIndex = prestacionesSeleccionadas.findIndex(p => p.id_servicio === prestacionSeleccionada)
     const prestacionesAnteriores = [...prestacionesSeleccionadas]
+
+    // Verificar alerta por cantidad
+    const alertaConfig = alertasConfig.find(a => a.tipo_unidad === prestacionData.tipo_unidad && a.activo === 1)
+    if (alertaConfig && cantidadNum >= alertaConfig.cantidad_maxima) {
+      notifications.show({
+        id: `alerta-prestacion-${prestacionData.tipo_unidad}`,
+        title: `⚠️ ${alertaConfig.mensaje_alerta || 'Cantidad excedida'}`,
+        message: `${prestacionData.nombre} (máx. recomendado: ${alertaConfig.cantidad_maxima} ${prestacionData.tipo_unidad})`,
+        color: alertaConfig.color_alerta || 'orange',
+        autoClose: false,
+        withCloseButton: true,
+        position: 'top-center'
+      })
+    }
     
     if (existeIndex >= 0) {
       const nuevas = [...prestacionesSeleccionadas]
@@ -349,7 +374,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       message: `Se agregó ${prestacionData.nombre}`,
       color: 'blue'
     })
-  }, [prestacionSeleccionada, cantidad, valorAsignado, prestacionesDisponibles, prestacionesSeleccionadas, setPrestacionesSeleccionadas])
+  }, [prestacionSeleccionada, cantidad, valorAsignado, prestacionesDisponibles, prestacionesSeleccionadas, setPrestacionesSeleccionadas, alertasConfig])
 
   const eliminarPrestacion = useCallback((index: number) => {
     const prestacion = prestacionesSeleccionadas[index]
@@ -383,7 +408,24 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     if (nuevaCantidad <= 0 || nuevoValor <= 0) return
     
     const nuevas = [...prestacionesSeleccionadas]
-    nuevas[index] = { ...nuevas[index], cantidad: nuevaCantidad, valor_asignado: nuevoValor }
+    const prestacionActual = nuevas[index]
+    
+    nuevas[index] = { ...prestacionActual, cantidad: nuevaCantidad, valor_asignado: nuevoValor }
+
+    // Verificar alerta por cantidad
+    const alertaConfig = alertasConfig.find(a => a.tipo_unidad === prestacionActual.tipo_unidad && a.activo === 1)
+    if (alertaConfig && nuevaCantidad >= alertaConfig.cantidad_maxima) {
+      notifications.show({
+        id: `alerta-prestacion-${prestacionActual.tipo_unidad}`,
+        title: `⚠️ ${alertaConfig.mensaje_alerta || 'Cantidad excedida'}`,
+        message: `${prestacionActual.prestacion} (máx. recomendado: ${alertaConfig.cantidad_maxima} ${prestacionActual.tipo_unidad})`,
+        color: alertaConfig.color_alerta || 'orange',
+        autoClose: false,
+        withCloseButton: true,
+        position: 'top-center'
+      })
+    }
+
     setPrestacionesSeleccionadas(nuevas)
     
     if (presupuestoId) {

@@ -240,6 +240,38 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
             </Table.ScrollContainer>
           </Paper>
         )}
+
+        {presupuesto.equipamientos && presupuesto.equipamientos.length > 0 && (
+          <Paper p="md" withBorder>
+            <Title order={4} mb="sm">Equipamientos ({presupuesto.equipamientos.length})</Title>
+            <Table.ScrollContainer minWidth={500}>
+              <Table striped>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Equipamiento</Table.Th>
+                    <Table.Th>Tipo</Table.Th>
+                    <Table.Th>Cantidad</Table.Th>
+                    <Table.Th>Costo Unitario</Table.Th>
+                    <Table.Th>Precio Facturar</Table.Th>
+                    <Table.Th>Subtotal</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {presupuesto.equipamientos.map((eq: any, idx: number) => (
+                    <Table.Tr key={idx}>
+                      <Table.Td>{eq.nombre}</Table.Td>
+                      <Table.Td>{eq.tipo}</Table.Td>
+                      <Table.Td>{eq.cantidad}</Table.Td>
+                      <Table.Td>${Number(eq.costo || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>${Number(eq.precio_facturar || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>${(Number(eq.cantidad) * Number(eq.precio_facturar || 0)).toFixed(2)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          </Paper>
+        )}
       </Stack>
     </Modal>
   );

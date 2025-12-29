@@ -429,10 +429,10 @@ export const actualizarAcuerdoEquipamiento = asyncHandler(async (req: Request, r
   res.json({ success: true });
 });
 
-// Agregar equipamiento a presupuesto
+// Agregar equipamiento a presupuesto (UPSERT con ON DUPLICATE KEY UPDATE)
 export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = req.params.id;
-  const { id_equipamiento, nombre, cantidad, costo, precio_facturar, tiene_acuerdo } = req.body;
+  const { id_equipamiento, nombre, tipo, cantidad, costo, precio_facturar, tiene_acuerdo } = req.body;
 
   if (!id_equipamiento || !nombre || !cantidad || !costo || !precio_facturar) {
     throw new AppError(400, "Datos incompletos");
@@ -440,12 +440,17 @@ export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, 
 
   const [result]: any = await pool.query(
     `INSERT INTO presupuesto_equipamiento 
-     (idPresupuestos, id_equipamiento, nombre, cantidad, costo, precio_facturar, tiene_acuerdo) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [presupuestoId, id_equipamiento, nombre, cantidad, costo, precio_facturar, tiene_acuerdo || false]
+     (idPresupuestos, id_equipamiento, nombre, tipo, cantidad, costo, precio_facturar, tiene_acuerdo) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+     cantidad = VALUES(cantidad),
+     costo = VALUES(costo),
+     precio_facturar = VALUES(precio_facturar),
+     tipo = VALUES(tipo)`,
+    [presupuestoId, id_equipamiento, nombre, tipo, cantidad, costo, precio_facturar, tiene_acuerdo || false]
   );
 
-  res.json({ ok: true, id: result.insertId });
+  res.json({ ok: true, id: result.insertId || result.insertId });
 });
 
 // Eliminar equipamiento de presupuesto

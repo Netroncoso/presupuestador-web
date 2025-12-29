@@ -135,6 +135,25 @@ export default function Equipamiento({
       tiene_acuerdo: equipo.tiene_acuerdo
     };
 
+    // Calcular cantidad total del mismo tipo
+    const cantidadTotalTipo = equipamientosSeleccionados
+      .filter((e, i) => e.tipo === equipo.tipo && i !== existeIndex)
+      .reduce((sum, e) => sum + e.cantidad, 0) + cantidad;
+
+    // Verificar alerta por tipo
+    const equipoData = equipo as any;
+    if (equipoData.activo_alerta && equipoData.cantidad_maxima && cantidadTotalTipo >= equipoData.cantidad_maxima) {
+      notifications.show({
+        id: `alerta-tipo-${equipo.tipo}`,
+        title: `⚠️ ${equipoData.mensaje_alerta || 'Cantidad excedida'}`,
+        message: `${equipo.nombre} (máx. recomendado: ${equipoData.cantidad_maxima})`,
+        color: equipoData.color_alerta || 'orange',
+        autoClose: false,
+        withCloseButton: true,
+        position: 'top-center'
+      });
+    }
+
     if (existeIndex >= 0) {
       const nuevos = [...equipamientosSeleccionados];
       nuevos[existeIndex] = nuevo;
@@ -144,13 +163,14 @@ export default function Equipamiento({
     }
 
     if (presupuestoId) {
-      api.post(`/presupuestos/${presupuestoId}/equipamientos`, {
+      api.post(`/equipamientos/presupuesto/${presupuestoId}`, {
         id_equipamiento: equipo.id,
         nombre: equipo.nombre,
         tipo: equipo.tipo,
         cantidad,
         costo: equipo.valor_asignado,
-        precio_facturar: equipo.valor_facturar
+        precio_facturar: equipo.valor_facturar,
+        tiene_acuerdo: equipo.tiene_acuerdo
       }).catch((err: any) => {
         console.error('Error saving equipamiento:', err);
         setEquipamientosSeleccionados(equipamientosAnteriores);
@@ -180,9 +200,7 @@ export default function Equipamiento({
     setEquipamientosSeleccionados(nuevos);
 
     if (presupuestoId) {
-      api.delete(`/presupuestos/${presupuestoId}/equipamientos`, {
-        data: { id_equipamiento: equipamiento.id_equipamiento }
-      }).catch((err: any) => {
+      api.delete(`/equipamientos/presupuesto/${presupuestoId}/${equipamiento.id}`).catch((err: any) => {
         console.error('Error deleting equipamiento:', err);
         setEquipamientosSeleccionados(equipamientosAnteriores);
         notifications.show({
@@ -205,22 +223,45 @@ export default function Equipamiento({
     if (nuevaCantidad <= 0 || nuevoCosto <= 0 || nuevoPrecio <= 0) return;
 
     const nuevos = [...equipamientosSeleccionados];
+    const equipoActual = nuevos[index];
+    
     nuevos[index] = {
-      ...nuevos[index],
+      ...equipoActual,
       cantidad: nuevaCantidad,
       costo: nuevoCosto,
       precio_facturar: nuevoPrecio
     };
+
+    // Calcular cantidad total del mismo tipo
+    const cantidadTotalTipo = nuevos
+      .filter((e, i) => e.tipo === equipoActual.tipo)
+      .reduce((sum, e) => sum + e.cantidad, 0);
+
+    // Verificar alerta por tipo
+    const equipoData = equipamientosDisponibles.find(e => e.id === equipoActual.id_equipamiento) as any;
+    if (equipoData?.activo_alerta && equipoData?.cantidad_maxima && cantidadTotalTipo >= equipoData.cantidad_maxima) {
+      notifications.show({
+        id: `alerta-tipo-${equipoActual.tipo}`,
+        title: `⚠️ ${equipoData.mensaje_alerta || 'Cantidad excedida'}`,
+        message: `${equipoActual.nombre} (máx. recomendado: ${equipoData.cantidad_maxima})`,
+        color: equipoData.color_alerta || 'orange',
+        autoClose: false,
+        withCloseButton: true,
+        position: 'top-center'
+      });
+    }
+
     setEquipamientosSeleccionados(nuevos);
 
     if (presupuestoId) {
-      api.post(`/presupuestos/${presupuestoId}/equipamientos`, {
+      api.post(`/equipamientos/presupuesto/${presupuestoId}`, {
         id_equipamiento: nuevos[index].id_equipamiento,
         nombre: nuevos[index].nombre,
         tipo: nuevos[index].tipo,
         cantidad: nuevaCantidad,
         costo: nuevoCosto,
-        precio_facturar: nuevoPrecio
+        precio_facturar: nuevoPrecio,
+        tiene_acuerdo: nuevos[index].tiene_acuerdo
       }).catch((err: any) => console.error('Error updating equipamiento:', err));
     }
 

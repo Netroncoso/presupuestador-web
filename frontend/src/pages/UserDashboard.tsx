@@ -73,7 +73,7 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<
-    { nombre: string; dni: string; sucursal: string } | undefined
+    { nombre: string; dni: string; sucursal: string; sucursal_id?: number } | undefined
   >();
   const [recargarHistorial, setRecargarHistorial] = useState(0);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
@@ -151,6 +151,7 @@ export default function UserDashboard() {
     financiadorId,
     financiadorInfo,
     prestacionesSeleccionadas,
+    equipamientosSeleccionados,
   });
 
   const handleNuevoPresupuesto = useCallback(() => {
@@ -164,6 +165,7 @@ export default function UserDashboard() {
     setEsCargaHistorial(false);
     setDatosHistorial(undefined);
     setSoloLectura(false);
+    setActiveTab('datos');
   }, [resetPresupuesto, resetTotales]);
 
   const ejecutarFinalizacion = useCallback(async () => {
@@ -181,9 +183,11 @@ export default function UserDashboard() {
       setRecargarHistorial((prev) => prev + 1);
       setValidacionCompletada(false);
 
+      // Primero ir al historial, luego limpiar
+      setActiveTab('historial');
       setTimeout(() => {
         handleNuevoPresupuesto();
-      }, 2000);
+      }, 500);
     } catch (error) {
       console.error("Error al finalizar presupuesto:", error);
       setValidacionCompletada(false);
@@ -233,6 +237,7 @@ export default function UserDashboard() {
           nombre: presupuesto.Nombre_Apellido,
           dni: presupuesto.DNI,
           sucursal: presupuesto.Sucursal,
+          sucursal_id: presupuesto.sucursal_id
         });
         await cargarPresupuesto(
           presupuesto.idPresupuestos,
@@ -265,6 +270,7 @@ export default function UserDashboard() {
             nombre: presupuesto.Nombre_Apellido,
             dni: presupuesto.DNI,
             sucursal: presupuesto.Sucursal,
+            sucursal_id: presupuesto.sucursal_id
           });
 
           await cargarPresupuesto(
@@ -336,7 +342,6 @@ export default function UserDashboard() {
 
       setEnviandoAuditoria(true);
       try {
-        // 1. Finalizar presupuesto (guarda totales)
         const totales = {
           totalInsumos,
           totalPrestaciones,
@@ -348,7 +353,6 @@ export default function UserDashboard() {
         
         await finalizarPresupuesto(totales);
         
-        // 2. Forzar estado a "pendiente" con mensaje del modal
         await api.put(`/auditoria/pedir/${presupuestoId}`, {
           mensaje: mensaje || null,
         });
@@ -365,9 +369,10 @@ export default function UserDashboard() {
         cerrarModalAuditoria();
         setRecargarHistorial((prev) => prev + 1);
         
+        setActiveTab('historial');
         setTimeout(() => {
           handleNuevoPresupuesto();
-        }, 2000);
+        }, 500);
         
       } catch (error) {
         console.error("Error:", error);
@@ -409,6 +414,7 @@ export default function UserDashboard() {
         nombre: presupuestoParaEditar.Nombre_Apellido,
         dni: presupuestoParaEditar.DNI,
         sucursal: presupuestoParaEditar.Sucursal,
+        sucursal_id: presupuestoParaEditar.sucursal_id
       });
 
       await cargarPresupuesto(
@@ -604,6 +610,7 @@ export default function UserDashboard() {
                   <Button
                     onClick={handleFinalizarPresupuesto}
                     loading={guardandoTotales}
+                    disabled={soloLectura || guardandoTotales}
                     size="xs"
                     color="green"                    
                     justify="center"
@@ -616,6 +623,7 @@ export default function UserDashboard() {
                     size="xs"
                     variant="outline"
                     color="orange"
+                    disabled={soloLectura}
                     justify="center"
                     leftSection={<ShieldCheckIcon style={ICON_SIZE} />}
                   >
@@ -625,7 +633,8 @@ export default function UserDashboard() {
                     onClick={handleDescargarPDF}
                     size="xs"
                     variant="outline"
-                    color="green"                    
+                    color="green"
+                    disabled={soloLectura}
                     justify="center"
                     leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
                   >

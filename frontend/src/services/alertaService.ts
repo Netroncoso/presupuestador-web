@@ -21,19 +21,15 @@ const getAlertasConfig = async () => {
   }
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/configuracion?categoria=alertas`, {
+    const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:4000';
+    const response = await fetch(`${API_URL}/api/configuracion?categoria=alertas`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const data = await response.json();
     
-    // Verificar que data sea un array
-    if (!Array.isArray(data)) {
-      throw new Error('La respuesta no es un array');
-    }
-    
     // Convertir array a objeto para acceso rápido
     alertasConfigCache = data.reduce((acc: any, item: any) => {
-      acc[item.clave] = item.valor;
+      acc[item.clave] = parseFloat(item.valor);
       return acc;
     }, {});
     
@@ -41,8 +37,6 @@ const getAlertasConfig = async () => {
     return alertasConfigCache;
   } catch (error) {
     console.error('Error cargando configuración de alertas:', error);
-    alertasConfigCache = null;
-    cacheTimestamp = 0;
     // Valores por defecto si falla la carga
     return {
       'alerta.rentabilidad.desaprobado': 20,
@@ -51,7 +45,7 @@ const getAlertasConfig = async () => {
       'alerta.rentabilidad.excepcional': 50,
       'alerta.monto.elevado': 100000,
       'alerta.monto.critico': 150000,
-      'alerta.financiador.cobranzaLenta': 45,
+      'alerta.financiador.cobranzaLenta': 50,
       'alerta.financiador.cobranzaExtendida': 60,
       'alerta.financiador.tasaAlta': 5
     };
@@ -84,7 +78,7 @@ export const evaluarPrestacionesExcedidas = (prestaciones: Prestacion[], alertas
   return prestaciones.filter(p => {
     const alertaConfig = alertasConfig.find(a => a.tipo_unidad === p.tipo_unidad && a.activo === 1);
     if (!alertaConfig) return false;
-    return p.cantidad > alertaConfig.cantidad_maxima;
+    return p.cantidad >= alertaConfig.cantidad_maxima;
   }).map(p => {
     const alertaConfig = alertasConfig.find(a => a.tipo_unidad === p.tipo_unidad);
     return {
@@ -93,6 +87,42 @@ export const evaluarPrestacionesExcedidas = (prestaciones: Prestacion[], alertas
       color_alerta: alertaConfig?.color_alerta
     };
   });
+};
+
+export const evaluarEquipamientosExcedidos = (equipamientos: any[], alertasConfig: any[]) => {
+  // Agrupar equipamientos por tipo
+  const equiposPorTipo = equipamientos.reduce((acc: any, eq: any) => {
+    if (!acc[eq.tipo]) {
+      acc[eq.tipo] = [];
+    }
+    acc[eq.tipo].push(eq);
+    return acc;
+  }, {});
+
+  const excedidos: any[] = [];
+
+  // Evaluar cada tipo
+  Object.keys(equiposPorTipo).forEach(tipo => {
+    const alertaConfig = alertasConfig.find(a => a.nombre === tipo && a.activo_alerta === 1);
+    if (!alertaConfig) return;
+
+    const equipos = equiposPorTipo[tipo];
+    const cantidadTotal = equipos.reduce((sum: number, eq: any) => sum + eq.cantidad, 0);
+
+    if (cantidadTotal >= alertaConfig.cantidad_maxima) {
+      // Agregar cada equipamiento del tipo excedido
+      equipos.forEach((eq: any) => {
+        excedidos.push({
+          ...eq,
+          mensaje_alerta: alertaConfig.mensaje_alerta,
+          color_alerta: alertaConfig.color_alerta,
+          cantidad_maxima: alertaConfig.cantidad_maxima
+        });
+      });
+    }
+  });
+
+  return excedidos;
 };
 
 export const evaluarFinanciador = async (financiadorInfo?: FinanciadorInfo) => {

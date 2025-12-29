@@ -41,7 +41,7 @@ const router = Router();
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/', authenticateToken, requireAdmin, alertasEquipamientosController.obtenerAlertasEquipamientos);
+router.get('/', authenticateToken, alertasEquipamientosController.obtenerAlertasEquipamientos);
 
 /**
  * @swagger

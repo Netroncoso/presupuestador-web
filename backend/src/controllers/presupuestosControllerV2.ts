@@ -59,6 +59,18 @@ async function obtenerInsumosPresupuesto(id: number) {
   return insumos;
 }
 
+async function obtenerEquipamientosPresupuesto(id: number) {
+  const [equipamientos] = await pool.query<any[]>(`
+    SELECT pe.*, e.nombre, te.nombre as tipo
+    FROM presupuesto_equipamiento pe
+    LEFT JOIN equipamientos e ON pe.id_equipamiento = e.id
+    LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
+    WHERE pe.idPresupuestos = ?
+    ORDER BY e.nombre
+  `, [id]);
+  return equipamientos;
+}
+
 // Listar solo últimas versiones
 export const listarPresupuestos = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const limit = parseInt(req.query.limit as string) || BusinessRules.paginacion.limitDefault;
@@ -270,11 +282,13 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
 
   const prestaciones = await obtenerPrestacionesPresupuesto(id);
   const insumos = await obtenerInsumosPresupuesto(id);
+  const equipamientos = await obtenerEquipamientosPresupuesto(id);
 
   res.json({
     ...presupuesto,
     prestaciones,
-    insumos
+    insumos,
+    equipamientos
   });
 });
 

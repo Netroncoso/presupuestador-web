@@ -173,7 +173,10 @@ export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, 
   // Si es solo lectura, devolver datos históricos guardados
   if (soloLectura) {
     const [rows] = await pool.query<any[]>(
-      'SELECT id_servicio, prestacion, cantidad, valor_asignado, valor_facturar FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+      `SELECT pp.id_servicio, pp.prestacion, pp.cantidad, pp.valor_asignado, pp.valor_facturar, s.tipo_unidad
+       FROM presupuesto_prestaciones pp
+       LEFT JOIN servicios s ON pp.id_servicio = s.id_servicio
+       WHERE pp.idPresupuestos = ?`,
       [presupuestoId]
     );
     return res.json(rows);
@@ -186,7 +189,8 @@ export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, 
       pp.prestacion,
       pp.cantidad,
       pp.valor_asignado,
-      COALESCE(psv.valor_facturar, pp.valor_facturar) as valor_facturar
+      COALESCE(psv.valor_facturar, pp.valor_facturar) as valor_facturar,
+      s.tipo_unidad
     FROM presupuesto_prestaciones pp
     INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
     LEFT JOIN prestador_servicio ps 
@@ -195,6 +199,7 @@ export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, 
     LEFT JOIN prestador_servicio_valores psv 
       ON ps.id_prestador_servicio = psv.id_prestador_servicio
       AND CURDATE() BETWEEN psv.fecha_inicio AND COALESCE(psv.fecha_fin, '9999-12-31')
+    LEFT JOIN servicios s ON pp.id_servicio = s.id_servicio
     WHERE pp.idPresupuestos = ?
   `, [presupuestoId]);
 

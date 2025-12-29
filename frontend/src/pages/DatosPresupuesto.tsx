@@ -8,7 +8,7 @@ interface Props {
   onNuevoPresupuesto: () => void
   esCargaHistorial?: boolean
   setEsCargaHistorial?: (esHistorial: boolean) => void
-  datosHistorial?: { nombre: string; dni: string; sucursal: string }
+  datosHistorial?: { nombre: string; dni: string; sucursal: string; sucursal_id?: number }
   soloLectura?: boolean
 }
 
@@ -48,9 +48,20 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       setNombre(datosHistorial.nombre)
       setDni(datosHistorial.dni)
       setSucursal(datosHistorial.sucursal)
+      if (datosHistorial.sucursal_id) {
+        setSucursalId(datosHistorial.sucursal_id)
+      }
       setPresupuestoCreado(true)
+    } else if (!esCargaHistorial) {
+      // Si no hay datosHistorial y no es carga histórica, limpiar todo
+      setNombre('')
+      setDni('')
+      setSucursal('')
+      setSucursalId(null)
+      setDificilAcceso(false)
+      setPresupuestoCreado(false)
     }
-  }, [datosHistorial])
+  }, [datosHistorial, esCargaHistorial])
 
   const verificarDNI = async () => {
     if (!dni || !/^\d{7,8}$/.test(dni)) {
@@ -184,10 +195,10 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   }
 
   const guardarYContinuar = async () => {
-    if (!nombre || !dni || !sucursal) {
+    if (!nombre || !dni || !sucursalId) {
       notifications.show({
         title: 'Campos vacíos',
-        message: 'Complete todos los campos',
+        message: 'Complete todos los campos obligatorios (Nombre, DNI y Sucursal)',
         color: 'red'
       })
       return
@@ -200,11 +211,12 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
     setNombre('')
     setDni('')
     setSucursal('')
+    setSucursalId(null)
     setDificilAcceso(false)
     setPresupuestoCreado(false)
     setModalDNI(false)
     setPresupuestoExistente(null)
-    setEsCargaHistorial(false) // Reset historical load flag
+    setEsCargaHistorial(false)
     onNuevoPresupuesto()
     notifications.show({
       title: 'Nuevo Presupuesto',

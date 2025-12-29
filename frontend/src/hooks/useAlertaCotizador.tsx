@@ -1,10 +1,11 @@
 import React from 'react';
 import { FinanciadorInfo, Prestacion } from '../types';
-import { evaluarRentabilidad, evaluarMonto, evaluarPrestacionesExcedidas, evaluarFinanciador } from '../services/alertaService';
+import { evaluarRentabilidad, evaluarMonto, evaluarPrestacionesExcedidas, evaluarEquipamientosExcedidos, evaluarFinanciador } from '../services/alertaService';
 import { RentabilidadAlert } from '../components/alerts/RentabilidadAlert';
 import { MontoAlert } from '../components/alerts/MontoAlert';
 import { FinanciadorAlerts } from '../components/alerts/FinanciadorAlerts';
 import { PrestacionExcedidaAlert } from '../components/alerts/PrestacionExcedidaAlert';
+import { EquipamientoExcedidoAlert } from '../components/alerts/EquipamientoExcedidoAlert';
 
 interface AlertaProps {
   presupuestoId: number | null;
@@ -16,6 +17,7 @@ interface AlertaProps {
   financiadorId: string | null;
   financiadorInfo?: FinanciadorInfo;
   prestacionesSeleccionadas?: Prestacion[];
+  equipamientosSeleccionados?: any[];
 }
 
 export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
@@ -24,20 +26,29 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
     totalFacturar,
     financiadorId,
     financiadorInfo,
-    prestacionesSeleccionadas = []
+    prestacionesSeleccionadas = [],
+    equipamientosSeleccionados = []
   } = props;
 
   const [alertasConfig, setAlertasConfig] = React.useState<any[]>([]);
+  const [alertasEquipamientosConfig, setAlertasEquipamientosConfig] = React.useState<any[]>([]);
   const [alertas, setAlertas] = React.useState<React.ReactNode[]>([]);
 
   React.useEffect(() => {
     const cargarAlertas = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/alertas-servicios`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        setAlertasConfig(data);
+        const [serviciosRes, equipamientosRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/api/alertas-servicios`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          }),
+          fetch(`${import.meta.env.VITE_API_URL}/api/alertas-equipamientos`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          })
+        ]);
+        const serviciosData = await serviciosRes.json();
+        const equipamientosData = await equipamientosRes.json();
+        setAlertasConfig(serviciosData);
+        setAlertasEquipamientosConfig(equipamientosData);
       } catch (error) {
         console.error('Error cargando alertas:', error);
       }
@@ -107,11 +118,24 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
         });
       }
 
+      // Alertas de equipamientos excedidos
+      if (alertasEquipamientosConfig.length > 0) {
+        const equipamientosExcedidos = evaluarEquipamientosExcedidos(equipamientosSeleccionados, alertasEquipamientosConfig);
+        equipamientosExcedidos.forEach((eq, idx) => {
+          alertas.push(
+            React.createElement(EquipamientoExcedidoAlert, {
+              key: `equipamiento-${idx}`,
+              equipamiento: eq
+            })
+          );
+        });
+      }
+
       setAlertas(alertas);
     };
 
     evaluarAlertas();
-  }, [rentabilidad, totalFacturar, financiadorId, financiadorInfo, prestacionesSeleccionadas, alertasConfig]);
+  }, [rentabilidad, totalFacturar, financiadorId, financiadorInfo, prestacionesSeleccionadas, equipamientosSeleccionados, alertasConfig, alertasEquipamientosConfig]);
 
   return alertas;
 };

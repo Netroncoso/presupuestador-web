@@ -2,6 +2,8 @@ import React, { Suspense } from 'react';
 import { MantineProvider, Loader, Center, ScrollArea } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useApiInterceptor } from './hooks/useApiInterceptor';
+import { useSessionExpiredNotification } from './hooks/useSessionExpiredNotification';
 import Login from './components/Login';
 import './styles/global.css';
 
@@ -14,6 +16,8 @@ const GerenciaFinanciera = React.lazy(() => import('./pages/GerenciaFinanciera')
 
 function AppContent() {
   const { user, loading } = useAuth();
+  useApiInterceptor();
+  useSessionExpiredNotification();
 
   if (loading) {
     return <div>Cargando...</div>;

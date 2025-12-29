@@ -24,8 +24,23 @@ class ApiClient {
     }
   };
 
+  private unauthorizedCallbacks: Set<() => void> = new Set();
+
+  subscribeToUnauthorized(callback: () => void) {
+    this.unauthorizedCallbacks.add(callback);
+    return () => this.unauthorizedCallbacks.delete(callback);
+  }
+
+  private handleUnauthorized() {
+    this.unauthorizedCallbacks.forEach(cb => cb());
+  }
+
   private async handleResponse(response: Response) {
     if (!response.ok) {
+      if (response.status === 401) {
+        this.handleUnauthorized();
+        throw new Error('Sesión expirada');
+      }
       const errorText = await response.text();
       let errorMessage = `HTTP ${response.status}`;
       try {

@@ -15,6 +15,21 @@ auditorias_presupuestos,estado_anterior,5,varchar(50),varchar,50,YES,NULL,,,,NUL
 auditorias_presupuestos,estado_nuevo,6,varchar(50),varchar,50,YES,NULL,,,,NULL,NULL,NULL
 auditorias_presupuestos,comentario,7,text,text,65535,YES,NULL,,,,NULL,NULL,NULL
 auditorias_presupuestos,fecha,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+backup_presupuestos_fase1,idPresupuestos,1,int,int,NULL,NO,0,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,Nombre_Apellido,2,varchar(45),varchar,45,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,DNI,3,int,int,NULL,NO,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,Sucursal,4,varchar(45),varchar,45,NO,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,total_insumos,5,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,dificil_acceso,6,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,total_prestaciones,7,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,idobra_social,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,costo_total,9,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,created_at,10,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+backup_presupuestos_fase1,updated_at,11,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
+backup_presupuestos_fase1,total_facturar,12,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,rentabilidad,13,"decimal(5,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,rentabilidad_con_plazo,14,"decimal(5,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
+backup_presupuestos_fase1,usuario_id,15,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 configuracion_sistema,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 configuracion_sistema,clave,2,varchar(100),varchar,100,NO,NULL,UNI,,,NULL,NULL,NULL
 configuracion_sistema,valor,3,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
@@ -65,7 +80,7 @@ notificaciones,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 notificaciones,usuario_id,2,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_1,usuarios,id
 notificaciones,presupuesto_id,3,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_2,presupuestos,idPresupuestos
 notificaciones,version_presupuesto,4,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-notificaciones,tipo,5,"enum('pendiente','aprobado','rechazado','nueva_version')",enum,13,YES,pendiente,,,,NULL,NULL,NULL
+notificaciones,tipo,5,"enum('pendiente','aprobado','aprobado_condicional','rechazado','observado','nueva_version')",enum,20,YES,pendiente,,,,NULL,NULL,NULL
 notificaciones,mensaje,6,varchar(512),varchar,512,YES,NULL,,,,NULL,NULL,NULL
 notificaciones,estado,7,"enum('nuevo','leido')",enum,5,YES,nuevo,MUL,,,NULL,NULL,NULL
 notificaciones,creado_en,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
@@ -90,12 +105,13 @@ presupuesto_equipamiento,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL
 presupuesto_equipamiento,idPresupuestos,2,int,int,NULL,NO,NULL,MUL,,,presupuesto_equipamiento_ibfk_1,presupuestos,idPresupuestos
 presupuesto_equipamiento,id_equipamiento,3,int,int,NULL,NO,NULL,MUL,,,presupuesto_equipamiento_ibfk_2,equipamientos,id
 presupuesto_equipamiento,nombre,4,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL
-presupuesto_equipamiento,cantidad,5,int,int,NULL,NO,1,,,,NULL,NULL,NULL
-presupuesto_equipamiento,costo,6,"decimal(10,2)",decimal,NULL,NO,NULL,,,"Precio usado: acuerdo o manual",NULL,NULL,NULL
-presupuesto_equipamiento,precio_facturar,7,"decimal(10,2)",decimal,NULL,NO,NULL,,,"Precio final",NULL,NULL,NULL
-presupuesto_equipamiento,tiene_acuerdo,8,tinyint(1),tinyint,NULL,YES,0,,,,NULL,NULL,NULL
-presupuesto_equipamiento,created_at,9,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-presupuesto_equipamiento,updated_at,10,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
+presupuesto_equipamiento,tipo,5,varchar(50),varchar,50,YES,NULL,,,,NULL,NULL,NULL
+presupuesto_equipamiento,cantidad,6,int,int,NULL,NO,1,,,,NULL,NULL,NULL
+presupuesto_equipamiento,costo,7,"decimal(10,2)",decimal,NULL,NO,NULL,,,"Precio usado: acuerdo o manual",NULL,NULL,NULL
+presupuesto_equipamiento,precio_facturar,8,"decimal(10,2)",decimal,NULL,NO,NULL,,,"Precio final",NULL,NULL,NULL
+presupuesto_equipamiento,tiene_acuerdo,9,tinyint(1),tinyint,NULL,YES,0,,,,NULL,NULL,NULL
+presupuesto_equipamiento,created_at,10,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+presupuesto_equipamiento,updated_at,11,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
 presupuesto_insumos,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuesto_insumos,idPresupuestos,2,int,int,NULL,NO,NULL,MUL,,,presupuesto_insumos_ibfk_1,presupuestos,idPresupuestos
 presupuesto_insumos,producto,3,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL
@@ -147,17 +163,17 @@ sucursales_mh,suc_porcentaje_dificil_acceso,3,int,int,NULL,YES,NULL,,,,NULL,NULL
 sucursales_mh,suc_porcentaje_insumos,4,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 tipos_equipamiento,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 tipos_equipamiento,nombre,2,varchar(50),varchar,50,NO,NULL,UNI,,,NULL,NULL,NULL
-tipos_equipamiento,descripcion,3,varchar(255),varchar,255,YES,NULL,,,"Descripción del tipo de equipamiento - Alertas integradas en esta tabla",NULL,NULL,NULL
+tipos_equipamiento,descripcion,3,varchar(255),varchar,255,YES,NULL,,,,NULL,NULL,NULL
 tipos_equipamiento,activo,4,tinyint(1),tinyint,NULL,YES,1,,,,NULL,NULL,NULL
-tipos_equipamiento,activo_alerta,5,tinyint(1),tinyint,NULL,YES,0,,,"Si está activa la alerta para este tipo (0=no, 1=sí)",NULL,NULL,NULL
-tipos_equipamiento,cantidad_maxima,6,int,int,NULL,YES,NULL,,,"Cantidad máxima permitida antes de generar alerta",NULL,NULL,NULL
+tipos_equipamiento,activo_alerta,5,tinyint(1),tinyint,NULL,YES,0,,,,NULL,NULL,NULL
+tipos_equipamiento,cantidad_maxima,6,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 tipos_equipamiento,mensaje_alerta,7,varchar(255),varchar,255,YES,NULL,,,,NULL,NULL,NULL
 tipos_equipamiento,color_alerta,8,varchar(20),varchar,20,YES,orange,,,,NULL,NULL,NULL
 tipos_equipamiento,created_at,9,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 tipos_equipamiento,updated_at,10,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
 tipos_unidad,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-tipos_unidad,nombre,2,varchar(50),varchar,50,NO,NULL,UNI,,"Nombre del tipo de unidad (ej: sesion, dia, mes)",NULL,NULL,NULL
-tipos_unidad,descripcion,3,varchar(255),varchar,255,YES,NULL,,,"Descripción del tipo de unidad - Alertas configuradas en alertas_servicios",NULL,NULL,NULL
+tipos_unidad,nombre,2,varchar(50),varchar,50,NO,NULL,UNI,,,NULL,NULL,NULL
+tipos_unidad,descripcion,3,varchar(255),varchar,255,YES,NULL,,,,NULL,NULL,NULL
 tipos_unidad,activo,4,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 tipos_unidad,created_at,5,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 tipos_unidad,updated_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
