@@ -8,9 +8,11 @@ interface PresupuestoData {
   presupuestoId: number;
   insumos: Array<{ producto: string; cantidad: number; costo: number }>;
   prestaciones: Array<{ prestacion: string; cantidad: number; valor_asignado: number }>;
+  equipamientos: Array<{ nombre: string; tipo: string; cantidad: number; costo: number }>;
   totales: {
     totalInsumos: number;
     totalPrestaciones: number;
+    totalEquipamientos: number;
     costoTotal: number;
     totalFacturar: number;
     rentabilidad: number;
@@ -85,6 +87,30 @@ export const pdfClientService = {
         headStyles: { fillColor: [37, 99, 235] },
       });
 
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // EQUIPAMIENTOS
+    if (data.equipamientos && data.equipamientos.length > 0) {
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EQUIPAMIENTOS', 20, yPos);
+      yPos += 7;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Equipamiento', 'Tipo', 'Cantidad', 'Precio Unit.', 'Total']],
+        body: data.equipamientos.map(e => [
+          e.nombre,
+          e.tipo,
+          e.cantidad.toString(),
+          `$${Number(e.costo).toFixed(2)}`,
+          `$${(Number(e.costo) * e.cantidad).toFixed(2)}`
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+      });
+
       yPos = (doc as any).lastAutoTable.finalY + 15;
     }
 
@@ -100,6 +126,10 @@ export const pdfClientService = {
     yPos += 7;
     doc.text(`Total Prestaciones: $${data.totales.totalPrestaciones.toFixed(2)}`, 20, yPos);
     yPos += 7;
+    if (data.totales.totalEquipamientos > 0) {
+      doc.text(`Total Equipamientos: $${data.totales.totalEquipamientos.toFixed(2)}`, 20, yPos);
+      yPos += 7;
+    }
     doc.text(`Costo Total: $${data.totales.costoTotal.toFixed(2)}`, 20, yPos);
     yPos += 7;
     doc.setFont('helvetica', 'bold');

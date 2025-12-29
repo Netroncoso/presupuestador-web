@@ -12,7 +12,9 @@ Sistema integral de gestión de presupuestos médicos con auditoría automatizad
 - **Modo Solo Lectura**: Visualización segura de presupuestos históricos con valores de época
 - **Sistema Multi-Gerencial**: 4 gerencias especializadas con flujo FCFS y auto-liberación
 - **Alertas Inteligentes**: Alertas de valores desactualizados y configurables por tipo
-- **Roles de Usuario**: Usuario normal, Gerencias (Administrativa, Prestacional, Financiera, General), Administrador
+- **Roles de Usuario**: Usuario normal, Gerencias (Administrativa, Prestacional, General, Financiera), Administrador
+- **Generación de PDF**: Exportación de presupuestos en cualquier estado (borrador, aprobado, rechazado)
+- **Manejo de Sesión**: Sistema automático de detección y notificación de sesión expirada (401)
 
 ## 📋 Requisitos
 
@@ -66,19 +68,22 @@ mysql -u root -p mh_1 < backend/migrations/008_estandarizar_nombres_alertas.sql
 
 ### Backend (.env)
 ```env
-DB_HOST=localhost
+DB_HOST=127.0.0.1
 DB_USER=root
 DB_PASSWORD=tu_password
 DB_NAME=mh_1
-PORT=3000
-JWT_SECRET=tu_secret_key
+PORT=4000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+SESSION_SECRET=tu_session_secret
+JWT_SECRET=tu_jwt_secret
 ```
 
-**Nota**: El nombre de la base de datos es `mh_1`.
+**Nota**: El nombre de la base de datos es `mh_1`. El backend corre en puerto **4000** (no 3000).
 
 ### Frontend (.env)
 ```env
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:4000
 ```
 
 ## 📚 Documentación
@@ -156,6 +161,11 @@ presupuestador-web/
 - Devolver a otras gerencias
 - Aprobación condicional
 - Decisión final en casos complejos
+
+### Gerencia Financiera
+- Dashboard de solo lectura
+- Visualización de casos sin capacidad de auditar
+- Usa mismo dashboard que G. General pero sin acciones
 
 ### Administrador
 - Gestión de usuarios
@@ -269,39 +279,45 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 ## 📦 Gestión de Insumos
 
 ### Características
-- CRUD completo de insumos
+- CRUD completo de insumos desde Panel Admin
 - Campo opcional `codigo_producto` (EAN/SKU)
 - Filtrado por nombre O código de producto
 - Precio de referencia actualizable
 - Estado activo/inactivo
+- Integración con presupuestos (cálculo automático con porcentaje)
 
 ## 🛠️ Gestión de Equipamientos
 
 ### Dos Paneles de Gestión
 
-#### 1. Gestión Base de Equipamientos
-- CRUD simple con precio_referencia
+#### 1. Equipamientos (Gestión Base)
+- CRUD completo de equipamientos desde Panel Admin
+- Campo `precio_referencia` (valor por defecto)
 - Gestión de tipos de equipamiento
 - Estado activo/inactivo
+- Disponible en tab "Equipamientos" del AdminDashboard
 
-#### 2. Equipamientos por Financiador
-- Acuerdos específicos con valores históricos
-- Valores diferenciados por sucursal
-- Similar a ServiciosPorPrestador
+#### 2. Equip/ Financiador (Acuerdos Específicos)
+- Acuerdos específicos con valores históricos por sucursal
+- Similar a "Serv/ Financiador"
 - Todos los equipamientos activos disponibles para todos los financiadores
-- Si no hay acuerdo específico, usa precio_referencia (valor general)
+- Si no hay acuerdo específico, usa `precio_referencia` (valor general)
+- Disponible en tab "Equip/ Financiador" del AdminDashboard
 
 ### Normalización de Tipos
 - Tabla `tipos_equipamiento` con FK desde `equipamientos.tipo_equipamiento_id`
 - Tipos predefinidos: oxigenoterapia, mobiliario, monitoreo, ventilacion, otro
 - Alertas configurables por tipo (no por equipamiento individual)
+- Gestión desde tab "Alertas/ Tipo" (solo super admin)
 
 ## 📱 Notificaciones en Tiempo Real
 
 - **SSE (Server-Sent Events)** para actualizaciones instantáneas
-- Notificaciones de auditoría (aprobación/rechazo)
-- Alertas de presupuestos pendientes
-- Indicador visual de conexión
+- Notificaciones de auditoría (aprobación/rechazo/derivación/escalamiento)
+- Alertas de presupuestos pendientes para gerencias
+- Indicador visual de conexión en todos los dashboards
+- Sistema de auto-reconexión automática
+- Notificaciones persistentes en tab "Notificaciones"
 
 ## 🧪 Testing
 
@@ -363,28 +379,43 @@ ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC;
 ## 🐛 Troubleshooting
 
 ### Error de Conexión SSE
-- Verificar que el backend esté corriendo
-- Revisar CORS en backend
+- Verificar que el backend esté corriendo en puerto **4000**
+- Revisar CORS en backend (variable `FRONTEND_URL`)
 - Comprobar firewall/antivirus
+- Verificar indicador de conexión en dashboard
+
+### Sesión Expirada (401)
+- Sistema detecta automáticamente y muestra notificación roja
+- Ejecuta logout automático
+- Usuario debe iniciar sesión nuevamente
+- Tokens JWT expiran en 1 hora
 
 ### Totales en $0
 - Sistema recalcula automáticamente desde insumos/prestaciones/equipamientos
-- Verificar que existan items asociados
+- Verificar que existan items asociados al presupuesto
+- Revisar que financiador esté seleccionado (requerido para prestaciones)
 
 ### Problemas de Autenticación
-- Verificar JWT_SECRET en .env
+- Verificar JWT_SECRET en .env del backend
 - Limpiar localStorage del navegador
-- Revisar expiración de tokens
+- Revisar expiración de tokens (1 hora por defecto)
+- Verificar que usuario esté activo en BD
 
 ### Valores Históricos no se Muestran
 - Verificar que la migración se ejecutó correctamente
-- Revisar endpoint correspondiente
+- Revisar endpoint correspondiente en backend
 - Verificar que existe registro en tabla de valores
+- Comprobar que sucursal del usuario tiene valores asignados
 
 ### Presupuestos Históricos Muestran Valores Actuales
-- **Comportamiento esperado**: En modo solo lectura, muestra valores de la fecha del presupuesto
+- **Comportamiento esperado**: En modo solo lectura, muestra valores guardados en BD
 - Verificar que `soloLectura=true` en componentes
-- Revisar que se pasa `fecha` al endpoint
+- Revisar que se pasa `fecha` al endpoint de valores históricos
+
+### No Puedo Imprimir PDF
+- **Solución**: Botón PDF ahora disponible en todos los estados
+- Funciona en borrador, aprobado, rechazado, en auditoría
+- Requiere que presupuesto tenga datos de paciente cargados
 
 ## 🤝 Contribuir
 
@@ -408,11 +439,23 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 3.1  
+**Versión:** 3.2  
 **Última actualización:** Enero 2025  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v3.2 (Enero 2025)
+- ⭐ **Generación de PDF Mejorada**
+- Botón PDF disponible en todos los estados (no solo borrador)
+- Hook reutilizable `usePdfGenerator` para múltiples dashboards
+- Inclusión de equipamientos en PDF generado
+- Sección de equipamientos en modal de detalle
+- ⭐ **Manejo de Sesión Expirada**
+- Patrón Observer para detección global de errores 401
+- Logout automático al expirar sesión
+- Notificación toast roja informando al usuario
+- Hooks `useApiInterceptor` y `useSessionExpiredNotification`
 
 ### v3.1 (Enero 2025)
 - ⭐ **Sistema Completo de Equipamientos**

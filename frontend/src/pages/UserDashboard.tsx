@@ -47,7 +47,7 @@ import { useTotales } from "../hooks/useTotales";
 import { useFinanciador } from "../hooks/useFinanciador";
 import { useModalState } from "../hooks/useModalState";
 import { useItemValidation } from "../hooks/useItemValidation";
-import { pdfClientService } from "../services/pdfClientService";
+import { usePdfGenerator } from "../hooks/usePdfGenerator";
 import { api } from "../api/api";
 
 const ICON_SIZE = { width: 20, height: 20 };
@@ -302,35 +302,19 @@ export default function UserDashboard() {
     [setFinanciadorId, setFinanciadorInfo]
   );
 
-  const handleDescargarPDF = useCallback(() => {
-    if (!presupuestoId || !datosHistorial) return;
-
-    pdfClientService.generarYDescargar({
-      cliente: datosHistorial.nombre,
-      dni: datosHistorial.dni,
-      sucursal: datosHistorial.sucursal,
-      presupuestoId,
-      insumos: insumosSeleccionados,
-      prestaciones: prestacionesSeleccionadas,
-      totales: {
-        totalInsumos,
-        totalPrestaciones,
-        costoTotal,
-        totalFacturar,
-        rentabilidad: rentabilidadFinal,
-      },
-    });
-  }, [
+  const { generarPDF } = usePdfGenerator({
     presupuestoId,
     datosHistorial,
     insumosSeleccionados,
     prestacionesSeleccionadas,
+    equipamientosSeleccionados,
     totalInsumos,
     totalPrestaciones,
+    totalEquipamientos: totalFacturarEquipamiento,
     costoTotal,
     totalFacturar,
-    rentabilidadFinal,
-  ]);
+    rentabilidad: rentabilidadFinal,
+  });
 
   const abrirModalAuditoria = useCallback(() => {
     if (presupuestoId) abrirModalAuditoriaBase();
@@ -630,11 +614,10 @@ export default function UserDashboard() {
                     Auditoría
                   </Button>
                   <Button
-                    onClick={handleDescargarPDF}
+                    onClick={generarPDF}
                     size="xs"
                     variant="outline"
                     color="green"
-                    disabled={soloLectura}
                     justify="center"
                     leftSection={<DocumentArrowDownIcon style={ICON_SIZE} />}
                   >
