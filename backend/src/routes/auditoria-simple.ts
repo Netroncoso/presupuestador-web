@@ -42,7 +42,8 @@ router.get('/historial/:id', auth, async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query(`
       SELECT 
-        a.id, a.estado_anterior, a.estado_nuevo, a.comentario, a.fecha as created_at,
+        a.id, a.estado_anterior, a.estado_nuevo, a.comentario, 
+        a.fecha as created_at,
         u.username as auditor_nombre
       FROM auditorias_presupuestos a
       LEFT JOIN usuarios u ON a.auditor_id = u.id
@@ -141,17 +142,20 @@ router.put('/pedir/:id', auth, async (req: AuthRequest, res: Response) => {
       return res.json({ success: true, estado: 'pendiente_administrativa', mensaje: 'Ya está en auditoría' });
     }
     
+    // Actualizar estado
     await pool.query(
       'UPDATE presupuestos SET estado = "pendiente_administrativa" WHERE idPresupuestos = ?',
       [id]
     );
     
+    // Insertar en auditorías
     await pool.query(`
       INSERT INTO auditorias_presupuestos 
       (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
       VALUES (?, ?, ?, ?, 'pendiente_administrativa', ?)
     `, [id, p.version || 1, p.usuario_id, estadoAnterior, mensaje || 'Auditoría solicitada manualmente']);
     
+    // Crear notificaciones
     let mensajeNotificacion = `Auditoría solicitada para presupuesto de ${p.Nombre_Apellido}`;
     if (mensaje && mensaje.trim()) {
       mensajeNotificacion += ` - ${mensaje.trim()}`;
@@ -169,7 +173,7 @@ router.put('/pedir/:id', auth, async (req: AuthRequest, res: Response) => {
     
     res.json({ success: true, estado: 'pendiente_administrativa' });
   } catch (error) {
-    console.error('Error solicitando auditoría:', { presupuestoId: id, error: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('Error solicitando auditoría:', { presupuestoId: id, error: error instanceof Error ? error.message : 'Unknown error', stack: error instanceof Error ? error.stack : undefined });
     res.status(500).json({ error: 'Error solicitando auditoría' });
   }
 });

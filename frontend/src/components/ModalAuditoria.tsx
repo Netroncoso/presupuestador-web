@@ -50,8 +50,9 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       
       <Textarea
         ref={textareaRef}
-        label="Mensaje"
+        label="Mensaje para la Gerencia (opcional)"
         placeholder="Explica por qué necesitas esta auditoría o cualquier información relevante..."
+        description="Este mensaje será visible para los auditores"
         value={mensaje}
         onChange={(e) => setMensaje(e.currentTarget.value)}
         rows={6}
