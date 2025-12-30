@@ -247,8 +247,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
           <Stack gap="xs">
             <Title order={5}>Insumos Seleccionados</Title>
 
-          <Table.ScrollContainer>
-            <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
+          <Table.ScrollContainer minWidth={600}>
+            <Table striped="odd" highlightOnHover stickyHeader>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Insumo</Table.Th>
