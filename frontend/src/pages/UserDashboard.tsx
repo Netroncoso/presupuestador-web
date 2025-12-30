@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import {
   Tabs,
-  Container,
   Title,
   Group,
   Text,
@@ -15,6 +14,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotificationCount } from "../hooks/useNotificationCount";
+import ResponsiveContainer from "../components/ResponsiveContainer";
 import DatosPresupuesto from "./DatosPresupuesto";
 import Notificaciones from "./Notificaciones";
 import { NotificationIndicator } from "../components/NotificationIndicator";
@@ -422,7 +422,7 @@ export default function UserDashboard() {
   }, [presupuestoParaEditar, crearVersionParaEdicion, cargarPresupuesto]);
 
   return (
-    <Container fluid p="xl">
+    <ResponsiveContainer px={{ base: 'xs', sm: 'md', lg: 'xl' }} py="md">
       <Group justify="space-between" mb={20}>
         <Title fw={500} order={2} c="blue">
           Cotizador General
@@ -798,6 +798,6 @@ export default function UserDashboard() {
         onContinuarDeTodasFormas={() => handleContinuarValidacion(true)}
         onFinalizarPresupuesto={() => handleContinuarValidacion(true)}
       />
-    </Container>
+    </ResponsiveContainer>
   );
 }

@@ -210,16 +210,16 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
         </Text>
       ) : (
         <Table.ScrollContainer minWidth={900}>
-          <Table striped="odd" highlightOnHover stickyHeader>
+          <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Estado</Table.Th>
-              {!esAuditor && <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>}
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Presupuesto</Table.Th>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Asunto</Table.Th>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
-              <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Estado</Table.Th>
+              {!esAuditor && <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Tipo</Table.Th>}
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Presupuesto</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Paciente</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Asunto</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Fecha</Table.Th>
+              <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acción</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -278,14 +278,14 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                   </span>
                 </Table.Td>
                 <Table.Td>
-                  <Group gap="xs">
+                  <Group gap={4}>
                     <ActionIcon 
                       variant="transparent"
                       color="blue" 
                       onClick={() => abrirModal(notif)}
                       title="Ver detalle"
                     >
-                      <EyeIcon style={ICON_SIZE_LG} />
+                      <EyeIcon style={{ width: 16, height: 16 }} />
                     </ActionIcon>
                     {notif.estado === 'nuevo' && (
                       <ActionIcon 
@@ -294,7 +294,7 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                         onClick={() => markAsRead(notif.id)}
                         title="Marcar como leída"
                       >
-                        <CheckIcon style={ICON_SIZE_LG} />
+                        <CheckIcon style={{ width: 16, height: 16 }} />
                       </ActionIcon>
                     )}
                     {notif.tipo === 'pendiente' && onIrAuditoria && (
@@ -305,7 +305,7 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                         title="Ir a auditoría"
                         
                       >
-                        <ShieldCheckIcon style={ICON_SIZE_LG} />
+                        <ShieldCheckIcon style={{ width: 16, height: 16 }} />
                       </ActionIcon>
                     )}
                   </Group>

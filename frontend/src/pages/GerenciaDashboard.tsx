@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Title, Text, Table, Button, Badge, Group, Paper, Loader, Center, Tabs, ActionIcon, TextInput, Alert } from '@mantine/core';
+import { Title, Text, Table, Button, Badge, Group, Paper, Loader, Center, Tabs, ActionIcon, TextInput, Alert } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotificationCount } from '../hooks/useNotificationCount';
@@ -10,6 +10,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { NotificationIndicator } from '../components/NotificationIndicator';
 import { ModalAuditoriaMulti } from '../components/ModalAuditoriaMulti';
 import { ModalDetallePresupuesto } from '../components/ModalDetallePresupuesto';
+import ResponsiveContainer from '../components/ResponsiveContainer';
 import Notificaciones from './Notificaciones';
 import ListaPresupuestos from './ListaPresupuestos';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
@@ -106,7 +107,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
   );
 
   return (
-    <Container fluid p="xl">
+    <ResponsiveContainer px={{ base: 'xs', sm: 'md', lg: 'xl' }} py="md">
       <Group justify="space-between" mb={20}>
         <Title fw={500} order={2} c="blue">{titulo}</Title>
         <Group gap="xs">
@@ -182,7 +183,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
           ) : (
             <Paper withBorder radius="md" shadow="sm">
               <Table.ScrollContainer minWidth={800}>
-                <Table striped highlightOnHover>
+                <Table striped highlightOnHover fontSize="xs">
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Paciente</Table.Th>
@@ -225,14 +226,14 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
                           <Text size="sm">{presupuesto.Sucursal}</Text>
                         </Table.Td>
                         <Table.Td>
-                          <Group gap="xs">
+                          <Group gap={4} wrap="nowrap">
                             <ActionIcon
                               variant="transparent"
                               color="blue"
                               onClick={() => verDetallePresupuesto(presupuesto)}
                               title="Ver detalle"
                             >
-                              <EyeIcon style={{ width: 20, height: 20 }} />
+                              <EyeIcon style={{ width: 16, height: 16 }} />
                             </ActionIcon>
                             <Button
                               size="xs"
@@ -257,7 +258,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
               </Alert>
               <Paper withBorder radius="md" shadow="sm">
                 <Table.ScrollContainer minWidth={800}>
-                  <Table striped highlightOnHover>
+                  <Table striped highlightOnHover fontSize="xs">
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>Paciente</Table.Th>
@@ -286,13 +287,13 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
                             </Text>
                           </Table.Td>
                           <Table.Td>
-                            <Group gap="xs">
+                            <Group gap={4} wrap="nowrap">
                               <ActionIcon
                                 variant="transparent"
                                 color="blue"
                                 onClick={() => verDetallePresupuesto(presupuesto)}
                               >
-                                <EyeIcon style={{ width: 20, height: 20 }} />
+                                <EyeIcon style={{ width: 16, height: 16 }} />
                               </ActionIcon>
                               <Button
                                 size="xs"
@@ -342,7 +343,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
         }}
         presupuesto={presupuestoDetalle}
       />
-    </Container>
+    </ResponsiveContainer>
   );
 };
 

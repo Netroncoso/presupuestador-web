@@ -385,25 +385,17 @@ export default function Equipamiento({
           <Stack gap="xs">
             <Title order={5}>Equipamientos Seleccionados</Title>
             <Table.ScrollContainer minWidth={1000}>
-              <Table striped="odd" highlightOnHover stickyHeader>
+              <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '13px' }}>Equipamiento</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Valores mensuales">
-                        <span style={{ cursor: 'help' }}>Costo</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Valores mensuales">
-                        <span style={{ cursor: 'help' }}>Precio a Facturar</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Costo</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Subtotal Facturar</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
+                    <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '12px' }}>Equipamiento</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Tipo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Cantidad</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Precio a Facturar</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Costo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Facturar</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acciones</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -468,7 +460,7 @@ export default function Equipamiento({
                         <Table.Td>
                           {!soloLectura && (
                             editandoIndex === i ? (
-                              <Group gap="xs" justify="left">
+                              <Group gap={4} justify="left" wrap="nowrap">
                                 <Button size="xs" onClick={() => actualizarEquipamiento(i)}>
                                   OK
                                 </Button>
@@ -477,7 +469,7 @@ export default function Equipamiento({
                                 </Button>
                               </Group>
                             ) : (
-                              <Group gap="xs" justify="left">
+                              <Group gap={4} justify="left" wrap="nowrap">
                                 <ActionIcon
                                   variant="transparent"
                                   onClick={() => {
@@ -487,14 +479,14 @@ export default function Equipamiento({
                                     setNuevoPrecio(eq.precio_facturar);
                                   }}
                                 >
-                                  <PencilSquareIcon width={20} height={20} />
+                                  <PencilSquareIcon width={16} height={16} />
                                 </ActionIcon>
                                 <ActionIcon
                                   variant="transparent"
                                   color="red"
                                   onClick={() => eliminarEquipamiento(i)}
                                 >
-                                  <TrashIcon width={20} height={20} />
+                                  <TrashIcon width={16} height={16} />
                                 </ActionIcon>
                               </Group>
                             )

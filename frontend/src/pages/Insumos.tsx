@@ -247,33 +247,17 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
           <Stack gap="xs">
             <Title order={5}>Insumos Seleccionados</Title>
 
-          <Table.ScrollContainer minWidth={900}>
-            <Table striped="odd" highlightOnHover stickyHeader >
+          <Table.ScrollContainer>
+            <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
             <Table.Thead>
               <Table.Tr>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Insumo</Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                  <Tooltip label="Costo base del insumo">
-                    <span>Costo Unit.</span>
-                  </Tooltip>
-                </Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                  <Tooltip label="Costo base + margen de sucursal (logística y ganancia)">
-                    <span>Precio a Facturar</span>
-                  </Tooltip>
-                </Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                  <Tooltip label="Costo base × cantidad">
-                    <span>Subtotal Costo</span>
-                  </Tooltip>
-                </Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                  <Tooltip label="Precio a facturar × cantidad">
-                    <span>Subtotal Facturar</span>
-                  </Tooltip>
-                </Table.Th>
-                <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Insumo</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Cant.</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo U.</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Precio Fact.</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subt. Costo</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subt. Fact.</Table.Th>
+                <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acciones</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -311,7 +295,7 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                   <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
                   <Table.Td>
                     {!soloLectura && (
-                      <Group gap="xs" align='baseline'>
+                      <Group gap={4} align='baseline' wrap="nowrap">
                         <ActionIcon
                           variant="transparent"
                           onClick={() => {
@@ -319,14 +303,14 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                             setNuevaCantidad(insumo.cantidad)
                           }}
                         >
-                          <PencilSquareIcon width={20} height={20} />
+                          <PencilSquareIcon width={16} height={16} />
                         </ActionIcon>
                         <ActionIcon
                           variant="transparent"
                           color="red"
                           onClick={() => eliminarInsumo(index)}
                         >
-                          <TrashIcon width={20} height={20} />
+                          <TrashIcon width={16} height={16} />
                         </ActionIcon>
                       </Group>
                     )}

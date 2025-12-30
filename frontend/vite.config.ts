@@ -4,18 +4,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Escuchar en todas las interfaces (0.0.0.0)
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
         secure: false,
-        configure: (proxy) => {
-          proxy.on('error', (err, _req, res) => {
-            if (err.code === 'ECONNRESET') return;
-            console.error('proxy error', err);
-          });
-        }
+        ws: true
       }
     }
   },

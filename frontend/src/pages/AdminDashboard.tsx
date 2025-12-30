@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Container, Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
+import { Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
 import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon, LifebuoyIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
+import ResponsiveContainer from '../components/ResponsiveContainer';
 
 const ICON_SIZE = { width: 20, height: 20 };
 
@@ -22,7 +23,7 @@ export default function AdminDashboard() {
   const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
 
   return (
-    <Container fluid  p="xl">
+    <ResponsiveContainer px={{ base: 'xs', sm: 'md', lg: 'xl' }} py="md">
       <Group style={{ justifyContent: 'space-between', marginBottom: 16 }}>
         <Title fw={500} order={2} c="red">Panel de Administración</Title>
         <Group gap="xs" align='baseline' justify='space-evenly'>
@@ -149,6 +150,6 @@ export default function AdminDashboard() {
         opened={usuariosModalOpen} 
         onClose={() => setUsuariosModalOpen(false)} 
       />
-    </Container>
+    </ResponsiveContainer>
   );
 }

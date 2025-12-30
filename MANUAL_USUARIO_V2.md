@@ -24,10 +24,11 @@ El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma i
 
 ### Roles del Sistema
 
-- **Usuario Normal**: Crea y gestiona presupuestos
+- **Usuario Normal**: Crea y gestiona presupuestos, solicita auditoría manual
 - **Gerencia Administrativa**: Primera línea de auditoría
 - **Gerencia Prestacional**: Segunda línea de auditoría técnica
 - **Gerencia General**: Última línea de auditoría y decisión final
+- **Gerencia Financiera**: Dashboard de solo lectura sin capacidad de auditar
 - **Administrador**: Gestión completa del sistema
 
 ---
@@ -47,7 +48,8 @@ El Sistema Presupuestador Web permite gestionar presupuestos médicos de forma i
 
 **Barra Superior:**
 - Nombre de usuario
-- Indicador de conexión (verde = conectado)
+- Indicador de conexión (verde = conectado, rojo = desconectado)
+- Botón "Imprimir PDF" (disponible en todos los estados)
 - Botón "Salir"
 
 **Panel de Totales:**
@@ -157,8 +159,11 @@ Al seleccionar un insumo con más de 45 días sin actualizar, aparecerá una ale
 1. Buscar prestación en la tabla izquierda
 2. Hacer clic en el **checkbox** de la prestación
 3. En el panel derecho:
-   - **Cantidad**: Ajustar si es necesario
-   - **Valor**: Seleccionar del dropdown (80%, 90%, 100%, 110%, 120%, 150%)
+   - **Cantidad**: Ajustar si es necesario (muestra cantidad sugerida inicial)
+   - **Valor**: Seleccionar del dropdown
+     - Opciones basadas en el valor sugerido del servicio
+     - 80% del sugerido, 90%, 100% (Sugerido), 110%, 120%, 150%
+     - Ejemplo: Si valor sugerido es $1000, opciones son $800, $900, $1000 (Sugerido), $1100, $1200, $1500
 4. Hacer clic en **"Agregar"**
 
 ### Alertas de Valores Desactualizados
@@ -251,11 +256,36 @@ El sistema evalúa **4 reglas automáticas**:
 - Listo para usar
 - No requiere auditoría
 
+### Solicitar Auditoría Manual
+
+Si el presupuesto NO cumple reglas automáticas pero deseas que sea revisado:
+
+1. Hacer clic en **"Pedir Auditoría"**
+2. Ingresar mensaje opcional para la gerencia
+3. Confirmar
+4. El presupuesto pasa a estado **"Pendiente"**
+5. Gerencias recibirán notificación
+
 ### Después de Finalizar
 
 - El presupuesto se guarda en el historial
 - Se limpia el formulario
 - Puede crear un nuevo presupuesto
+
+### Generar PDF
+
+Puedes generar PDF en **cualquier estado** del presupuesto:
+
+1. Hacer clic en **"Imprimir PDF"** (barra superior)
+2. El sistema genera PDF con:
+   - Datos del paciente
+   - Insumos seleccionados
+   - Prestaciones seleccionadas
+   - Equipamientos seleccionados
+   - Totales y rentabilidad
+3. Descarga automática
+
+**Nota:** Funciona en borrador, aprobado, rechazado, en auditoría, etc.
 
 ---
 
@@ -285,6 +315,12 @@ El sistema evalúa **4 reglas automáticas**:
 - Si está **finalizado/aprobado**: Muestra modal de confirmación
 - Crea nueva versión si es necesario
 - Actualiza valores a precios actuales
+
+**Lupa (Ver Detalle):**
+- Abre modal con información completa
+- Muestra historial de auditoría humanizado
+- Incluye todos los items (insumos, prestaciones, equipamientos)
+- Disponible para todos los estados
 
 ### Modo Solo Lectura
 
@@ -319,6 +355,16 @@ Cuando se visualiza un presupuesto:
 - Se actualiza en tiempo real (SSE)
 - Desaparece al marcar como leída
 
+### Sesión Expirada
+
+Si tu sesión expira (tokens JWT duran 1 hora):
+
+1. Sistema detecta automáticamente error 401
+2. Muestra notificación roja: "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
+3. Ejecuta logout automático
+4. Redirige a pantalla de login
+5. Debes iniciar sesión nuevamente
+
 ---
 
 ## Dashboard Gerencias
@@ -329,6 +375,7 @@ Usuarios con roles:
 - **gerencia_administrativa**
 - **gerencia_prestacional**
 - **gerencia_general**
+- **gerencia_financiera** (solo lectura, sin capacidad de auditar)
 
 ### Sistema Multi-Gerencial
 
@@ -353,6 +400,12 @@ Usuarios con roles:
    - Devolver a otras gerencias
    - Aprobación condicional
    - Decisión final
+
+4. **Gerencia Financiera** (Solo lectura)
+   - Dashboard de visualización
+   - Sin capacidad de tomar casos
+   - Sin acciones de auditoría
+   - Solo monitoreo
 
 ### Asignación FCFS
 
@@ -380,9 +433,10 @@ Usuarios con roles:
 **Información Mostrada:**
 - Paciente y DNI
 - Versión del presupuesto
-- Costo Total
-- Rentabilidad
-- Historial de auditoría humanizado
+- Costo Total y Total a Facturar
+- Rentabilidad (con y sin plazo)
+- Insumos, Prestaciones y Equipamientos
+- Historial de auditoría humanizado con mensajes del usuario
 
 **Acciones Disponibles:**
 - **Aprobar**: Finaliza el proceso
@@ -425,7 +479,7 @@ Solo usuarios con rol **"admin"** tienen acceso completo.
 2. Completar formulario:
    - Username
    - Password
-   - Rol (user, gerencia_administrativa, gerencia_prestacional, gerencia_general, admin)
+   - Rol (usuario_normal, gerencia_administrativa, gerencia_prestacional, gerencia_general, gerencia_financiera, admin)
    - Sucursal asignada
 3. Hacer clic en **"Crear"**
 
@@ -586,6 +640,18 @@ First Come First Served: El primer gerente que hace clic en "Tomar Caso" se lo a
 
 Es una aprobación especial para casos políticos o estratégicos que requieren consideraciones especiales. Solo disponible para gerencias.
 
+### ¿Puedo generar PDF de un presupuesto rechazado?
+
+Sí, el botón "Imprimir PDF" está disponible en todos los estados: borrador, aprobado, rechazado, en auditoría, observado, etc.
+
+### ¿Qué pasa si mi sesión expira mientras trabajo?
+
+El sistema detecta automáticamente cuando tu sesión expira (401), muestra una notificación roja y ejecuta logout automático. Debes iniciar sesión nuevamente. Los tokens JWT expiran en 1 hora.
+
+### ¿Puedo solicitar auditoría aunque no cumpla las reglas?
+
+Sí, usa el botón "Pedir Auditoría" para enviar manualmente un presupuesto a revisión gerencial. Puedes incluir un mensaje explicando por qué requiere revisión.
+
 ---
 
 ## Soporte Técnico
@@ -593,5 +659,5 @@ Es una aprobación especial para casos políticos o estratégicos que requieren 
 Para asistencia adicional, contactar al equipo de desarrollo o administrador del sistema.
 
 **Última actualización:** Enero 2025  
-**Versión:** 3.1  
-**Incluye:** Sistema Multi-Gerencial v3.0 + Equipamientos + Alertas por Tipo + Código de Producto
+**Versión:** 3.2  
+**Incluye:** Sistema Multi-Gerencial v3.0 + Equipamientos + Alertas por Tipo + Código de Producto + PDF en todos los estados + Manejo de sesión expirada + Gerencia Financiera

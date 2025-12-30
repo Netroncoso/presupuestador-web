@@ -202,21 +202,21 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         />
       </Group>
 
-      <Table.ScrollContainer minWidth={1000}>
-        <Table striped="odd" highlightOnHover stickyHeader>
+      <Table.ScrollContainer>
+        <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>ID</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Paciente</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>DNI</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Sucursal</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Estado</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo Total</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Total Facturar</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Utilidad</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Rentabilidad</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Fecha</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acción</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>ID</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Paciente</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>DNI</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Sucursal</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Estado</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Facturar</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Utilidad</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Rent.</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Fecha</Table.Th>
+            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acción</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -252,7 +252,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                 </Table.Td>
                 <Table.Td>{new Date(p.created_at).toLocaleDateString()}</Table.Td>
                 <Table.Td>
-                  <Group gap="xs">
+                  <Group gap={4} wrap="nowrap">
                     {(esAuditor || soloConsulta) ? (
                       <ActionIcon 
                         variant="transparent" 
@@ -260,15 +260,15 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                         onClick={() => onVerDetalle?.(p)} 
                         title="Ver detalle del presupuesto"
                       >
-                        <EyeIcon style={ICON_SIZE_LG} />
+                        <EyeIcon style={{ width: 16, height: 16 }} />
                       </ActionIcon>
                     ) : (
                       <>
                         <ActionIcon variant="transparent" color="teal" onClick={() => onEditarPresupuesto(p, true)} title="Ver presupuesto">
-                          <EyeIcon style={ICON_SIZE_LG} />
+                          <EyeIcon style={{ width: 16, height: 16 }} />
                         </ActionIcon>
                         <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(p, false)} title="Editar (nueva versión)">
-                          <PencilSquareIcon style={ICON_SIZE_LG} />
+                          <PencilSquareIcon style={{ width: 16, height: 16 }} />
                         </ActionIcon>
                       </>
                     )}

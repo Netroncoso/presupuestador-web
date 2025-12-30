@@ -601,32 +601,16 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             <Stack gap="xs">
               <Title order={5}>Prestaciones Seleccionadas</Title>
               <Table.ScrollContainer minWidth={1000}>
-                <Table striped="odd" highlightOnHover stickyHeader >
+                <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{textAlign: 'left', fontWeight: 500, fontSize: '13px' }}>Prestación</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Cantidad</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Valor asignado negociado con el prestador">
-                        <span>Costo Unit.</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Valor unitario a facturar al financiador">
-                        <span>Precio a Facturar</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Valor asignado × cantidad">
-                        <span>Subtotal Costo</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                      <Tooltip label="Precio a facturar × cantidad">
-                        <span>Subtotal Facturar</span>
-                      </Tooltip>
-                    </Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acciones</Table.Th>
+                    <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '12px' }}>Prestación</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Cantidad</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo Unit.</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Precio a Facturar</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Costo</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Facturar</Table.Th>
+                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acciones</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -678,7 +662,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                         <Table.Td>
                           {!soloLectura && (
                             editandoIndex === i ? (
-                              <Group gap="xs" justify="left">
+                              <Group gap={4} justify="left" wrap="nowrap">
                                 <Button size="xs" onClick={() => actualizarPrestacion(i)}>
                                   OK
                                 </Button>
@@ -687,7 +671,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                                 </Button>
                               </Group>
                             ) : (
-                              <Group gap="xs" justify="left">
+                              <Group gap={4} justify="left" wrap="nowrap">
                                 <ActionIcon
                                   variant="transparent"
                                   onClick={() => {
@@ -696,14 +680,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                                     setNuevoValor(Number(p.valor_asignado))
                                   }}
                                 >
-                                  <PencilSquareIcon  width={20} height={20} />
+                                  <PencilSquareIcon  width={16} height={16} />
                                 </ActionIcon>
                                 <ActionIcon
                                   variant="transparent"
                                   color="red"
                                   onClick={() => eliminarPrestacion(i)}
                                 >
-                                  <TrashIcon  width={20} height={20} />
+                                  <TrashIcon  width={16} height={16} />
                                 </ActionIcon>
                               </Group>
                             )
