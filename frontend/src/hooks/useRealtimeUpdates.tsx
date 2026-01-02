@@ -107,15 +107,15 @@ export const useRealtimeUpdates = () => {
     // Start SSE connection
     connectSSE();
 
-    // Fallback polling every 20 seconds
+    // Fallback polling every 60 seconds (increased from 20s)
     fallbackIntervalRef.current = setInterval(() => {
       const timeSinceLastUpdate = Date.now() - lastUpdateRef.current;
-      // If no update in 30 seconds, refresh manually
-      if (timeSinceLastUpdate > 30000) {
-        console.log('No SSE updates for 30s, refreshing manually');
+      // If no update in 2 minutes, refresh manually (increased from 30s)
+      if (timeSinceLastUpdate > 120000 && isConnected) {
+        console.log('No SSE updates for 2min, refreshing manually');
         refreshData();
       }
-    }, 20000);
+    }, 60000);
 
     return () => {
       if (eventSourceRef.current) {

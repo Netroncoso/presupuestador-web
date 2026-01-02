@@ -37,7 +37,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   const [loading, setLoading] = useState(true);
   const [filtroNombre, setFiltroNombre] = useState('');
   const [filtroRentabilidad, setFiltroRentabilidad] = useState('');
-  const [filtroMonto, setFiltroMonto] = useState('');
+  const [filtroUtilidad, setFiltroUtilidad] = useState('');
   const [filtroId, setFiltroId] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroAuditor, setFiltroAuditor] = useState('todos');
@@ -86,10 +86,10 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
       }
     }
 
-    if (filtroMonto) {
-      const montoMin = parseFloat(filtroMonto);
-      if (!isNaN(montoMin)) {
-        resultado = resultado.filter(p => Number(p.total_facturar) >= montoMin);
+    if (filtroUtilidad) {
+      const utilidadMin = parseFloat(filtroUtilidad);
+      if (!isNaN(utilidadMin)) {
+        resultado = resultado.filter(p => Number(p.utilidad) >= utilidadMin);
       }
     }
 
@@ -98,7 +98,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     }
 
     return resultado;
-  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto, filtroId, filtroEstado]);
+  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroUtilidad, filtroId, filtroEstado]);
 
   if (loading) {
     return <Loader />;
@@ -175,7 +175,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           clearable
         />
         <TextInput
-          placeholder="Rentabilidad mínima (%)"
+          placeholder="Rentabilidad mín."
           value={filtroRentabilidad}
           onChange={(e) => setFiltroRentabilidad(e.currentTarget.value)}
           type="number"
@@ -188,13 +188,13 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           }
         />
         <TextInput
-          placeholder="Monto mínimo a facturar"
-          value={filtroMonto}
-          onChange={(e) => setFiltroMonto(e.currentTarget.value)}
+          placeholder="Utilidad míni."
+          value={filtroUtilidad}
+          onChange={(e) => setFiltroUtilidad(e.currentTarget.value)}
           type="number"
           rightSection={
-            filtroMonto ? (
-              <ActionIcon variant="subtle" onClick={() => setFiltroMonto('')}>
+            filtroUtilidad ? (
+              <ActionIcon variant="subtle" onClick={() => setFiltroUtilidad('')}>
                 <XMarkIcon style={ICON_SIZE} />
               </ActionIcon>
             ) : null
@@ -202,8 +202,8 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         />
       </Group>
 
-      <Table.ScrollContainer>
-        <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
+      <Table.ScrollContainer minWidth={800}>
+        <Table striped="odd" highlightOnHover stickyHeader>
         <Table.Thead>
           <Table.Tr>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>ID</Table.Th>
@@ -211,8 +211,6 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>DNI</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Sucursal</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Estado</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Facturar</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Utilidad</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Rent.</Table.Th>
             <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Fecha</Table.Th>
@@ -222,7 +220,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         <Table.Tbody>
           {filtrados.length === 0 ? (
             <Table.Tr>
-              <Table.Td colSpan={11}>
+              <Table.Td colSpan={9}>
                 <Text ta="center" c="dimmed">No se encontraron presupuestos</Text>
               </Table.Td>
             </Table.Tr>
@@ -238,8 +236,6 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
                     {getEstadoLabel(p.estado)}
                   </Text>
                 </Table.Td>
-                <Table.Td>${Number(p.costo_total || 0).toFixed(2)}</Table.Td>
-                <Table.Td>${Number(p.total_facturar || 0).toFixed(2)}</Table.Td>
                 <Table.Td>
                   <Text size="sm" c={p.utilidad >= 0 ? 'green' : 'red'} fw={500}>
                     ${Number(p.utilidad || 0).toFixed(2)}
