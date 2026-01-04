@@ -1,49 +1,36 @@
 import { Request, Response } from 'express';
-import { pool } from '../db';
-import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { AlertasServicios, MutationResult } from '../types/database';
+import { asyncHandler } from '../middleware/errorHandler';
+import { alertasServiciosService } from '../services/alertasServiciosService';
 
 export const obtenerAlertasServicios = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query<AlertasServicios[]>(
-    'SELECT * FROM alertas_servicios ORDER BY tipo_unidad'
-  );
-  res.json(rows);
+  const alertas = await alertasServiciosService.obtenerTodas();
+  res.json(alertas);
 });
 
 export const actualizarAlertaServicio = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   const { cantidad_maxima, mensaje_alerta, color_alerta, activo } = req.body;
 
-  if (isNaN(id)) {
-    throw new AppError(400, 'ID inválido');
-  }
+  const resultado = await alertasServiciosService.actualizar(id, {
+    cantidad_maxima,
+    mensaje_alerta,
+    color_alerta,
+    activo
+  });
 
-  if (cantidad_maxima === undefined || !mensaje_alerta || !color_alerta || activo === undefined) {
-    throw new AppError(400, 'Todos los campos son requeridos');
-  }
-
-  const [result] = await pool.query<MutationResult>(
-    `UPDATE alertas_servicios 
-     SET cantidad_maxima = ?, mensaje_alerta = ?, color_alerta = ?, activo = ?
-     WHERE id = ?`,
-    [cantidad_maxima, mensaje_alerta, color_alerta, activo, id]
-  );
-
-  if (result.affectedRows === 0) {
-    throw new AppError(404, 'Alerta no encontrada');
-  }
-
-  res.json({ ok: true, mensaje: 'Alerta actualizada' });
+  res.json(resultado);
 });
 
 export const crearAlertaServicio = asyncHandler(async (req: Request, res: Response) => {
   const { tipo_unidad, cantidad_maxima, mensaje_alerta, color_alerta, activo } = req.body;
 
-  const [result] = await pool.query<MutationResult>(
-    `INSERT INTO alertas_servicios (tipo_unidad, cantidad_maxima, mensaje_alerta, color_alerta, activo)
-     VALUES (?, ?, ?, ?, ?)`,
-    [tipo_unidad, cantidad_maxima, mensaje_alerta, color_alerta || 'orange', activo ?? 1]
-  );
+  const resultado = await alertasServiciosService.crear({
+    tipo_unidad,
+    cantidad_maxima,
+    mensaje_alerta,
+    color_alerta,
+    activo
+  });
 
-  res.status(201).json({ ok: true, id: result.insertId });
+  res.status(201).json(resultado);
 });

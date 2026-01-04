@@ -1,6 +1,35 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
 import { getAllSucursales, updateSucursal } from '../../controllers/admin/adminSucursalesController';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { logger } from '../../utils/logger';
+import { AuthenticatedRequest } from '../../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateSucursalId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de sucursal debe ser un número válido' });
+  }
+  next();
+};
+
+const validateSucursalData = (req: Request, res: Response, next: NextFunction) => {
+  const { Sucursales_mh, porcentaje_insumos } = req.body;
+  
+  if (Sucursales_mh !== undefined && !Sucursales_mh?.trim()) {
+    return res.status(400).json({ error: 'Nombre de sucursal no puede estar vacío' });
+  }
+  
+  if (porcentaje_insumos !== undefined && (isNaN(parseFloat(porcentaje_insumos)) || parseFloat(porcentaje_insumos) < 0)) {
+    return res.status(400).json({ error: 'Porcentaje de insumos debe ser un número válido' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -37,7 +66,10 @@ router.use(requireAdmin);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/', getAllSucursales);
+router.get('/', (req: Request, res: Response, next: NextFunction) => {
+  logger.info('Listando sucursales admin', { usuario: (req as AuthenticatedRequest).user.id });
+  getAllSucursales(req, res, next);
+});
 
 /**
  * @swagger
@@ -77,6 +109,23 @@ router.get('/', getAllSucursales);
  *       404:
  *         description: Sucursal no encontrada
  */
-router.put('/:id', updateSucursal);
+router.put('/:id', validateSucursalId, validateSucursalData, (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  const { Sucursales_mh, porcentaje_insumos } = req.body;
+  
+  logger.info('Actualizando sucursal', { 
+    sucursalId: id, 
+    Sucursales_mh, 
+    porcentaje_insumos, 
+    usuario: (req as AuthenticatedRequest).user.id 
+  });
+  
+  updateSucursal(req, res, next);
+  
+  logger.info('Sucursal actualizada exitosamente', { 
+    sucursalId: id, 
+    usuario: (req as AuthenticatedRequest).user.id 
+  });
+});
 
 export default router;

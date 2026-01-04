@@ -1,8 +1,12 @@
+import dotenv from 'dotenv';
+
+// CRITICAL: Load environment variables FIRST, before any other imports
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import sucursalesRoutes from './routes/sucursales';
 import presupuestosV2Routes from './routes/presupuestosV2';
 import notificacionesRoutes from './routes/notificaciones';
@@ -28,13 +32,11 @@ import sseRoutes from './routes/sse';
 import healthRoutes from './routes/health';
 import cacheStatsRoutes from './routes/cacheStats';
 import equipamientosRoutes from './routes/equipamientos';
-import { csrfProtection } from './middleware/csrf';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { iniciarCronJobs } from './services/cronJobs';
 import { setupSwagger } from './swagger';
 
-dotenv.config();
 const app = express();
 
 // Iniciar cron jobs
@@ -70,19 +72,16 @@ app.use(express.json({ limit: '10mb' }));
 // Swagger documentation (public)
 setupSwagger(app);
 
-// Auth routes (public - sin CSRF)
+// Auth routes (public)
 app.use('/api/auth', authRoutes);
 
-// Health check (public - sin CSRF)
+// Health check (public)
 app.use('/api/health', healthRoutes);
-
-// CSRF protection para rutas protegidas
-app.use(csrfProtection);
 
 // SSE routes (protected, but handles auth internally)
 app.use('/api/stream', sseRoutes);
 
-// Protected routes
+// Protected routes (JWT + CORS protection)
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/presupuestos', presupuestosV2Routes);
 app.use('/api/notificaciones', notificacionesRoutes);

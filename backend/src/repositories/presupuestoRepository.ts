@@ -62,4 +62,24 @@ export class PresupuestoRepository {
       throw new Error('Error al crear notificaciones para auditores');
     }
   }
+
+  async crearRegistroAuditoriaInicial(
+    presupuestoId: number, 
+    version: number, 
+    usuarioId: number, 
+    estadoAnterior: string, 
+    estadoNuevo: string, 
+    comentario: string
+  ) {
+    try {
+      await pool.query(`
+        INSERT INTO auditorias_presupuestos 
+        (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [presupuestoId, version, usuarioId, estadoAnterior, estadoNuevo, comentario]);
+    } catch (error) {
+      console.error('Error al crear registro de auditoría inicial:', error);
+      throw new Error('Error al crear registro de auditoría');
+    }
+  }
 }

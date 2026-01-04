@@ -169,7 +169,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
                       key={aud.id} 
                       title={getAccionDescripcion(aud.estado_anterior, aud.estado_nuevo, aud.auditor_nombre || 'Sistema')}
                     >
-                      <Text size="xs" c="dimmed">{formatearFecha(aud.created_at)}</Text>
+                      <Text size="xs" c="dimmed">{formatearFecha(aud.fecha)}</Text>
                       {aud.comentario && (
                         <Text size="sm" mt="xs" fs="italic" c="dark">"{aud.comentario}"</Text>
                       )}

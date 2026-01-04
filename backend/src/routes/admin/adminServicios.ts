@@ -1,6 +1,47 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
 import { getPrestadoresActivos, getServiciosPorPrestador, createOrUpdateServicioPrestador } from '../../controllers/admin/adminServiciosController';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { logger } from '../../utils/logger';
+import { AuthenticatedRequest } from '../../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validatePrestadorId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.prestadorId);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de prestador debe ser un número válido' });
+  }
+  next();
+};
+
+const validateServicioId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.servicioId);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de servicio debe ser un número válido' });
+  }
+  next();
+};
+
+const validateServicioData = (req: Request, res: Response, next: NextFunction) => {
+  const { valor_asignado, valor_facturar, cantidad_sugerida } = req.body;
+  
+  if (valor_asignado !== undefined && (isNaN(parseFloat(valor_asignado)) || parseFloat(valor_asignado) < 0)) {
+    return res.status(400).json({ error: 'Valor asignado debe ser un número válido' });
+  }
+  
+  if (valor_facturar !== undefined && (isNaN(parseFloat(valor_facturar)) || parseFloat(valor_facturar) < 0)) {
+    return res.status(400).json({ error: 'Valor facturar debe ser un número válido' });
+  }
+  
+  if (cantidad_sugerida !== undefined && (isNaN(parseInt(cantidad_sugerida)) || parseInt(cantidad_sugerida) < 0)) {
+    return res.status(400).json({ error: 'Cantidad sugerida debe ser un número entero válido' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -34,7 +75,12 @@ router.use(requireAdmin);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/prestadores', getPrestadoresActivos);
+router.get('/prestadores', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo prestadores activos', { usuario: req.user.id });
+  
+  const resultado = await getPrestadoresActivos(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -77,7 +123,17 @@ router.get('/prestadores', getPrestadoresActivos);
  *                   activo:
  *                     type: boolean
  */
-router.get('/prestador/:prestadorId/servicios', getServiciosPorPrestador);
+router.get('/prestador/:prestadorId/servicios', validatePrestadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const prestadorId = parseInt(req.params.prestadorId);
+  
+  logger.info('Obteniendo servicios por prestador', { 
+    prestadorId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await getServiciosPorPrestador(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -122,6 +178,29 @@ router.get('/prestador/:prestadorId/servicios', getServiciosPorPrestador);
  *       200:
  *         description: Servicio actualizado
  */
-router.put('/prestador/:prestadorId/servicio/:servicioId', createOrUpdateServicioPrestador);
+router.put('/prestador/:prestadorId/servicio/:servicioId', validatePrestadorId, validateServicioId, validateServicioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const prestadorId = parseInt(req.params.prestadorId);
+  const servicioId = parseInt(req.params.servicioId);
+  const { valor_asignado, valor_facturar, cantidad_sugerida } = req.body;
+  
+  logger.info('Actualizando servicio de prestador', { 
+    prestadorId, 
+    servicioId, 
+    valor_asignado, 
+    valor_facturar, 
+    cantidad_sugerida,
+    usuario: req.user.id 
+  });
+  
+  const resultado = await createOrUpdateServicioPrestador(req, res, () => {});
+  
+  logger.info('Servicio de prestador actualizado exitosamente', { 
+    prestadorId, 
+    servicioId, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

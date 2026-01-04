@@ -71,13 +71,13 @@ export default function GestionReglasNegocio() {
   const getTooltipText = (clave: string): string => {
     const tooltips: Record<string, string> = {
       'alerta.financiador.cobranzaExtendida': '> 60 días → COBRANZA EXTENDIDA (rojo)\nEl financiador tarda demasiado, afecta flujo de caja.',
-      'alerta.financiador.cobranzaLenta': '> 45 días → COBRANZA LENTA (amarillo)\nEl financiador tarda más de lo normal en pagar.',
+      'alerta.financiador.cobranzaLenta': '> 50 días → COBRANZA LENTA (amarillo)\nEl financiador tarda más de lo normal en pagar.',
       'alerta.financiador.tasaAlta': '> 5% → TASA ALTA (amarillo)\nTasa de interés alta que reduce la rentabilidad con plazo.',
-      'alerta.monto.critico': '>= $150,000 → MONTO CRÍTICO (rojo)\nRequiere gestión especial y aprobación adicional.',
-      'alerta.monto.elevado': '>= $100,000 → MONTO ELEVADO (naranja)\nRequiere revisión y aviso a las áreas correspondientes.',
-      'alerta.rentabilidad.desaprobado': '< 20% → DESAPROBADO (rojo)\nRentabilidad muy baja. No viable.',
-      'alerta.rentabilidad.mejorar': '20-30% → MEJORAR (naranja)\nRentabilidad baja. Renegociar valores o revisar costos.',
-      'alerta.rentabilidad.felicitaciones': '30-50% → FELICITACIONES (verde)\nExcelente rentabilidad. Cumple objetivos comerciales.',
+      'alerta.monto.critico': '>= $1,500,000 → MONTO CRÍTICO (rojo)\nRequiere gestión especial y aprobación adicional.',
+      'alerta.monto.elevado': '>= $1,000,000 → MONTO ELEVADO (naranja)\nRequiere revisión y aviso a las áreas correspondientes.',
+      'alerta.rentabilidad.desaprobado': '< 20% → DESAPROBADO (rojo)\nRentabilidad muy baja. Requiere auditoría.',
+      'alerta.rentabilidad.mejorar': '20-30% → MEJORAR (naranja)\nRentabilidad baja. Revisar costos o renegociar.',
+      'alerta.rentabilidad.felicitaciones': '30-50% → FELICITACIONES (verde)\nExcelente rentabilidad. Cumple objetivos.',
       'alerta.rentabilidad.excepcional': '>= 50% → EXCEPCIONAL (violeta)\nRentabilidad excepcional. Márgenes óptimos.',
     };
     return tooltips[clave] || '';
@@ -125,10 +125,10 @@ export default function GestionReglasNegocio() {
                   label={
                     <div>
                       <Text size="sm" fw={500} mb={4}>Reglas de auditoría automática:</Text>
-                      <Text size="xs">• Rentabilidad &lt; 15%</Text>
-                      <Text size="xs">• Costo total &gt; $150,000</Text>
-                      <Text size="xs">• Rentabilidad con plazo &gt; 25%</Text>
-                      <Text size="xs">• Utilidad &gt; $50,000</Text>
+                      <Text size="xs">• Rentabilidad &lt; 15% (configurable)</Text>
+                      <Text size="xs">• Costo total &gt; $150,000 (configurable)</Text>
+                      <Text size="xs">• Rentabilidad con plazo &gt; 25% (configurable)</Text>
+                      <Text size="xs">• Utilidad &gt; $50,000 (configurable)</Text>
                     </div>
                   }
                 >

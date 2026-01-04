@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
 
 interface Insumo {
+  id?: number
   producto: string
   costo: number
   cantidad: number
@@ -91,8 +92,15 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
         producto: insumoSeleccionado.producto,
         costo: insumoSeleccionado.costo,
         cantidad,
-        id_insumo: insumoSeleccionado.idInsumos
-      }).catch((err: any) => console.error('Error saving insumo:', err))
+        insumo_id: insumoSeleccionado.idInsumos
+      }).catch((err: any) => {
+        console.error('Error saving insumo:', err)
+        notifications.show({
+          title: 'Error',
+          message: err.message || 'Error al guardar insumo',
+          color: 'red'
+        })
+      })
     }
 
     setInsumoSeleccionado(null)
@@ -110,10 +118,17 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
     const nuevosInsumos = insumosSeleccionados.filter((_, i) => i !== index)
     setInsumosSeleccionados(nuevosInsumos)
     
-    if (presupuestoId) {
+    if (presupuestoId && insumo.id) {
       api.delete(`/presupuestos/${presupuestoId}/insumos`, {
-        data: { producto: insumo.producto }
-      }).catch((err: any) => console.error('Error deleting insumo:', err))
+        data: { id: insumo.id }
+      }).catch((err: any) => {
+        console.error('Error deleting insumo:', err)
+        notifications.show({
+          title: 'Error',
+          message: err.message || 'Error al eliminar insumo',
+          color: 'red'
+        })
+      })
     }
     
     notifications.show({
@@ -135,8 +150,15 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
         producto: nuevosInsumos[index].producto,
         costo: nuevosInsumos[index].costo,
         cantidad: nuevaCantidad,
-        id_insumo: nuevosInsumos[index].idInsumos
-      }).catch((err: any) => console.error('Error updating insumo:', err))
+        insumo_id: nuevosInsumos[index].idInsumos || null
+      }).catch((err: any) => {
+        console.error('Error updating insumo:', err)
+        notifications.show({
+          title: 'Error',
+          message: err.message || 'Error al actualizar insumo',
+          color: 'red'
+        })
+      })
     }
     
     setEditandoIndex(null)

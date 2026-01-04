@@ -4,15 +4,12 @@ import { logger } from '../utils/logger';
 import { sendSSEEvent, sendHeartbeat } from '../middleware/sseCleanup';
 import jwt from 'jsonwebtoken';
 import { Notificaciones, Presupuestos } from '../types/database';
+import { AuthenticatedRequest } from '../types/express';
 
 interface SSEConnection {
   res: Response;
   userId: number;
   userRole: string;
-}
-
-interface AuthenticatedRequest extends Request {
-  user?: { id: number; rol: string };
 }
 
 // Store active SSE connections
@@ -22,8 +19,9 @@ const activeConnections = new Map<number, SSEConnection[]>();
 const HEARTBEAT_INTERVAL = 30000;
 const NOTIFICATION_LIMIT = 20;
 
-export const streamUpdates = async (req: AuthenticatedRequest, res: Response) => {
-  const { userId, userRole } = await authenticateUser(req, res);
+export const streamUpdates = async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const { userId, userRole } = await authenticateUser(authReq, res);
   if (!userId || !userRole) return;
 
   setupSSEHeaders(res);
@@ -32,7 +30,7 @@ export const streamUpdates = async (req: AuthenticatedRequest, res: Response) =>
   const connection = addConnection(userId, userRole, res);
   const heartbeat = startHeartbeat(connection);
   
-  setupCleanupHandlers(req, heartbeat, userId, res);
+  setupCleanupHandlers(authReq, heartbeat, userId, res);
   
   // Send immediate heartbeat to confirm connection
   setTimeout(() => {
@@ -42,7 +40,7 @@ export const streamUpdates = async (req: AuthenticatedRequest, res: Response) =>
   }, 1000);
 };
 
-const authenticateUser = async (req: AuthenticatedRequest, res: Response): Promise<{ userId?: number; userRole?: string }> => {
+const authenticateUser = async (req: Request, res: Response): Promise<{ userId?: number; userRole?: string }> => {
   const token = req.query.token as string || req.headers.authorization?.replace('Bearer ', '');
   
   if (!token) {
@@ -101,7 +99,7 @@ const startHeartbeat = (connection: SSEConnection) => {
   }, HEARTBEAT_INTERVAL);
 };
 
-const setupCleanupHandlers = (req: AuthenticatedRequest, heartbeat: NodeJS.Timeout, userId: number, res: Response) => {
+const setupCleanupHandlers = (req: Request, heartbeat: NodeJS.Timeout, userId: number, res: Response) => {
   const cleanup = () => {
     clearInterval(heartbeat);
     removeConnection(userId, res);

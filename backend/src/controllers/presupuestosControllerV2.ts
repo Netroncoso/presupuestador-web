@@ -231,6 +231,7 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
       p.Nombre_Apellido, 
       p.DNI, 
       p.sucursal_id,
+      p.estado,
       s.Sucursales_mh as Sucursal, 
       p.idobra_social, 
       p.created_at 

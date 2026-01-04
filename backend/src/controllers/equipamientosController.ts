@@ -2,261 +2,147 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { equipamientosService } from '../services/equipamientosService';
 
 // GET /api/equipamientos - Obtener todos los equipamientos (admin)
 export const getAllEquipamientos = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query(
-    `SELECT e.id, e.nombre, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
-     FROM equipamientos e
-     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-     ORDER BY e.nombre`
-  );
-  res.json(rows);
+  const equipamientos = await equipamientosService.obtenerTodos();
+  res.json(equipamientos);
 });
 
 // Obtener todos los equipamientos activos (catálogo)
 export const getEquipamientos = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query(
-    `SELECT e.*, te.nombre as tipo 
-     FROM equipamientos e
-     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-     WHERE e.activo = 1 
-     ORDER BY te.nombre, e.nombre`
-  );
-  res.json(rows);
+  const equipamientos = await equipamientosService.obtenerActivos();
+  res.json(equipamientos);
 });
 
 // Obtener equipamientos por financiador con valores vigentes
 export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, res: Response) => {
-  const financiadorId = req.params.id;
+  const { id } = req.params;
   const fecha = (req.query.fecha as string) || new Date().toISOString().slice(0, 10);
   const sucursalId = req.query.sucursal_id ? Number(req.query.sucursal_id) : null;
   
-  const [rows] = await pool.query(
-    `SELECT 
-      e.id,
-      e.nombre,
-      e.descripcion,
-      te.nombre as tipo,
-      e.tipo_equipamiento_id,
-      te.cantidad_maxima,
-      te.mensaje_alerta,
-      te.color_alerta,
-      te.activo_alerta,
-      e.precio_referencia,
-      e.unidad_tiempo,
-      COALESCE(
-        (SELECT valor_asignado 
-         FROM financiador_equipamiento_valores v
-         JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
-         WHERE fe.idobra_social = ?
-           AND fe.id_equipamiento = e.id
-           AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
-           AND ? BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
-         ORDER BY 
-           CASE 
-             WHEN v.sucursal_id IS NOT NULL 
-               AND DATEDIFF(v.fecha_inicio, 
-                 (SELECT MAX(v2.fecha_inicio) FROM financiador_equipamiento_valores v2
-                  JOIN financiador_equipamiento fe2 ON v2.id_financiador_equipamiento = fe2.id
-                  WHERE fe2.idobra_social = ?
-                    AND fe2.id_equipamiento = e.id
-                    AND v2.sucursal_id IS NULL
-                    AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
-               ) >= -30
-             THEN 1
-             ELSE 2
-           END,
-           v.fecha_inicio DESC
-         LIMIT 1),
-        e.precio_referencia
-      ) AS valor_asignado,
-      COALESCE(
-        (SELECT valor_facturar 
-         FROM financiador_equipamiento_valores v
-         JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
-         WHERE fe.idobra_social = ?
-           AND fe.id_equipamiento = e.id
-           AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
-           AND ? BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
-         ORDER BY 
-           CASE 
-             WHEN v.sucursal_id IS NOT NULL 
-               AND DATEDIFF(v.fecha_inicio, 
-                 (SELECT MAX(v2.fecha_inicio) FROM financiador_equipamiento_valores v2
-                  JOIN financiador_equipamiento fe2 ON v2.id_financiador_equipamiento = fe2.id
-                  WHERE fe2.idobra_social = ?
-                    AND fe2.id_equipamiento = e.id
-                    AND v2.sucursal_id IS NULL
-                    AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
-               ) >= -30
-             THEN 1
-             ELSE 2
-           END,
-           v.fecha_inicio DESC
-         LIMIT 1),
-        e.precio_referencia
-      ) AS valor_facturar,
-      EXISTS(
-        SELECT 1 FROM financiador_equipamiento fe
-        WHERE fe.idobra_social = ? AND fe.id_equipamiento = e.id
-      ) AS tiene_acuerdo,
-      COALESCE(
-        (SELECT DATEDIFF(CURDATE(), MAX(v.fecha_inicio))
-         FROM financiador_equipamiento_valores v
-         JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
-         WHERE fe.idobra_social = ? AND fe.id_equipamiento = e.id),
-        DATEDIFF(CURDATE(), e.created_at)
-      ) AS dias_sin_actualizar
-     FROM equipamientos e
-     LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-     WHERE e.activo = 1
-     ORDER BY te.nombre, e.nombre`, 
-    [financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, sucursalId, fecha, financiadorId, fecha, financiadorId, financiadorId]
-  );
-  
-  res.json(rows);
+  const resultado = await equipamientosService.obtenerPorFinanciador(id, fecha, sucursalId);
+  res.json(resultado);
 });
 
 // Obtener valores históricos de un acuerdo
 export const getValoresEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const id = req.params.id;
-  
-  if (!id || isNaN(Number(id))) {
-    throw new AppError(400, "ID inválido");
-  }
-
-  const [rows] = await pool.query(
-    `SELECT 
-      id, 
-      valor_asignado,
-      valor_facturar,
-      fecha_inicio, 
-      fecha_fin,
-      sucursal_id,
-      created_at
-     FROM financiador_equipamiento_valores 
-     WHERE id_financiador_equipamiento = ? 
-     ORDER BY fecha_inicio DESC`,
-    [id]
-  );
-
-  res.json(rows);
+  const { id } = req.params;
+  const valores = await equipamientosService.obtenerValoresHistoricos(id);
+  res.json(valores);
 });
 
 // Guardar nuevo valor histórico
 export const guardarValorEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  let financiadorEquipamientoId = Number(req.params.id);
-  const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, id_equipamiento, idobra_social } = req.body;
-
-  if (!valor_asignado || !valor_facturar || !fecha_inicio) {
-    throw new AppError(400, "Datos incompletos: valor_asignado, valor_facturar y fecha_inicio requeridos");
-  }
-
-  const connection = await pool.getConnection();
-  await connection.beginTransaction();
-
-  try {
-    // Si no existe financiadorEquipamientoId, crear registro en financiador_equipamiento
-    if (!financiadorEquipamientoId || isNaN(financiadorEquipamientoId)) {
-      if (!id_equipamiento || !idobra_social) {
-        throw new AppError(400, "id_equipamiento e idobra_social requeridos para crear acuerdo nuevo");
-      }
-
-      // Verificar si ya existe
-      const [existing] = await connection.query<RowDataPacket[]>(
-        'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND idobra_social = ?',
-        [id_equipamiento, idobra_social]
-      );
-
-      if (existing.length > 0) {
-        financiadorEquipamientoId = existing[0].id;
-      } else {
-        // Crear nuevo registro activo
-        const [result]: any = await connection.query(
-          'INSERT INTO financiador_equipamiento (id_equipamiento, idobra_social, activo) VALUES (?, ?, 1)',
-          [id_equipamiento, idobra_social]
-        );
-        financiadorEquipamientoId = result.insertId;
-      }
-    }
-
-    // Cerrar todos los períodos vigentes o que solapan con la nueva fecha para la misma sucursal
-    await connection.query(
-      `UPDATE financiador_equipamiento_valores 
-       SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
-       WHERE id_financiador_equipamiento = ? 
-         AND (sucursal_id = ? OR (sucursal_id IS NULL AND ? IS NULL))
-         AND fecha_inicio < ?
-         AND (fecha_fin IS NULL OR fecha_fin >= ?)`,
-      [fecha_inicio, financiadorEquipamientoId, sucursal_id, sucursal_id, fecha_inicio, fecha_inicio]
-    );
-
-    // Si es valor general, cerrar valores específicos obsoletos (> 30 días)
-    if (sucursal_id === null || sucursal_id === undefined) {
-      await connection.query(
-        `UPDATE financiador_equipamiento_valores 
-         SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
-         WHERE id_financiador_equipamiento = ? 
-           AND sucursal_id IS NOT NULL
-           AND fecha_fin IS NULL
-           AND DATEDIFF(?, fecha_inicio) > 30`,
-        [fecha_inicio, financiadorEquipamientoId, fecha_inicio]
-      );
-    }
-
-    // Insertar nuevo período
-    await connection.query(
-      `INSERT INTO financiador_equipamiento_valores 
-       (id_financiador_equipamiento, valor_asignado, valor_facturar, fecha_inicio, sucursal_id) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [financiadorEquipamientoId, valor_asignado, valor_facturar, fecha_inicio, sucursal_id]
-    );
-
-    await connection.commit();
-    res.json({ 
-      ok: true, 
-      message: 'Valor guardado correctamente',
-      id_financiador_equipamiento: financiadorEquipamientoId
-    });
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  const { id } = req.params;
+  const resultado = await equipamientosService.guardarValor(id, req.body);
+  res.json(resultado);
 });
 
 // PUT /api/equipamientos/:id - Actualizar equipamiento
 export const actualizarEquipamiento = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { nombre, tipo_equipamiento_id, precio_referencia, activo } = req.body;
-
-  await pool.query(
-    'UPDATE equipamientos SET nombre = ?, tipo_equipamiento_id = ?, precio_referencia = ?, activo = ? WHERE id = ?',
-    [nombre, tipo_equipamiento_id, precio_referencia, activo, id]
-  );
-
-  res.json({ success: true });
+  const resultado = await equipamientosService.actualizar(id, req.body);
+  res.json(resultado);
 });
+
+// GET /api/equipamientos/tipos - Obtener tipos de equipamiento
+export const getTiposEquipamiento = asyncHandler(async (req: Request, res: Response) => {
+  const tipos = await equipamientosService.obtenerTipos();
+  res.json(tipos);
+});
+
+// POST /api/equipamientos/tipos - Crear tipo de equipamiento
+export const crearTipoEquipamiento = asyncHandler(async (req: Request, res: Response) => {
+  const resultado = await equipamientosService.crearTipo(req.body);
+  res.json(resultado);
+});
+
+// POST /api/equipamientos/admin - Crear equipamiento
+export const crearEquipamiento = asyncHandler(async (req: Request, res: Response) => {
+  const resultado = await equipamientosService.crear(req.body);
+  res.json(resultado);
+});
+
+// DELETE /api/equipamientos/admin/:id - Eliminar equipamiento
+export const eliminarEquipamiento = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const resultado = await equipamientosService.eliminar(id);
+  res.json(resultado);
+});
+
+// Métodos adicionales que mantienen lógica compleja
+const validateEquipamientoId = (id: string): number => {
+  const numId = Number(id);
+  if (!id || isNaN(numId) || numId <= 0) {
+    throw new AppError(400, "ID de equipamiento inválido");
+  }
+  return numId;
+};
+
+const validateFinanciadorId = (id: string): number => {
+  const numId = Number(id);
+  if (!id || isNaN(numId) || numId <= 0) {
+    throw new AppError(400, "ID de financiador inválido");
+  }
+  return numId;
+};
+
+const validateDateFormat = (fecha: string): void => {
+  const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!fechaRegex.test(fecha)) {
+    throw new AppError(400, "Formato de fecha inválido (YYYY-MM-DD)");
+  }
+};
+
+const validateNumericValues = (valor_asignado: any, valor_facturar: any): { valorAsignado: number; valorFacturar: number } => {
+  const valorAsignado = Number(valor_asignado);
+  const valorFacturar = Number(valor_facturar);
+  
+  if (isNaN(valorAsignado) || valorAsignado < 0) {
+    throw new AppError(400, 'Valor asignado debe ser un número positivo');
+  }
+  
+  if (isNaN(valorFacturar) || valorFacturar < 0) {
+    throw new AppError(400, 'Valor facturar debe ser un número positivo');
+  }
+  
+  return { valorAsignado, valorFacturar };
+};
 
 // POST /api/equipamientos/:id/valores - Agregar valor histórico por financiador
 export const agregarValorEquipamientoAdmin = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const equipamientoId = validateEquipamientoId(req.params.id);
   const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, financiador_id } = req.body;
 
-  if (!valor_asignado || !valor_facturar || !fecha_inicio || !financiador_id) {
-    throw new AppError(400, 'Faltan campos obligatorios');
+  if (!fecha_inicio || !financiador_id) {
+    throw new AppError(400, 'Faltan campos obligatorios: fecha_inicio, financiador_id');
   }
 
-  const connection = await pool.getConnection();
-  await connection.beginTransaction();
+  const { valorAsignado, valorFacturar } = validateNumericValues(valor_asignado, valor_facturar);
+  const financiadorIdNum = validateFinanciadorId(financiador_id);
+  validateDateFormat(fecha_inicio);
 
+  let connection;
   try {
-    // Verificar/crear financiador_equipamiento
-    const [existing] = await connection.query<RowDataPacket[]>(
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Verificar equipamiento existe
+    const [equipamiento] = await connection.query<RowDataPacket[]>(
+      'SELECT id FROM equipamientos WHERE id = ? AND activo = 1',
+      [equipamientoId]
+    );
+
+    if (equipamiento.length === 0) {
+      throw new AppError(404, 'Equipamiento no encontrado');
+    }
+
+    // Obtener/crear financiador_equipamiento
+    let [existing] = await connection.query<RowDataPacket[]>(
       'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND idobra_social = ?',
-      [id, financiador_id]
+      [equipamientoId, financiadorIdNum]
     );
 
     let financiadorEquipamientoId;
@@ -265,36 +151,34 @@ export const agregarValorEquipamientoAdmin = asyncHandler(async (req: Request, r
     } else {
       const [result]: any = await connection.query(
         'INSERT INTO financiador_equipamiento (id_equipamiento, idobra_social, activo) VALUES (?, ?, 1)',
-        [id, financiador_id]
+        [equipamientoId, financiadorIdNum]
       );
       financiadorEquipamientoId = result.insertId;
     }
 
     // Cerrar valores anteriores
     await connection.query(
-      `UPDATE financiador_equipamiento_valores 
-       SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
-       WHERE id_financiador_equipamiento = ?
-         AND (sucursal_id = ? OR (sucursal_id IS NULL AND ? IS NULL))
-         AND fecha_fin IS NULL`,
-      [fecha_inicio, financiadorEquipamientoId, sucursal_id, sucursal_id]
+      `UPDATE financiador_equipamiento_valores SET fecha_fin = DATE_SUB(?, INTERVAL 1 DAY)
+       WHERE id_financiador_equipamiento = ? AND (sucursal_id = ? OR (sucursal_id IS NULL AND ? IS NULL))
+         AND fecha_fin IS NULL AND fecha_inicio < ?`,
+      [fecha_inicio, financiadorEquipamientoId, sucursal_id, sucursal_id, fecha_inicio]
     );
 
     // Insertar nuevo valor
     await connection.query(
-      `INSERT INTO financiador_equipamiento_valores 
-       (id_financiador_equipamiento, valor_asignado, valor_facturar, fecha_inicio, sucursal_id)
+      `INSERT INTO financiador_equipamiento_valores (id_financiador_equipamiento, valor_asignado, valor_facturar, fecha_inicio, sucursal_id)
        VALUES (?, ?, ?, ?, ?)`,
-      [financiadorEquipamientoId, valor_asignado, valor_facturar, fecha_inicio, sucursal_id || null]
+      [financiadorEquipamientoId, valorAsignado, valorFacturar, fecha_inicio, sucursal_id || null]
     );
 
     await connection.commit();
-    res.json({ success: true });
+    res.json({ success: true, message: 'Valor agregado correctamente' });
   } catch (error) {
-    await connection.rollback();
-    throw error;
+    if (connection) await connection.rollback();
+    if (error instanceof AppError) throw error;
+    throw new AppError(500, "Error interno al agregar valor");
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 });
 
@@ -319,47 +203,6 @@ export const getValoresEquipamientoAdmin = asyncHandler(async (req: Request, res
   );
 
   res.json(rows);
-});
-
-// POST /api/equipamientos/admin - Crear equipamiento
-export const crearEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const { nombre, tipo_equipamiento_id, precio_referencia, activo } = req.body;
-
-  const [result]: any = await pool.query(
-    'INSERT INTO equipamientos (nombre, tipo_equipamiento_id, precio_referencia, activo) VALUES (?, ?, ?, ?)',
-    [nombre, tipo_equipamiento_id, precio_referencia, activo]
-  );
-
-  res.json({ success: true, id: result.insertId });
-});
-
-// DELETE /api/equipamientos/admin/:id - Eliminar equipamiento
-export const eliminarEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  await pool.query('DELETE FROM equipamientos WHERE id = ?', [id]);
-
-  res.json({ success: true });
-});
-
-// GET /api/equipamientos/tipos - Obtener tipos de equipamiento
-export const getTiposEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const [rows] = await pool.query(
-    'SELECT * FROM tipos_equipamiento ORDER BY nombre'
-  );
-  res.json(rows);
-});
-
-// POST /api/equipamientos/tipos - Crear tipo de equipamiento
-export const crearTipoEquipamiento = asyncHandler(async (req: Request, res: Response) => {
-  const { nombre, descripcion } = req.body;
-
-  const [result]: any = await pool.query(
-    'INSERT INTO tipos_equipamiento (nombre, descripcion, activo) VALUES (?, ?, 1)',
-    [nombre, descripcion]
-  );
-
-  res.json({ success: true, id: result.insertId });
 });
 
 // GET /api/equipamientos/admin/financiador/:id - Obtener equipamientos con valores por financiador
@@ -467,53 +310,58 @@ export const eliminarEquipamientoPresupuesto = asyncHandler(async (req: Request,
 
 // Obtener equipamientos de un presupuesto
 export const getEquipamientosPresupuesto = asyncHandler(async (req: Request, res: Response) => {
-  const presupuestoId = req.params.id;
+  const presupuestoId = validateEquipamientoId(req.params.id);
   const soloLectura = req.query.soloLectura === 'true';
 
   if (soloLectura) {
-    // Modo solo lectura: devolver valores guardados tal cual
     const [rows] = await pool.query(
-      `SELECT * FROM presupuesto_equipamiento WHERE idPresupuestos = ? ORDER BY nombre`,
+      'SELECT * FROM presupuesto_equipamiento WHERE idPresupuestos = ? ORDER BY nombre LIMIT 100',
       [presupuestoId]
     );
-    res.json(rows);
-  } else {
-    // Modo edición: actualizar precio_facturar con valores actuales
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT 
-        pe.*,
-        p.idobra_social,
-        p.sucursal_id
-       FROM presupuesto_equipamiento pe
-       JOIN presupuestos p ON pe.idPresupuestos = p.idPresupuestos
-       WHERE pe.idPresupuestos = ?
-       ORDER BY pe.nombre`,
-      [presupuestoId]
-    );
-
-    // Actualizar precio_facturar con valores actuales
-    const equipamientosActualizados = await Promise.all(
-      rows.map(async (eq: any) => {
-        const [valores] = await pool.query<RowDataPacket[]>(
-          `SELECT valor_facturar
-           FROM financiador_equipamiento_valores v
-           JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
-           WHERE fe.idobra_social = ?
-             AND fe.id_equipamiento = ?
-             AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
-             AND CURDATE() BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
-           ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC
-           LIMIT 1`,
-          [eq.idobra_social, eq.id_equipamiento, eq.sucursal_id]
-        );
-
-        return {
-          ...eq,
-          precio_facturar: valores.length > 0 ? valores[0].valor_facturar : eq.precio_facturar
-        };
-      })
-    );
-
-    res.json(equipamientosActualizados);
+    return res.json(rows);
   }
+
+  // Obtener datos base
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT pe.*, p.idobra_social, p.sucursal_id
+     FROM presupuesto_equipamiento pe
+     JOIN presupuestos p ON pe.idPresupuestos = p.idPresupuestos
+     WHERE pe.idPresupuestos = ? ORDER BY pe.nombre LIMIT 100`,
+    [presupuestoId]
+  );
+
+  if (rows.length === 0) return res.json([]);
+
+  // Obtener valores actuales en batch
+  const equipamientoIds = rows.map(eq => eq.id_equipamiento).filter(Boolean);
+  const obraSocial = rows[0]?.idobra_social;
+  const sucursalId = rows[0]?.sucursal_id;
+
+  let valoresMap = new Map();
+  if (equipamientoIds.length > 0 && obraSocial) {
+    const placeholders = equipamientoIds.map(() => '?').join(',');
+    const [valores] = await pool.query<RowDataPacket[]>(
+      `SELECT fe.id_equipamiento, v.valor_facturar
+       FROM financiador_equipamiento fe
+       JOIN financiador_equipamiento_valores v ON fe.id = v.id_financiador_equipamiento
+       WHERE fe.idobra_social = ? AND fe.id_equipamiento IN (${placeholders})
+         AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+         AND CURDATE() BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
+       ORDER BY fe.id_equipamiento, v.sucursal_id DESC, v.fecha_inicio DESC`,
+      [obraSocial, ...equipamientoIds, sucursalId]
+    );
+
+    valores.forEach(v => {
+      if (!valoresMap.has(v.id_equipamiento)) {
+        valoresMap.set(v.id_equipamiento, v.valor_facturar);
+      }
+    });
+  }
+
+  const resultado = rows.map(eq => ({
+    ...eq,
+    precio_facturar: valoresMap.get(eq.id_equipamiento) || eq.precio_facturar
+  }));
+
+  res.json(resultado);
 });

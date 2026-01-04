@@ -155,9 +155,37 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const cargarPresupuestoExistente = async () => {
     if (presupuestoExistente) {
       try {
-        // Obtener datos completos del presupuesto
-        const res = await api.get(`/presupuestos/${presupuestoExistente.idPresupuestos}`)
-        const presupuestoCompleto = res.data
+        // Usar la misma lógica que el botón "Editar" - crear nueva versión si está finalizado
+        const response = await api.post(`/presupuestos/${presupuestoExistente.idPresupuestos}/version/editar`, {
+          confirmar: false
+        })
+
+        let presupuestoCompleto
+        if (response.data.requiereConfirmacion) {
+          // Si requiere confirmación, crear nueva versión automáticamente
+          const responseConfirmado = await api.post(`/presupuestos/${presupuestoExistente.idPresupuestos}/version/editar`, {
+            confirmar: true
+          })
+          
+          const res = await api.get(`/presupuestos/${responseConfirmado.data.id}`)
+          presupuestoCompleto = res.data
+          
+          notifications.show({
+            title: 'Nueva Versión Creada',
+            message: `Nueva versión del presupuesto creada para edición (ID: ${presupuestoCompleto.idPresupuestos})`,
+            color: 'green'
+          })
+        } else {
+          // Si no requiere confirmación, cargar directamente
+          const res = await api.get(`/presupuestos/${response.data.id}`)
+          presupuestoCompleto = res.data
+          
+          notifications.show({
+            title: 'Presupuesto Cargado',
+            message: `Presupuesto ID: ${presupuestoCompleto.idPresupuestos} cargado para edición`,
+            color: 'blue'
+          })
+        }
         
         // Actualizar los campos del formulario
         setNombre(presupuestoCompleto.Nombre_Apellido)
@@ -177,12 +205,18 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           porcentajeInsumos,
           presupuestoCompleto.idobra_social
         )
+        
+        // Cargar insumos, prestaciones y equipamientos como el botón "Editar"
+        // Simular el callback que usa UserDashboard
+        if (window.cargarPresupuestoCallback) {
+          await window.cargarPresupuestoCallback(
+            presupuestoCompleto.idPresupuestos,
+            presupuestoCompleto.Nombre_Apellido,
+            presupuestoCompleto.Sucursal,
+            presupuestoCompleto.idobra_social
+          )
+        }
         setModalDNI(false)
-        notifications.show({
-          title: 'Presupuesto Cargado',
-          message: `Presupuesto ID: ${presupuestoCompleto.idPresupuestos} cargado`,
-          color: 'blue'
-        })
       } catch (error) {
         console.error('Error cargando presupuesto:', error)
         notifications.show({
@@ -306,21 +340,48 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         )}
       </Stack>
 
-      <Modal opened={modalDNI} onClose={() => setModalDNI(false)} title="DNI Existente">
+      <Modal opened={modalDNI} onClose={() => setModalDNI(false)} title={presupuestoExistente?.estado === 'borrador' ? "Presupuesto en Borrador" : "Presupuesto Existente"}>
         <Stack>
-          <Text>Ya existe un presupuesto con este DNI:</Text>
-          <Text fw={700}>{presupuestoExistente?.Nombre_Apellido}</Text>
+          <Text fw={500}>Presupuesto: #{presupuestoExistente?.idPresupuestos} - {presupuestoExistente?.Nombre_Apellido}</Text>
           <Text size="sm">Sucursal: {presupuestoExistente?.Sucursal}</Text>
+          <Text size="sm">Estado: {presupuestoExistente?.estado?.toUpperCase() || 'NO DISPONIBLE'}</Text>
+          
+          <Text mt="md">
+            {presupuestoExistente?.estado === 'borrador' 
+              ? 'Este presupuesto está en borrador y puede editarse directamente.'
+              : `Este presupuesto está ${presupuestoExistente?.estado}. Se creará una nueva versión en estado borrador para que puedas editarlo.`
+            }
+          </Text>
+          
+          {presupuestoExistente?.estado !== 'borrador' && (
+            <Text size="sm" c="dimmed" fs="italic">
+              ⚠️ La versión actual se mantendrá sin cambios en el historial.
+            </Text>
+          )}
+          
           <Group justify="center" mt="md">
-            <Button onClick={cargarPresupuestoExistente} color="blue">
-              Cargar Presupuesto Existente
-            </Button>
-            <Button onClick={() => {
-              setModalDNI(false)
-              crearNuevoConDatos(nombre, sucursal)
-            }} color="green">
-              Crear Nuevo
-            </Button>
+            {presupuestoExistente?.estado === 'borrador' ? (
+              <>
+                <Button onClick={() => setModalDNI(false)} variant="outline">
+                  Cancelar
+                </Button>
+                <Button onClick={cargarPresupuestoExistente} color="blue">
+                  Continuar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={() => {
+                  setModalDNI(false)
+                  crearNuevoConDatos(nombre, sucursal)
+                }} color="green">
+                  Crear Nuevo
+                </Button>
+                <Button onClick={cargarPresupuestoExistente} color="blue">
+                  Nueva Versión
+                </Button>
+              </>
+            )}
           </Group>
         </Stack>
       </Modal>

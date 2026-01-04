@@ -2,10 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET is required');
-}
-const JWT_SECRET = process.env.JWT_SECRET;
+const getJwtSecret = () => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return process.env.JWT_SECRET;
+};
 
 interface AuthRequest extends Request {
   user?: any;
@@ -19,7 +21,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
       throw new AppError(401, 'Token no proporcionado');
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     req.user = decoded;
     next();
   } catch (err) {

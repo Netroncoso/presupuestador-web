@@ -1,6 +1,39 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
 import { getAllInsumos, createInsumo, updateInsumo, deleteInsumo } from '../../controllers/admin/adminInsumosController';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { logger } from '../../utils/logger';
+import { AuthenticatedRequest } from '../../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateInsumoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de insumo debe ser un número válido' });
+  }
+  next();
+};
+
+const validateInsumoData = (req: Request, res: Response, next: NextFunction) => {
+  const { Producto, Precio, Categoria } = req.body;
+  
+  if (!Producto?.trim()) {
+    return res.status(400).json({ error: 'Nombre del producto es requerido' });
+  }
+  
+  if (!Precio || isNaN(parseFloat(Precio)) || parseFloat(Precio) < 0) {
+    return res.status(400).json({ error: 'Precio válido es requerido' });
+  }
+  
+  if (!Categoria?.trim()) {
+    return res.status(400).json({ error: 'Categoría es requerida' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -81,8 +114,33 @@ router.use(requireAdmin);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/', getAllInsumos);
-router.post('/', createInsumo);
+router.get('/', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando insumos admin', { usuario: req.user.id });
+  
+  const resultado = await getAllInsumos(req, res, () => {});
+  return resultado;
+}));
+
+router.post('/', validateInsumoData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { Producto, codigo_producto, Precio, Categoria } = req.body;
+  
+  logger.info('Creando insumo', { 
+    Producto, 
+    codigo_producto, 
+    Precio, 
+    Categoria, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await createInsumo(req, res, () => {});
+  
+  logger.info('Insumo creado exitosamente', { 
+    Producto, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -141,7 +199,40 @@ router.post('/', createInsumo);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.put('/:id', updateInsumo);
-router.delete('/:id', deleteInsumo);
+router.put('/:id', validateInsumoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Actualizando insumo', { 
+    insumoId: id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await updateInsumo(req, res, () => {});
+  
+  logger.info('Insumo actualizado exitosamente', { 
+    insumoId: id, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
+
+router.delete('/:id', validateInsumoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Eliminando insumo', { 
+    insumoId: id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await deleteInsumo(req, res, () => {});
+  
+  logger.info('Insumo eliminado exitosamente', { 
+    insumoId: id, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

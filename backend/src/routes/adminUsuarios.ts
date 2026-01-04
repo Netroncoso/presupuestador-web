@@ -1,7 +1,44 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireSuperAdmin } from '../middleware/auth';
-import { csrfProtection } from '../middleware/csrf';
 import { getUsuarios, createUsuario, updateUsuario, toggleUsuario, deleteUsuario } from '../controllers/adminUsuariosController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateUsuarioId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de usuario debe ser un número válido' });
+  }
+  next();
+};
+
+const validateUsuarioData = (req: Request, res: Response, next: NextFunction) => {
+  const { username, password, rol, sucursal_id } = req.body;
+  
+  if (!username?.trim()) {
+    return res.status(400).json({ error: 'Username es requerido' });
+  }
+  
+  if (!password?.trim()) {
+    return res.status(400).json({ error: 'Password es requerido' });
+  }
+  
+  if (!rol?.trim()) {
+    return res.status(400).json({ error: 'Rol es requerido' });
+  }
+  
+  if (!sucursal_id || isNaN(parseInt(sucursal_id))) {
+    return res.status(400).json({ error: 'Sucursal válida es requerida' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -17,7 +54,11 @@ const router = Router();
  *       200:
  *         description: Lista de usuarios
  */
-router.get('/usuarios', authenticateToken, requireSuperAdmin, getUsuarios);
+router.get('/usuarios', authenticateToken, requireSuperAdmin, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando usuarios', { usuario: req.user.id });
+  const resultado = await getUsuarios(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -48,7 +89,21 @@ router.get('/usuarios', authenticateToken, requireSuperAdmin, getUsuarios);
  *       201:
  *         description: Usuario creado
  */
-router.post('/usuarios', authenticateToken, requireSuperAdmin, csrfProtection, createUsuario);
+router.post('/usuarios', authenticateToken, requireSuperAdmin, validateUsuarioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { username, rol, sucursal_id } = req.body;
+  
+  logger.info('Creando usuario', { username, rol, sucursal_id, creador: req.user.id });
+  const resultado = await createUsuario(req, res, () => {});
+  
+  logger.info('Usuario creado exitosamente', { 
+    username, 
+    rol, 
+    sucursal_id, 
+    creador: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -83,7 +138,19 @@ router.post('/usuarios', authenticateToken, requireSuperAdmin, csrfProtection, c
  *       200:
  *         description: Usuario actualizado
  */
-router.put('/usuarios/:id', authenticateToken, requireSuperAdmin, csrfProtection, updateUsuario);
+router.put('/usuarios/:id', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Actualizando usuario', { usuarioId: id, editor: req.user.id });
+  const resultado = await updateUsuario(req, res, () => {});
+  
+  logger.info('Usuario actualizado exitosamente', { 
+    usuarioId: id, 
+    editor: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -103,7 +170,19 @@ router.put('/usuarios/:id', authenticateToken, requireSuperAdmin, csrfProtection
  *       200:
  *         description: Estado actualizado
  */
-router.put('/usuarios/:id/toggle', authenticateToken, requireSuperAdmin, csrfProtection, toggleUsuario);
+router.put('/usuarios/:id/toggle', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Cambiando estado de usuario', { usuarioId: id, editor: req.user.id });
+  const resultado = await toggleUsuario(req, res, () => {});
+  
+  logger.info('Estado de usuario cambiado exitosamente', { 
+    usuarioId: id, 
+    editor: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -123,6 +202,18 @@ router.put('/usuarios/:id/toggle', authenticateToken, requireSuperAdmin, csrfPro
  *       200:
  *         description: Usuario eliminado
  */
-router.delete('/usuarios/:id', authenticateToken, requireSuperAdmin, csrfProtection, deleteUsuario);
+router.delete('/usuarios/:id', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Eliminando usuario', { usuarioId: id, eliminador: req.user.id });
+  const resultado = await deleteUsuario(req, res, () => {});
+  
+  logger.info('Usuario eliminado exitosamente', { 
+    usuarioId: id, 
+    eliminador: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

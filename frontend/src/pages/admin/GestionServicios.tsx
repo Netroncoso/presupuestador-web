@@ -92,7 +92,7 @@ export default function GestionServicios() {
       
       setModalOpen(false);
       setEditingServicio(null);
-      setFormData({ nombre: '' });
+      setFormData({ nombre: '', tipo_unidad: '' });
       cargarServicios();
     } catch (error: any) {
       notifications.show({

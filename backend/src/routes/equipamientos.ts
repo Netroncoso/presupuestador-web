@@ -1,6 +1,65 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import * as equipamientosController from '../controllers/equipamientosController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateAcuerdoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  // Permitir 0 para crear nuevos acuerdos, pero no negativos o NaN
+  if (isNaN(id) || id < 0) {
+    return res.status(400).json({ error: 'ID de acuerdo debe ser un número válido' });
+  }
+  next();
+};
+
+const validateEquipamientoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de equipamiento debe ser un número válido' });
+  }
+  next();
+};
+
+const validateFinanciadorId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de financiador debe ser un número válido' });
+  }
+  next();
+};
+
+const validatePresupuestoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de presupuesto debe ser un número válido' });
+  }
+  next();
+};
+
+const validateEquipamientoData = (req: Request, res: Response, next: NextFunction) => {
+  const { nombre, tipo, precio_referencia } = req.body;
+  
+  if (!nombre?.trim()) {
+    return res.status(400).json({ error: 'Nombre del equipamiento es requerido' });
+  }
+  
+  if (!tipo?.trim()) {
+    return res.status(400).json({ error: 'Tipo de equipamiento es requerido' });
+  }
+  
+  if (!precio_referencia || isNaN(parseFloat(precio_referencia))) {
+    return res.status(400).json({ error: 'Precio de referencia válido es requerido' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -73,8 +132,27 @@ const router = Router();
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/admin', authenticateToken, requireAdmin, equipamientosController.getAllEquipamientos);
-router.post('/admin', authenticateToken, requireAdmin, equipamientosController.crearEquipamiento);
+router.get('/admin', authenticateToken, requireAdmin, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando equipamientos admin', { usuario: req.user.id });
+  const resultado = await equipamientosController.getAllEquipamientos(req, res, () => {});
+  return resultado;
+}));
+
+router.post('/admin', authenticateToken, requireAdmin, validateEquipamientoData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { nombre, tipo, precio_referencia } = req.body;
+  
+  logger.info('Creando equipamiento', { nombre, tipo, precio_referencia, usuario: req.user.id });
+  const resultado = await equipamientosController.crearEquipamiento(req, res, () => {});
+  
+  logger.info('Equipamiento creado exitosamente', { 
+    nombre, 
+    tipo, 
+    precio_referencia, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -123,8 +201,33 @@ router.post('/admin', authenticateToken, requireAdmin, equipamientosController.c
  *       200:
  *         description: Equipamiento eliminado
  */
-router.put('/admin/:id', authenticateToken, requireAdmin, equipamientosController.actualizarEquipamiento);
-router.delete('/admin/:id', authenticateToken, requireAdmin, equipamientosController.eliminarEquipamiento);
+router.put('/admin/:id', authenticateToken, requireAdmin, validateEquipamientoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Actualizando equipamiento', { equipamientoId: id, usuario: req.user.id });
+  const resultado = await equipamientosController.actualizarEquipamiento(req, res, () => {});
+  
+  logger.info('Equipamiento actualizado exitosamente', { 
+    equipamientoId: id, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
+
+router.delete('/admin/:id', authenticateToken, requireAdmin, validateEquipamientoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Eliminando equipamiento', { equipamientoId: id, usuario: req.user.id });
+  const resultado = await equipamientosController.eliminarEquipamiento(req, res, () => {});
+  
+  logger.info('Equipamiento eliminado exitosamente', { 
+    equipamientoId: id, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 // ============================================
 // RUTAS TIPOS
@@ -184,8 +287,29 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, equipamientosContro
  *       200:
  *         description: Tipo creado
  */
-router.get('/tipos', authenticateToken, equipamientosController.getTiposEquipamiento);
-router.post('/tipos', authenticateToken, requireAdmin, equipamientosController.crearTipoEquipamiento);
+router.get('/tipos', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando tipos de equipamiento', { usuario: req.user.id });
+  const resultado = await equipamientosController.getTiposEquipamiento(req, res, () => {});
+  return resultado;
+}));
+
+router.post('/tipos', authenticateToken, requireAdmin, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { nombre } = req.body;
+  
+  if (!nombre?.trim()) {
+    return res.status(400).json({ error: 'Nombre del tipo es requerido' });
+  }
+  
+  logger.info('Creando tipo de equipamiento', { nombre, usuario: req.user.id });
+  const resultado = await equipamientosController.crearTipoEquipamiento(req, res, () => {});
+  
+  logger.info('Tipo de equipamiento creado exitosamente', { 
+    nombre, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 // ============================================
 // RUTAS ADMIN ACUERDOS
@@ -230,7 +354,17 @@ router.post('/tipos', authenticateToken, requireAdmin, equipamientosController.c
  *                   count_valores_vigentes:
  *                     type: integer
  */
-router.get('/admin/financiador/:id', authenticateToken, requireAdmin, equipamientosController.getEquipamientosPorFinanciadorAdmin);
+router.get('/admin/financiador/:id', authenticateToken, requireAdmin, validateFinanciadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const financiadorId = parseInt(req.params.id);
+  
+  logger.info('Listando equipamientos por financiador (admin)', { 
+    financiadorId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.getEquipamientosPorFinanciadorAdmin(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -263,7 +397,30 @@ router.get('/admin/financiador/:id', authenticateToken, requireAdmin, equipamien
  *       200:
  *         description: Estado actualizado
  */
-router.put('/admin/acuerdo/:id', authenticateToken, requireAdmin, equipamientosController.actualizarAcuerdoEquipamiento);
+router.put('/admin/acuerdo/:id', authenticateToken, requireAdmin, validateAcuerdoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const acuerdoId = parseInt(req.params.id);
+  const { activo } = req.body;
+  
+  if (typeof activo !== 'boolean' && activo !== 0 && activo !== 1) {
+    return res.status(400).json({ error: 'Estado activo debe ser boolean o 0/1' });
+  }
+  
+  logger.info('Actualizando acuerdo equipamiento', { 
+    acuerdoId, 
+    activo, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.actualizarAcuerdoEquipamiento(req, res, () => {});
+  
+  logger.info('Acuerdo equipamiento actualizado exitosamente', { 
+    acuerdoId, 
+    activo, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -327,8 +484,57 @@ router.put('/admin/acuerdo/:id', authenticateToken, requireAdmin, equipamientosC
  *       200:
  *         description: Historial de valores
  */
-router.post('/admin/:id/valores', authenticateToken, requireAdmin, equipamientosController.agregarValorEquipamientoAdmin);
-router.get('/admin/:id/valores', authenticateToken, requireAdmin, equipamientosController.getValoresEquipamientoAdmin);
+router.post('/admin/:id/valores', authenticateToken, requireAdmin, validateEquipamientoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const equipamientoId = parseInt(req.params.id);
+  const { valor_asignado, valor_facturar, fecha_inicio, financiador_id } = req.body;
+  
+  if (!valor_asignado || isNaN(parseFloat(valor_asignado))) {
+    return res.status(400).json({ error: 'Valor asignado válido es requerido' });
+  }
+  
+  if (!valor_facturar || isNaN(parseFloat(valor_facturar))) {
+    return res.status(400).json({ error: 'Valor facturar válido es requerido' });
+  }
+  
+  if (!fecha_inicio) {
+    return res.status(400).json({ error: 'Fecha de inicio es requerida' });
+  }
+  
+  if (!financiador_id || isNaN(parseInt(financiador_id))) {
+    return res.status(400).json({ error: 'ID de financiador válido es requerido' });
+  }
+  
+  logger.info('Agregando valor histórico equipamiento', { 
+    equipamientoId, 
+    valor_asignado, 
+    valor_facturar, 
+    fecha_inicio, 
+    financiador_id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.agregarValorEquipamientoAdmin(req, res, () => {});
+  
+  logger.info('Valor histórico equipamiento agregado exitosamente', { 
+    equipamientoId, 
+    financiador_id, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
+
+router.get('/admin/:id/valores', authenticateToken, requireAdmin, validateEquipamientoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const equipamientoId = parseInt(req.params.id);
+  
+  logger.info('Obteniendo valores históricos equipamiento', { 
+    equipamientoId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.getValoresEquipamientoAdmin(req, res, () => {});
+  return resultado;
+}));
 
 // ============================================
 // RUTAS PÚBLICAS (requieren autenticación)
@@ -362,7 +568,11 @@ router.get('/admin/:id/valores', authenticateToken, requireAdmin, equipamientosC
  *                   precio_referencia:
  *                     type: number
  */
-router.get('/', authenticateToken, equipamientosController.getEquipamientos);
+router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando equipamientos activos', { usuario: req.user.id });
+  const resultado = await equipamientosController.getEquipamientos(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -417,7 +627,20 @@ router.get('/', authenticateToken, equipamientosController.getEquipamientos);
  *                   dias_sin_actualizar:
  *                     type: integer
  */
-router.get('/financiador/:id', authenticateToken, equipamientosController.getEquipamientosPorFinanciador);
+router.get('/financiador/:id', authenticateToken, validateFinanciadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const financiadorId = parseInt(req.params.id);
+  const { fecha, sucursal_id } = req.query;
+  
+  logger.info('Obteniendo equipamientos por financiador', { 
+    financiadorId, 
+    fecha, 
+    sucursal_id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.getEquipamientosPorFinanciador(req, res, () => {});
+  return resultado;
+}));
 
 // ============================================
 // RUTAS DE VALORES HISTÓRICOS
@@ -504,8 +727,51 @@ router.get('/financiador/:id', authenticateToken, equipamientosController.getEqu
  *       200:
  *         description: Valor guardado
  */
-router.get('/acuerdo/:id/valores', authenticateToken, equipamientosController.getValoresEquipamiento);
-router.post('/acuerdo/:id/valores', authenticateToken, requireAdmin, equipamientosController.guardarValorEquipamiento);
+router.get('/acuerdo/:id/valores', authenticateToken, validateAcuerdoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const acuerdoId = parseInt(req.params.id);
+  
+  logger.info('Obteniendo valores históricos de acuerdo', { 
+    acuerdoId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.getValoresEquipamiento(req, res, () => {});
+  return resultado;
+}));
+
+router.post('/acuerdo/:id/valores', authenticateToken, requireAdmin, validateAcuerdoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const acuerdoId = parseInt(req.params.id);
+  const { valor_asignado, valor_facturar, fecha_inicio } = req.body;
+  
+  if (!valor_asignado || isNaN(parseFloat(valor_asignado))) {
+    return res.status(400).json({ error: 'Valor asignado válido es requerido' });
+  }
+  
+  if (!valor_facturar || isNaN(parseFloat(valor_facturar))) {
+    return res.status(400).json({ error: 'Valor facturar válido es requerido' });
+  }
+  
+  if (!fecha_inicio) {
+    return res.status(400).json({ error: 'Fecha de inicio es requerida' });
+  }
+  
+  logger.info('Guardando valor histórico de acuerdo', { 
+    acuerdoId, 
+    valor_asignado, 
+    valor_facturar, 
+    fecha_inicio, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.guardarValorEquipamiento(req, res, () => {});
+  
+  logger.info('Valor histórico de acuerdo guardado exitosamente', { 
+    acuerdoId, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 // ============================================
 // RUTAS DE PRESUPUESTO
@@ -572,8 +838,62 @@ router.post('/acuerdo/:id/valores', authenticateToken, requireAdmin, equipamient
  *       200:
  *         description: Equipamiento agregado
  */
-router.post('/presupuesto/:id', authenticateToken, equipamientosController.agregarEquipamientoPresupuesto);
-router.get('/presupuesto/:id', authenticateToken, equipamientosController.getEquipamientosPresupuesto);
+router.post('/presupuesto/:id', authenticateToken, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { id_equipamiento, nombre, cantidad, costo, precio_facturar } = req.body;
+  
+  if (!id_equipamiento || isNaN(parseInt(id_equipamiento))) {
+    return res.status(400).json({ error: 'ID de equipamiento válido es requerido' });
+  }
+  
+  if (!nombre?.trim()) {
+    return res.status(400).json({ error: 'Nombre del equipamiento es requerido' });
+  }
+  
+  if (!cantidad || isNaN(parseInt(cantidad)) || parseInt(cantidad) <= 0) {
+    return res.status(400).json({ error: 'Cantidad válida es requerida' });
+  }
+  
+  if (costo === undefined || isNaN(parseFloat(costo))) {
+    return res.status(400).json({ error: 'Costo válido es requerido' });
+  }
+  
+  if (precio_facturar === undefined || isNaN(parseFloat(precio_facturar))) {
+    return res.status(400).json({ error: 'Precio facturar válido es requerido' });
+  }
+  
+  logger.info('Agregando equipamiento a presupuesto', { 
+    presupuestoId, 
+    id_equipamiento, 
+    nombre, 
+    cantidad, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.agregarEquipamientoPresupuesto(req, res, () => {});
+  
+  logger.info('Equipamiento agregado a presupuesto exitosamente', { 
+    presupuestoId, 
+    id_equipamiento, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
+
+router.get('/presupuesto/:id', authenticateToken, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { soloLectura } = req.query;
+  
+  logger.info('Obteniendo equipamientos de presupuesto', { 
+    presupuestoId, 
+    soloLectura, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.getEquipamientosPresupuesto(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -598,6 +918,29 @@ router.get('/presupuesto/:id', authenticateToken, equipamientosController.getEqu
  *       200:
  *         description: Equipamiento eliminado
  */
-router.delete('/presupuesto/:id/:equipamientoId', authenticateToken, equipamientosController.eliminarEquipamientoPresupuesto);
+router.delete('/presupuesto/:id/:equipamientoId', authenticateToken, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const equipamientoId = parseInt(req.params.equipamientoId);
+  
+  if (isNaN(equipamientoId) || equipamientoId <= 0) {
+    return res.status(400).json({ error: 'ID de equipamiento debe ser un número válido' });
+  }
+  
+  logger.info('Eliminando equipamiento de presupuesto', { 
+    presupuestoId, 
+    equipamientoId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await equipamientosController.eliminarEquipamientoPresupuesto(req, res, () => {});
+  
+  logger.info('Equipamiento eliminado de presupuesto exitosamente', { 
+    presupuestoId, 
+    equipamientoId, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

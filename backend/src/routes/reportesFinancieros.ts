@@ -1,6 +1,9 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { authenticateToken, requireGerenciaFinanciera } from '../middleware/auth';
 import * as reportesController from '../controllers/reportesFinancierosController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
 
 const router = Router();
 
@@ -19,7 +22,12 @@ router.use(requireGerenciaFinanciera);
  *       200:
  *         description: KPIs del sistema
  */
-router.get('/kpis', reportesController.obtenerKPIs);
+router.get('/kpis', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo KPIs financieros', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerKPIs(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -33,7 +41,12 @@ router.get('/kpis', reportesController.obtenerKPIs);
  *       200:
  *         description: Ranking por volumen
  */
-router.get('/ranking-financiadores', reportesController.obtenerRankingFinanciadores);
+router.get('/ranking-financiadores', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo ranking de financiadores', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerRankingFinanciadores(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -47,7 +60,12 @@ router.get('/ranking-financiadores', reportesController.obtenerRankingFinanciado
  *       200:
  *         description: Ranking por sucursal
  */
-router.get('/ranking-sucursales', reportesController.obtenerRankingSucursales);
+router.get('/ranking-sucursales', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo ranking de sucursales', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerRankingSucursales(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -61,7 +79,12 @@ router.get('/ranking-sucursales', reportesController.obtenerRankingSucursales);
  *       200:
  *         description: Análisis detallado
  */
-router.get('/analisis-costos', reportesController.obtenerAnalisisCostos);
+router.get('/analisis-costos', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo análisis de costos', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerAnalisisCostos(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -75,7 +98,12 @@ router.get('/analisis-costos', reportesController.obtenerAnalisisCostos);
  *       200:
  *         description: Promedios del sistema
  */
-router.get('/promedios-generales', reportesController.obtenerPromediosGenerales);
+router.get('/promedios-generales', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo promedios generales', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerPromediosGenerales(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -89,6 +117,11 @@ router.get('/promedios-generales', reportesController.obtenerPromediosGenerales)
  *       200:
  *         description: Detalle de servicios
  */
-router.get('/servicios-por-financiador', reportesController.obtenerServiciosPorFinanciador);
+router.get('/servicios-por-financiador', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo servicios por financiador', { usuario: req.user.id });
+  
+  const resultado = await reportesController.obtenerServiciosPorFinanciador(req, res, () => {});
+  return resultado;
+}));
 
 export default router;

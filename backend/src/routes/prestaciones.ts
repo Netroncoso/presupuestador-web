@@ -1,14 +1,52 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { getPrestadores, getPrestacionesPorPrestador, getPrestadorInfo } from '../controllers/prestacionesController';
 import { getValoresPrestadorServicio, guardarValorPrestadorServicio } from '../controllers/prestadorValoresController';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validatePrestadorId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de prestador debe ser un número válido' });
+  }
+  next();
+};
+
+const validateServicioId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  // Permitir 0 para crear nuevos servicios, pero no negativos o NaN
+  if (isNaN(id) || id < 0) {
+    return res.status(400).json({ error: 'ID de servicio debe ser un número válido' });
+  }
+  next();
+};
+
+const validateValorData = (req: Request, res: Response, next: NextFunction) => {
+  const { valor_asignado, valor_facturar, fecha_inicio } = req.body;
+  
+  if (!valor_asignado || isNaN(parseFloat(valor_asignado))) {
+    return res.status(400).json({ error: 'Valor asignado válido es requerido' });
+  }
+  
+  if (!valor_facturar || isNaN(parseFloat(valor_facturar))) {
+    return res.status(400).json({ error: 'Valor facturar válido es requerido' });
+  }
+  
+  if (!fecha_inicio) {
+    return res.status(400).json({ error: 'Fecha de inicio es requerida' });
+  }
+  
+  next();
+};
 
 const router = Router();
-
-// Wrapper to handle async errors
-const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
 
 /**
  * @swagger
@@ -40,7 +78,11 @@ const asyncHandler = (fn: any) => (req: any, res: any, next: any) => {
  *                   dias_cobranza_real:
  *                     type: integer
  */
-router.get('/prestadores', authenticateToken, asyncHandler(getPrestadores));
+router.get('/prestadores', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando prestadores/financiadores', { usuario: req.user.id });
+  const resultado = await getPrestadores(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -94,7 +136,20 @@ router.get('/prestadores', authenticateToken, asyncHandler(getPrestadores));
  *                   dias_sin_actualizar:
  *                     type: integer
  */
-router.get('/prestador/:id', authenticateToken, asyncHandler(getPrestacionesPorPrestador));
+router.get('/prestador/:id', authenticateToken, validatePrestadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const prestadorId = parseInt(req.params.id);
+  const { fecha, sucursal_id } = req.query;
+  
+  logger.info('Obteniendo prestaciones por prestador', { 
+    prestadorId, 
+    fecha, 
+    sucursal_id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await getPrestacionesPorPrestador(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -132,7 +187,17 @@ router.get('/prestador/:id', authenticateToken, asyncHandler(getPrestacionesPorP
  *                 acuerdo_asignado:
  *                   type: string
  */
-router.get('/prestador/:id/info', authenticateToken, asyncHandler(getPrestadorInfo));
+router.get('/prestador/:id/info', authenticateToken, validatePrestadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const prestadorId = parseInt(req.params.id);
+  
+  logger.info('Obteniendo información del prestador', { 
+    prestadorId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await getPrestadorInfo(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -217,7 +282,41 @@ router.get('/prestador/:id/info', authenticateToken, asyncHandler(getPrestadorIn
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/servicio/:id/valores', authenticateToken, asyncHandler(getValoresPrestadorServicio));
-router.post('/servicio/:id/valores', requireAdmin, asyncHandler(guardarValorPrestadorServicio));
+router.get('/servicio/:id/valores', authenticateToken, validateServicioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const servicioId = parseInt(req.params.id);
+  
+  logger.info('Obteniendo valores históricos de servicio', { 
+    servicioId, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await getValoresPrestadorServicio(req, res, () => {});
+  return resultado;
+}));
+
+router.post('/servicio/:id/valores', authenticateToken, requireAdmin, validateServicioId, validateValorData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id } = req.body;
+  
+  logger.info('Guardando valor histórico de prestación', { 
+    servicioId: id, 
+    valor_asignado, 
+    valor_facturar, 
+    fecha_inicio, 
+    sucursal_id, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await guardarValorPrestadorServicio(req, res, () => {});
+  
+  logger.info('Valor de prestación guardado exitosamente', { 
+    servicioId: id, 
+    valor_asignado, 
+    valor_facturar, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

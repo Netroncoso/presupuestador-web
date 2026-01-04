@@ -1,6 +1,43 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
 import { getAllPrestadores, updatePrestador, getAcuerdos } from '../../controllers/admin/adminPrestadoresController';
+import { asyncHandler } from '../../middleware/errorHandler';
+import { logger } from '../../utils/logger';
+import { AuthenticatedRequest } from '../../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validatePrestadorId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de prestador debe ser un número válido' });
+  }
+  next();
+};
+
+const validatePrestadorData = (req: Request, res: Response, next: NextFunction) => {
+  const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real } = req.body;
+  
+  if (Financiador !== undefined && !Financiador?.trim()) {
+    return res.status(400).json({ error: 'Nombre del financiador no puede estar vacío' });
+  }
+  
+  if (tasa_mensual !== undefined && (isNaN(parseFloat(tasa_mensual)) || parseFloat(tasa_mensual) < 0)) {
+    return res.status(400).json({ error: 'Tasa mensual debe ser un número válido' });
+  }
+  
+  if (dias_cobranza_teorico !== undefined && (isNaN(parseInt(dias_cobranza_teorico)) || parseInt(dias_cobranza_teorico) < 0)) {
+    return res.status(400).json({ error: 'Días cobranza teórico debe ser un número entero válido' });
+  }
+  
+  if (dias_cobranza_real !== undefined && (isNaN(parseInt(dias_cobranza_real)) || parseInt(dias_cobranza_real) < 0)) {
+    return res.status(400).json({ error: 'Días cobranza real debe ser un número entero válido' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -42,7 +79,10 @@ router.use(requireAdmin);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/', getAllPrestadores);
+router.get('/', (req: Request, res: Response, next: NextFunction) => {
+  logger.info('Listando prestadores admin', { usuario: (req as AuthenticatedRequest).user.id });
+  getAllPrestadores(req, res, next);
+});
 
 /**
  * @swagger
@@ -64,7 +104,10 @@ router.get('/', getAllPrestadores);
  *                 type: string
  *               example: ["80%", "90%", "100%", "110%", "120%"]
  */
-router.get('/acuerdos', getAcuerdos);
+router.get('/acuerdos', (req: Request, res: Response, next: NextFunction) => {
+  logger.info('Obteniendo acuerdos disponibles', { usuario: (req as AuthenticatedRequest).user.id });
+  getAcuerdos(req, res, next);
+});
 
 /**
  * @swagger
@@ -113,6 +156,26 @@ router.get('/acuerdos', getAcuerdos);
  *       404:
  *         description: Financiador no encontrado
  */
-router.put('/:id', updatePrestador);
+router.put('/:id', validatePrestadorId, validatePrestadorData, (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, acuerdo_asignado } = req.body;
+  
+  logger.info('Actualizando prestador', { 
+    prestadorId: id, 
+    Financiador, 
+    tasa_mensual, 
+    dias_cobranza_teorico, 
+    dias_cobranza_real, 
+    acuerdo_asignado,
+    usuario: (req as AuthenticatedRequest).user.id 
+  });
+  
+  updatePrestador(req, res, next);
+  
+  logger.info('Prestador actualizado exitosamente', { 
+    prestadorId: id, 
+    usuario: (req as AuthenticatedRequest).user.id 
+  });
+});
 
 export default router;

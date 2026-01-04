@@ -183,7 +183,7 @@ export default function GestionEquipamientos() {
     setLoading(true);
     try {
       for (const valor of nuevosValores) {
-        await api.post(`/equipamientos/acuerdo/${editando?.id_financiador_equipamiento || 'null'}/valores`, {
+        await api.post(`/equipamientos/acuerdo/${editando?.id_financiador_equipamiento || 0}/valores`, {
           valor_asignado: parseFloat(valor.valor_asignado),
           valor_facturar: parseFloat(valor.valor_facturar),
           fecha_inicio: valor.fecha_inicio,
@@ -206,12 +206,23 @@ export default function GestionEquipamientos() {
         sucursal_id: ''
       }]);
       
+      // Recargar datos después de guardar
+      await cargarEquipamientos();
+      
+      // Recargar valores históricos del modal
       if (editando?.id_financiador_equipamiento) {
         const res = await api.get(`/equipamientos/acuerdo/${editando.id_financiador_equipamiento}/valores`);
         setValoresHistoricos(res.data.filter((v: any) => !v.fecha_fin));
+      } else {
+        // Si era nuevo acuerdo (ID = 0), buscar el equipamiento actualizado
+        const response = await api.get(`/equipamientos/admin/financiador/${financiadorSeleccionado}`);
+        const equipoActualizado = response.data.find((e: Equipamiento) => e.id === editando?.id);
+        if (equipoActualizado?.id_financiador_equipamiento) {
+          setEditando(equipoActualizado);
+          const res = await api.get(`/equipamientos/acuerdo/${equipoActualizado.id_financiador_equipamiento}/valores`);
+          setValoresHistoricos(res.data.filter((v: any) => !v.fecha_fin));
+        }
       }
-      
-      cargarEquipamientos();
     } catch (err: any) {
       notifications.show({
         title: 'Error',
@@ -371,16 +382,9 @@ export default function GestionEquipamientos() {
                   checked={editando.activo_financiador === 1}
                   onChange={async (e) => {
                     if (e.currentTarget.checked) {
-                      if (!editando.id_financiador_equipamiento) {
-                        notifications.show({
-                          title: 'Error',
-                          message: 'Debes agregar al menos un valor antes de activar',
-                          color: 'red'
-                        });
-                        return;
-                      }
+                      // Validar que tenga valores VIGENTES (para todos los equipamientos)
                       try {
-                        const res = await api.get(`/equipamientos/acuerdo/${editando.id_financiador_equipamiento}/valores`);
+                        const res = await api.get(`/equipamientos/acuerdo/${editando.id_financiador_equipamiento || 0}/valores`);
                         const vigentes = res.data.filter((v: any) => !v.fecha_fin);
                         if (vigentes.length === 0) {
                           notifications.show({

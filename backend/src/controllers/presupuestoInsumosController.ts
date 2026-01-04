@@ -57,7 +57,10 @@ const recalcularTotales = async (presupuestoId: number) => {
 
 export const guardarInsumoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
-  const { producto, costo, cantidad, id_insumo } = req.body;
+  const { producto, costo, cantidad, id_insumo, insumo_id } = req.body;
+  
+  // Accept both field names from frontend
+  const insumoIdFinal = id_insumo || insumo_id;
 
   if (isNaN(presupuestoId) || !producto || !costo || !cantidad) {
     throw new AppError(400, 'Datos inválidos');
@@ -74,7 +77,7 @@ export const guardarInsumoPresupuesto = asyncHandler(async (req: Request, res: R
 
   await pool.query(
     'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad, id_insumo) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE costo = VALUES(costo), precio_facturar = VALUES(precio_facturar), cantidad = VALUES(cantidad), id_insumo = VALUES(id_insumo)',
-    [presupuestoId, producto, costo, precio_facturar, cantidad, id_insumo || null]
+    [presupuestoId, producto, costo, precio_facturar, cantidad, insumoIdFinal || null]
   );
   
   // Recalcular totales
@@ -85,15 +88,15 @@ export const guardarInsumoPresupuesto = asyncHandler(async (req: Request, res: R
 
 export const eliminarInsumoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
-  const { producto } = req.body;
+  const { id } = req.body;
 
-  if (isNaN(presupuestoId) || !producto) {
+  if (isNaN(presupuestoId) || !id) {
     throw new AppError(400, 'Datos inválidos');
   }
 
   await pool.query(
-    'DELETE FROM presupuesto_insumos WHERE idPresupuestos = ? AND producto = ?',
-    [presupuestoId, producto]
+    'DELETE FROM presupuesto_insumos WHERE id = ? AND idPresupuestos = ?',
+    [id, presupuestoId]
   );
   
   await recalcularTotales(presupuestoId);

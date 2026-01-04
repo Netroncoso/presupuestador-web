@@ -1,5 +1,25 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { login, verifyToken } from '../controllers/authController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { logger } from '../utils/logger';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateLoginData = (req: Request, res: Response, next: NextFunction) => {
+  const { username, password } = req.body;
+  
+  if (!username?.trim()) {
+    return res.status(400).json({ error: 'Username es requerido' });
+  }
+  
+  if (!password?.trim()) {
+    return res.status(400).json({ error: 'Password es requerido' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -47,7 +67,20 @@ const router = Router();
  *       401:
  *         description: Credenciales inválidas
  */
-router.post('/login', login);
+router.post('/login', validateLoginData, asyncHandler(async (req: Request, res: Response) => {
+  const { username } = req.body;
+  
+  logger.info('Intento de login', { username, ip: req.ip });
+  
+  const resultado = await login(req, res, () => {});
+  
+  // Solo logear éxito si no hay error
+  if (res.statusCode === 200) {
+    logger.info('Login exitoso', { username, ip: req.ip });
+  }
+  
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -63,6 +96,11 @@ router.post('/login', login);
  *       401:
  *         description: Token inválido
  */
-router.get('/verify', verifyToken);
+router.get('/verify', asyncHandler(async (req: Request, res: Response) => {
+  logger.info('Verificación de token', { ip: req.ip });
+  
+  const resultado = await verifyToken(req, res, () => {});
+  return resultado;
+}));
 
 export default router;

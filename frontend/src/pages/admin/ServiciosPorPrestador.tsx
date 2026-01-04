@@ -40,6 +40,7 @@ export default function ServiciosPorPrestador() {
   const [editingServicio, setEditingServicio] = useState<ServicioPrestador | null>(null);
   const [loading, setLoading] = useState(false);
   const [valoresHistoricos, setValoresHistoricos] = useState<any[]>([]);
+  const [valoresVigentes, setValoresVigentes] = useState<any[]>([]);
   const [modalValoresOpen, setModalValoresOpen] = useState(false);
   const [servicioValores, setServicioValores] = useState<ServicioPrestador | null>(null);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -105,6 +106,9 @@ export default function ServiciosPorPrestador() {
   };
 
   const cargarServicios = async () => {
+    if (!financiadorSeleccionado) return;
+    
+    setLoading(true);
     try {
       const response = await api.get(`/admin/servicios/prestador/${financiadorSeleccionado}/servicios`);
       setServicios(response.data);
@@ -114,6 +118,8 @@ export default function ServiciosPorPrestador() {
         message: 'Error al cargar servicios',
         color: 'red'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,7 +164,7 @@ export default function ServiciosPorPrestador() {
     try {
       const res = await api.get(`/prestaciones/servicio/${servicio.id_prestador_servicio}/valores`);
       const vigentes = res.data.filter((v: any) => !v.fecha_fin);
-      setValoresHistoricos(vigentes);
+      setValoresVigentes(vigentes);
       setServicioValores(servicio);
       setModalValoresOpen(true);
     } catch (err) {
@@ -254,7 +260,7 @@ export default function ServiciosPorPrestador() {
               {servicios
                 .filter(s => s.nombre.toLowerCase().includes(filtroServicio.toLowerCase()))
                 .map((servicio) => (
-                <Table.Tr key={servicio.id_servicio}>
+                <Table.Tr key={`servicio-${servicio.id_servicio}-${servicio.id_prestador_servicio || 'no-prestador'}`}>
                   <Table.Td>{formatName(servicio.nombre)}</Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || '-'}</Table.Td>
                   <Table.Td>
@@ -294,6 +300,7 @@ export default function ServiciosPorPrestador() {
         opened={modalOpen}
         onClose={() => {
           setModalOpen(false);
+          setEditingServicio(null);
           setValoresHistoricos([]);
           setNuevosValores([{
             valor_asignado: '',
@@ -319,14 +326,9 @@ export default function ServiciosPorPrestador() {
                     checked={editingServicio.activo === 1}
                     onChange={async (e) => {
                     if (e.currentTarget.checked) {
-                      // Si es la primera vez (no tiene id_prestador_servicio), permitir activar
-                      if (!editingServicio.id_prestador_servicio) {
-                        toggleActivo(1);
-                        return;
-                      }
-                      // Si ya existe, validar que tenga valores VIGENTES
+                      // Validar que tenga valores VIGENTES (para todos los servicios)
                       try {
-                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 0}/valores`);
                         const vigentes = res.data.filter((v: any) => !v.fecha_fin);
                         if (vigentes.length === 0) {
                           notifications.show({
@@ -513,7 +515,7 @@ export default function ServiciosPorPrestador() {
                       try {
                         // Guardar todos los valores
                         for (const valor of nuevosValores) {
-                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 'null'}/valores`, {
+                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 0}/valores`, {
                             valor_asignado: parseFloat(valor.valor_asignado),
                             valor_facturar: parseFloat(valor.valor_facturar),
                             fecha_inicio: valor.fecha_inicio,
@@ -544,9 +546,11 @@ export default function ServiciosPorPrestador() {
                           sucursal_id: ''
                         }]);
                         
-                        // Recargar histórico
-                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
-                        setValoresHistoricos(res.data);
+                        // Recargar histórico solo si existe id_prestador_servicio
+                        if (editingServicio.id_prestador_servicio) {
+                          const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                          setValoresHistoricos(res.data);
+                        }
                         cargarServicios();
                       } catch (err: any) {
                         notifications.show({
@@ -581,10 +585,10 @@ export default function ServiciosPorPrestador() {
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {valoresHistoricos.map((v: any) => {
+                    {valoresHistoricos.map((v: any, index) => {
                       const sucursal = v.sucursal_id ? sucursales.find(s => s.ID === v.sucursal_id) : null;
                       return (
-                        <Table.Tr key={v.id}>
+                        <Table.Tr key={`historico-${v.id || 'no-id'}-${index}-${v.fecha_inicio || 'no-fecha'}`}>
                           <Table.Td>
                             <Text size="sm" fw={!v.sucursal_id ? 500 : 400}>
                               {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
@@ -653,13 +657,13 @@ export default function ServiciosPorPrestador() {
         opened={modalValoresOpen}
         onClose={() => {
           setModalValoresOpen(false);
-          setValoresHistoricos([]);
+          setValoresVigentes([]);
           setServicioValores(null);
         }}
         title={`Valores Vigentes: ${servicioValores ? formatName(servicioValores.nombre) : ''}`}
         size="md"
       >
-        {valoresHistoricos.length > 0 ? (
+        {valoresVigentes.length > 0 ? (
           <Table striped highlightOnHover>
             <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
               <Table.Tr>
@@ -669,10 +673,10 @@ export default function ServiciosPorPrestador() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {valoresHistoricos.map((v: any) => {
+              {valoresVigentes.map((v: any, index) => {
                 const sucursal = v.sucursal_id ? sucursales.find(s => s.ID === v.sucursal_id) : null;
                 return (
-                  <Table.Tr key={v.id}>
+                  <Table.Tr key={`modal-${v.id || 'no-id'}-${index}-${v.sucursal_id || 'no-sucursal'}`}>
                     <Table.Td>
                       <Text size="sm" fw={!v.sucursal_id ? 500 : 400}>
                         {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}

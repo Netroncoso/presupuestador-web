@@ -7,7 +7,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 export const getValoresPrestadorServicio = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id;
   
-  if (!id || isNaN(Number(id))) {
+  if (!id || isNaN(Number(id)) || Number(id) <= 0) {
     throw new AppError(400, "ID inválido");
   }
 
@@ -43,7 +43,7 @@ export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, r
 
   try {
     // Si no existe prestadorServicioId, crear registro en prestador_servicio
-    if (!prestadorServicioId || isNaN(prestadorServicioId)) {
+    if (!prestadorServicioId || prestadorServicioId === 0 || isNaN(prestadorServicioId)) {
       if (!id_servicio || !idobra_social) {
         throw new AppError(400, "id_servicio e idobra_social requeridos para crear servicio nuevo");
       }

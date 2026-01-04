@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Tabs,
   Title,
@@ -49,6 +49,13 @@ import { useModalState } from "../hooks/useModalState";
 import { useItemValidation } from "../hooks/useItemValidation";
 import { usePdfGenerator } from "../hooks/usePdfGenerator";
 import { api } from "../api/api";
+
+// Declaración global para callback
+declare global {
+  interface Window {
+    cargarPresupuestoCallback?: (id: number, nombre: string, sucursal: string, financiadorId: string | null) => Promise<void>;
+  }
+}
 
 const ICON_SIZE = { width: 20, height: 20 };
 const TAB_HOVER_STYLE = { "&:hover": { backgroundColor: "#dff1db" } };
@@ -293,6 +300,28 @@ export default function UserDashboard() {
     },
     [cargarPresupuesto, crearVersionParaEdicion]
   );
+
+  // Callback para que DatosPresupuesto pueda cargar items
+  useEffect(() => {
+    window.cargarPresupuestoCallback = async (id, nombre, sucursal, financiadorId) => {
+      await cargarPresupuesto(
+        id,
+        nombre,
+        sucursal,
+        financiadorId,
+        setInsumosSeleccionados,
+        setPrestacionesSeleccionadas,
+        setEsCargaHistorial,
+        false, // modo edición
+        setTotalesDesdeBaseDatos,
+        setEquipamientosSeleccionados
+      );
+    };
+    
+    return () => {
+      delete window.cargarPresupuestoCallback;
+    };
+  }, [cargarPresupuesto]);
 
   const handleFinanciadorChange = useCallback(
     (id: string | null, info: any) => {
@@ -784,7 +813,12 @@ export default function UserDashboard() {
         opened={modalEdicionAbierto}
         onClose={cerrarModalEdicion}
         presupuesto={
-          presupuestoParaEditar || { id: 0, nombre: "", version: 0, estado: "" }
+          presupuestoParaEditar ? {
+            id: presupuestoParaEditar.idPresupuestos,
+            nombre: presupuestoParaEditar.Nombre_Apellido,
+            version: presupuestoParaEditar.version || 1,
+            estado: presupuestoParaEditar.estado || 'borrador'
+          } : { id: 0, nombre: "", version: 0, estado: "" }
         }
         requiereNuevaVersion={infoEdicion?.requiereNuevaVersion || false}
         onConfirmar={handleConfirmarEdicion}

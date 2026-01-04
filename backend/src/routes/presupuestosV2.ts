@@ -1,18 +1,39 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { auth } from '../middleware/auth';
 import * as presupuestosController from '../controllers/presupuestosControllerV2';
 import * as equipamientosController from '../controllers/equipamientosController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
 
-const router = Router();
-
-// Middleware para verificar rol gerencias/admin
-const requireAuditor = (req: any, res: any, next: any) => {
-  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
-  if (!rolesPermitidos.includes(req.user?.rol)) {
-    return res.status(403).json({ error: 'Acceso denegado: Solo gerencias o admins' });
+// Middlewares de validación reutilizables
+const validatePresupuestoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de presupuesto debe ser un número válido' });
   }
   next();
 };
+
+const validateDni = (req: Request, res: Response, next: NextFunction) => {
+  const { dni } = req.params;
+  if (!dni || !/^\d{7,8}$/.test(dni)) {
+    return res.status(400).json({ error: 'DNI debe tener 7-8 dígitos' });
+  }
+  next();
+};
+
+const requireAuditor = (req: Request, res: Response, next: NextFunction) => {
+  const authReq = req as AuthenticatedRequest;
+  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+  if (!rolesPermitidos.includes(authReq.user?.rol)) {
+    throw new AppError(403, 'Acceso denegado: Solo gerencias o admins');
+  }
+  next();
+};
+
+const router = Router();
 
 // ============================================
 // RUTAS DE AUDITORÍA (específicas primero)
@@ -52,7 +73,11 @@ const requireAuditor = (req: any, res: any, next: any) => {
  *       403:
  *         description: Acceso denegado - Solo gerencias
  */
-router.get('/auditor/pendientes', auth, requireAuditor, presupuestosController.obtenerPendientes);
+router.get('/auditor/pendientes', auth, requireAuditor, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo presupuestos pendientes de auditoría', { usuario: req.user.id });
+  const resultado = await presupuestosController.obtenerPendientes(req, res, () => {});
+  return resultado;
+}));
 
 // ============================================
 // RUTAS DE VERIFICACIÓN DNI (específicas)
@@ -90,7 +115,12 @@ router.get('/auditor/pendientes', auth, requireAuditor, presupuestosController.o
  *                   items:
  *                     type: object
  */
-router.get('/dni/:dni', auth, presupuestosController.verificarDNI);
+router.get('/dni/:dni', auth, validateDni, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { dni } = req.params;
+  logger.info('Verificando DNI', { dni, usuario: req.user.id });
+  const resultado = await presupuestosController.verificarDNI(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -111,7 +141,12 @@ router.get('/dni/:dni', auth, presupuestosController.verificarDNI);
  *       200:
  *         description: Resultado de verificación
  */
-router.get('/verificar-dni/:dni', auth, presupuestosController.verificarDNI);
+router.get('/verificar-dni/:dni', auth, validateDni, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { dni } = req.params;
+  logger.info('Verificando DNI (alias)', { dni, usuario: req.user.id });
+  const resultado = await presupuestosController.verificarDNI(req, res, () => {});
+  return resultado;
+}));
 
 // ============================================
 // RUTAS GENERALES DE PRESUPUESTOS
@@ -156,7 +191,11 @@ router.get('/verificar-dni/:dni', auth, presupuestosController.verificarDNI);
  *                     type: string
  *                     format: date-time
  */
-router.get('/', auth, presupuestosController.listarPresupuestos);
+router.get('/', auth, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Listando presupuestos', { usuario: req.user.id });
+  const resultado = await presupuestosController.listarPresupuestos(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -204,7 +243,28 @@ router.get('/', auth, presupuestosController.listarPresupuestos);
  *                 message:
  *                   type: string
  */
-router.post('/', auth, presupuestosController.crearPresupuesto);
+router.post('/', auth, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { nombre, dni, sucursal, sucursal_id } = req.body;
+  
+  if (!nombre?.trim()) {
+    throw new AppError(400, 'Nombre del paciente es requerido');
+  }
+  
+  if (!dni?.trim()) {
+    throw new AppError(400, 'DNI es requerido');
+  }
+  
+  // Aceptar tanto sucursal (string) como sucursal_id (number)
+  if (!sucursal?.trim() && !sucursal_id) {
+    throw new AppError(400, 'Sucursal es requerida');
+  }
+  
+  logger.info('Creando presupuesto', { nombre, dni, sucursal: sucursal || sucursal_id, usuario: req.user.id });
+  const resultado = await presupuestosController.crearPresupuesto(req, res, () => {});
+  
+  logger.info('Presupuesto creado exitosamente', { nombre, dni, sucursal: sucursal || sucursal_id, usuario: req.user.id });
+  return resultado;
+}));
 
 // ============================================
 // RUTAS CON ID DE PRESUPUESTO
@@ -255,7 +315,12 @@ router.post('/', auth, presupuestosController.crearPresupuesto);
  *       404:
  *         description: Presupuesto no encontrado
  */
-router.get('/:id', auth, presupuestosController.obtenerPresupuesto);
+router.get('/:id', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  logger.info('Obteniendo presupuesto', { presupuestoId: id, usuario: req.user.id });
+  const resultado = await presupuestosController.obtenerPresupuesto(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -293,7 +358,12 @@ router.get('/:id', auth, presupuestosController.obtenerPresupuesto);
  *                   es_ultima_version:
  *                     type: boolean
  */
-router.get('/:id/versiones', auth, presupuestosController.obtenerHistorial);
+router.get('/:id/versiones', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  logger.info('Obteniendo historial de versiones', { presupuestoId: id, usuario: req.user.id });
+  const resultado = await presupuestosController.obtenerHistorial(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -333,7 +403,15 @@ router.get('/:id/versiones', auth, presupuestosController.obtenerHistorial);
  *                 requiere_auditoria:
  *                   type: boolean
  */
-router.post('/:id/finalizar', auth, presupuestosController.finalizarPresupuesto);
+router.post('/:id/finalizar', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Finalizando presupuesto', { presupuestoId: id, usuario: req.user.id });
+  const resultado = await presupuestosController.finalizarPresupuesto(req, res, () => {});
+  
+  logger.info('Presupuesto finalizado exitosamente', { presupuestoId: id, usuario: req.user.id });
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -372,7 +450,15 @@ router.post('/:id/finalizar', auth, presupuestosController.finalizarPresupuesto)
  *                 message:
  *                   type: string
  */
-router.post('/:id/version/editar', auth, presupuestosController.crearVersionParaEdicion);
+router.post('/:id/version/editar', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Creando nueva versión para edición', { presupuestoId: id, usuario: req.user.id });
+  const resultado = await presupuestosController.crearVersionParaEdicion(req, res, () => {});
+  
+  logger.info('Nueva versión creada exitosamente', { presupuestoId: id, usuario: req.user.id });
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -405,7 +491,20 @@ router.post('/:id/version/editar', auth, presupuestosController.crearVersionPara
  *       200:
  *         description: Financiador actualizado
  */
-router.put('/:id/prestador', auth, presupuestosController.actualizarPrestador);
+router.put('/:id/prestador', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { idobra_social } = req.body;
+  
+  if (!idobra_social || isNaN(parseInt(idobra_social))) {
+    throw new AppError(400, 'ID de obra social válido es requerido');
+  }
+  
+  logger.info('Actualizando prestador', { presupuestoId: id, obraSocial: idobra_social, usuario: req.user.id });
+  const resultado = await presupuestosController.actualizarPrestador(req, res, () => {});
+  
+  logger.info('Prestador actualizado exitosamente', { presupuestoId: id, obraSocial: idobra_social, usuario: req.user.id });
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -444,7 +543,20 @@ router.put('/:id/prestador', auth, presupuestosController.actualizarPrestador);
  *       403:
  *         description: Acceso denegado - Solo gerencias
  */
-router.put('/:id/estado', auth, requireAuditor, presupuestosController.cambiarEstado);
+router.put('/:id/estado', auth, validatePresupuestoId, requireAuditor, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { accion, comentario } = req.body;
+  
+  if (!accion) {
+    throw new AppError(400, 'Acción es requerida');
+  }
+  
+  logger.info('Cambiando estado de presupuesto', { presupuestoId: id, accion, comentario, auditor: req.user.id });
+  const resultado = await presupuestosController.cambiarEstado(req, res, () => {});
+  
+  logger.info('Estado de presupuesto cambiado exitosamente', { presupuestoId: id, accion, auditor: req.user.id });
+  return resultado;
+}));
 
 /**
  * @swagger

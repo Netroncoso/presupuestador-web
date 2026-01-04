@@ -67,6 +67,16 @@ export class PresupuestoService {
     });
 
     if (estadoFinal === 'pendiente_administrativa') {
+      // Crear registro inicial de auditoría automática
+      await this.repo.crearRegistroAuditoriaInicial(
+        id,
+        presupuesto.version,
+        presupuesto.usuario_id,
+        'borrador',
+        'pendiente_administrativa',
+        'Auditoría automática por reglas de negocio'
+      ).catch(err => console.error('Error creando registro auditoría:', err));
+
       await this.repo.notificarAuditores(
         id,
         presupuesto.version,

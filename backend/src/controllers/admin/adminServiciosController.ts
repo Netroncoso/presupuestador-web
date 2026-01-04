@@ -23,14 +23,25 @@ export const getServiciosPorPrestador = asyncHandler(async (req: Request, res: R
       ps.activo,
       ps.cant_total,
       ps.valor_sugerido,
-      COUNT(psv.id) as count_valores_vigentes,
-      psv.valor_facturar as valor_facturar_vigente,
-      psv.valor_asignado as valor_asignado_vigente,
-      psv.sucursal_id as sucursal_id_vigente
+      COALESCE(v.count_valores_vigentes, 0) AS count_valores_vigentes,
+      v.valor_facturar_vigente,
+      v.valor_asignado_vigente,
+      v.sucursal_id_vigente
     FROM servicios s
-    LEFT JOIN prestador_servicio ps ON s.id_servicio = ps.id_servicio AND ps.idobra_social = ?
-    LEFT JOIN prestador_servicio_valores psv ON psv.id_prestador_servicio = ps.id_prestador_servicio AND psv.fecha_fin IS NULL
-    GROUP BY s.id_servicio, s.nombre, s.tipo_unidad, ps.id_prestador_servicio, ps.valor_facturar, ps.activo, ps.cant_total, ps.valor_sugerido, psv.valor_facturar, psv.valor_asignado, psv.sucursal_id
+    LEFT JOIN prestador_servicio ps
+      ON s.id_servicio = ps.id_servicio
+     AND ps.idobra_social = ?
+    LEFT JOIN (
+      SELECT
+        id_prestador_servicio,
+        COUNT(*) AS count_valores_vigentes,
+        MAX(valor_facturar) AS valor_facturar_vigente,
+        MAX(valor_asignado) AS valor_asignado_vigente,
+        MAX(sucursal_id) AS sucursal_id_vigente
+      FROM prestador_servicio_valores
+      WHERE fecha_fin IS NULL
+      GROUP BY id_prestador_servicio
+    ) v ON v.id_prestador_servicio = ps.id_prestador_servicio
     ORDER BY s.nombre`,
     [prestadorId]
   );

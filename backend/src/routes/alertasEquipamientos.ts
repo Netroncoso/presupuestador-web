@@ -1,6 +1,40 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import * as alertasEquipamientosController from '../controllers/alertasEquipamientosController';
+import { asyncHandler } from '../utils/asyncHandler';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthenticatedRequest } from '../types/express';
+
+// ============================================================================
+// VALIDATION MIDDLEWARE
+// ============================================================================
+
+const validateTipoEquipamientoId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de tipo de equipamiento debe ser un número válido' });
+  }
+  next();
+};
+
+const validateAlertaEquipamiento = (req: Request, res: Response, next: NextFunction) => {
+  const { cantidad_maxima, color_alerta, activo_alerta } = req.body;
+  
+  if (cantidad_maxima !== undefined && (isNaN(parseInt(cantidad_maxima)) || parseInt(cantidad_maxima) < 0)) {
+    return res.status(400).json({ error: 'Cantidad máxima debe ser un número positivo' });
+  }
+  
+  if (color_alerta && !['orange', 'red', 'yellow'].includes(color_alerta)) {
+    return res.status(400).json({ error: 'Color de alerta debe ser orange, red o yellow' });
+  }
+  
+  if (activo_alerta !== undefined && typeof activo_alerta !== 'boolean') {
+    return res.status(400).json({ error: 'Activo alerta debe ser boolean' });
+  }
+  
+  next();
+};
 
 const router = Router();
 
@@ -41,7 +75,11 @@ const router = Router();
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/', authenticateToken, alertasEquipamientosController.obtenerAlertasEquipamientos);
+router.get('/', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo alertas de equipamientos', { usuario: req.user.id });
+  const resultado = await alertasEquipamientosController.obtenerAlertasEquipamientos(req, res, () => {});
+  return resultado;
+}));
 
 /**
  * @swagger
@@ -85,6 +123,30 @@ router.get('/', authenticateToken, alertasEquipamientosController.obtenerAlertas
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.put('/:id', authenticateToken, requireAdmin, alertasEquipamientosController.actualizarAlertaEquipamiento);
+router.put('/:id', authenticateToken, requireAdmin, validateTipoEquipamientoId, validateAlertaEquipamiento, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { cantidad_maxima, mensaje_alerta, color_alerta, activo_alerta } = req.body;
+  
+  logger.info('Actualizando alerta de equipamiento', { 
+    tipoId: id, 
+    cantidad_maxima, 
+    mensaje_alerta, 
+    color_alerta, 
+    activo_alerta, 
+    usuario: req.user.id 
+  });
+  
+  const resultado = await alertasEquipamientosController.actualizarAlertaEquipamiento(req, res, () => {});
+  
+  logger.info('Alerta de equipamiento actualizada exitosamente', { 
+    tipoId: id, 
+    cantidad_maxima, 
+    color_alerta, 
+    activo_alerta, 
+    usuario: req.user.id 
+  });
+  
+  return resultado;
+}));
 
 export default router;

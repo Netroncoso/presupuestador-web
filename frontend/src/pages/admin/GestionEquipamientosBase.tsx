@@ -30,7 +30,7 @@ export default function GestionEquipamientosBase() {
   const [eliminando, setEliminando] = useState<Equipamiento | null>(null);
   const [formData, setFormData] = useState({ 
     nombre: '', 
-    tipo: '',
+    tipo_equipamiento_id: '',
     precio_referencia: 0,
     activo: 1
   });
@@ -82,7 +82,7 @@ export default function GestionEquipamientosBase() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.nombre || !formData.tipo || formData.precio_referencia <= 0) {
+    if (!formData.nombre || !formData.tipo_equipamiento_id || formData.precio_referencia <= 0) {
       notifications.show({
         title: 'Error',
         message: 'Complete todos los campos',
@@ -111,7 +111,7 @@ export default function GestionEquipamientosBase() {
       
       setModalOpen(false);
       setEditando(null);
-      setFormData({ nombre: '', tipo: '', precio_referencia: 0, activo: 1 });
+      setFormData({ nombre: '', tipo_equipamiento_id: '', precio_referencia: 0, activo: 1 });
       cargarEquipamientos();
     } catch (error: any) {
       notifications.show({
@@ -128,7 +128,7 @@ export default function GestionEquipamientosBase() {
     setEditando(equipo);
     setFormData({ 
       nombre: equipo.nombre,
-      tipo: equipo.tipo,
+      tipo_equipamiento_id: equipo.tipo,
       precio_referencia: equipo.precio_referencia,
       activo: equipo.activo
     });
@@ -167,7 +167,7 @@ export default function GestionEquipamientosBase() {
 
   const openNewModal = () => {
     setEditando(null);
-    setFormData({ nombre: '', tipo: '', precio_referencia: 0, activo: 1 });
+    setFormData({ nombre: '', tipo_equipamiento_id: '', precio_referencia: 0, activo: 1 });
     setModalOpen(true);
   };
 
@@ -253,10 +253,10 @@ export default function GestionEquipamientosBase() {
           />
           <Select
             label="Tipo"
-            value={formData.tipo}
-            onChange={(value) => setFormData({ ...formData, tipo: value || '' })}
+            value={formData.tipo_equipamiento_id}
+            onChange={(value) => setFormData({ ...formData, tipo_equipamiento_id: value || '' })}
             data={tipos.filter(t => t.activo).map(t => ({ 
-              value: t.nombre, 
+              value: t.id.toString(), 
               label: t.nombre.charAt(0).toUpperCase() + t.nombre.slice(1) 
             }))}
             required
