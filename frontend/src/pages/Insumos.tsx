@@ -31,8 +31,13 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
 
   useEffect(() => {
     api.get('/insumos').then(res => {
-      setInsumosDisponibles(res.data)
-    })
+      // Backend ahora retorna { data: [], pagination: {} }
+      const data = res.data.data || res.data;
+      setInsumosDisponibles(Array.isArray(data) ? data : []);
+    }).catch(err => {
+      console.error('Error loading insumos:', err);
+      setInsumosDisponibles([]);
+    });
   }, [])
 
   useEffect(() => {
