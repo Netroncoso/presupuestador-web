@@ -4,7 +4,10 @@ import { equipamientosService } from '../services/equipamientosService';
 
 // GET /api/equipamientos - Obtener todos los equipamientos (admin)
 export const getAllEquipamientos = asyncHandler(async (req: Request, res: Response) => {
-  const equipamientos = await equipamientosService.obtenerTodos();
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 100;
+  
+  const equipamientos = await equipamientosService.obtenerTodos(page, limit);
   res.json(equipamientos);
 });
 

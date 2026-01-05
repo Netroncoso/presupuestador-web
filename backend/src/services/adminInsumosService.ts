@@ -1,6 +1,7 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
+import { cacheService } from './cacheService';
 
 export class AdminInsumosService {
   
@@ -36,6 +37,8 @@ export class AdminInsumosService {
         throw new AppError(409, 'El producto ya existe');
       }
       throw err;
+    } finally {
+      this.invalidateCache();
     }
   }
 
@@ -62,6 +65,8 @@ export class AdminInsumosService {
         throw new AppError(409, 'El producto ya existe');
       }
       throw err;
+    } finally {
+      this.invalidateCache();
     }
   }
 
@@ -75,7 +80,15 @@ export class AdminInsumosService {
       throw new AppError(404, 'Insumo no encontrado');
     }
 
+    this.invalidateCache();
     return { message: 'Insumo eliminado correctamente' };
+  }
+
+  private invalidateCache() {
+    // Invalidar todas las páginas de insumos
+    cacheService.del('insumos:page:1:limit:100');
+    cacheService.del('insumos:page:1:limit:50');
+    cacheService.del('insumos:page:1:limit:20');
   }
 }
 

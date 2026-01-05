@@ -45,20 +45,37 @@ export class EquipamientosService {
   }
 
   // Métodos de datos
-  async obtenerTodos() {
-    const cacheKey = 'catalogos:equipamientos:all';
+  async obtenerTodos(page: number = 1, limit: number = 100) {
+    const cacheKey = `catalogos:equipamientos:all:page:${page}:limit:${limit}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
+    
+    const offset = (page - 1) * limit;
     
     const [rows] = await pool.query(
       `SELECT e.id, e.nombre, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
        FROM equipamientos e
        LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-       ORDER BY e.nombre`
+       ORDER BY e.nombre
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
     
-    cacheService.set(cacheKey, rows, 1800); // 30 min
-    return rows;
+    const [countResult] = await pool.query<any[]>('SELECT COUNT(*) as total FROM equipamientos');
+    const total = countResult[0].total;
+    
+    const result = {
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+    
+    cacheService.set(cacheKey, result, 1800); // 30 min
+    return result;
   }
 
   async obtenerActivos() {
@@ -252,6 +269,7 @@ export class EquipamientosService {
       [nombre, tipo_equipamiento_id, precio_referencia, activo, id]
     );
 
+    this.invalidateCache();
     return { success: true };
   }
 
@@ -263,11 +281,13 @@ export class EquipamientosService {
       [nombre, tipo_equipamiento_id, precio_referencia, activo]
     );
 
+    this.invalidateCache();
     return { success: true, id: result.insertId };
   }
 
   async eliminar(id: string) {
     await pool.query('DELETE FROM equipamientos WHERE id = ?', [id]);
+    this.invalidateCache();
     return { success: true };
   }
 
@@ -290,10 +310,17 @@ export class EquipamientosService {
       [nombre, descripcion]
     );
 
+    this.invalidateCache();
     return { success: true, id: result.insertId };
   }
 
-  async agregarValorAdmin(equipamientoId: string, datos: any) {
+  private invalidateCache() {
+    cacheService.del('catalogos:equipamientos:all:page:1:limit:100');
+    cacheService.del('catalogos:equipamientos:activos');
+    cacheService.del('catalogos:tipos_equipamiento');
+  }
+
+  async agregarValorAdmin(equipamientoId: string, datos: any) {(equipamientoId: string, datos: any) {
     const validEquipamientoId = this.validateEquipamientoId(equipamientoId);
     const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, financiador_id } = datos;
 
