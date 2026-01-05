@@ -768,6 +768,7 @@ export default function UserDashboard() {
             financiadorId={financiadorId}
             onFinanciadorChange={handleFinanciadorChange}
             soloLectura={soloLectura}
+            sucursalId={datosHistorial?.sucursal_id || null}
           />
         </Tabs.Panel>
 

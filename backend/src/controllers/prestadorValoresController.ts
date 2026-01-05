@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
+import { cacheService } from '../services/cacheService';
 
 // Obtener histórico de valores de un servicio-prestador
 export const getValoresPrestadorServicio = asyncHandler(async (req: Request, res: Response) => {
@@ -99,6 +100,11 @@ export const guardarValorPrestadorServicio = asyncHandler(async (req: Request, r
     );
 
     await connection.commit();
+    
+    // Invalidar cache de prestaciones
+    const cacheKeys = cacheService.keys().filter(k => k.startsWith('prestaciones:'));
+    cacheKeys.forEach(k => cacheService.del(k));
+    
     res.json({ 
       ok: true, 
       message: 'Valor guardado correctamente',

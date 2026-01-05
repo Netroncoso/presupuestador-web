@@ -148,7 +148,8 @@ export async function getPrestacionesPorPrestador(id: string, fecha?: string, su
     ? `/prestaciones/prestador/${id}?${params.toString()}`
     : `/prestaciones/prestador/${id}`;
   const res = await api.get(url);
-  return res.data;
+  // Backend retorna { data: [], pagination: {} }, extraer solo data
+  return res.data.data || res.data;
 }
 
 export async function actualizarTotales(id: number, payload: { total_insumos: number; total_prestaciones: number }) {

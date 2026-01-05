@@ -29,12 +29,15 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
       });
       if (response.ok) {
         const data = await response.json();
-        setUsuarios(data);
+        const usuarios = data.data || data;
+        setUsuarios(Array.isArray(usuarios) ? usuarios : []);
       } else {
         console.error('Error fetching usuarios:', response.status);
+        setUsuarios([]);
       }
     } catch (error) {
       console.error('Error:', error);
+      setUsuarios([]);
     }
   };
 
@@ -172,7 +175,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
                 </Table.Td>
                 <Table.Td>
                   {usuario.username === 'admin' ? (
-                    <text color="none">-</text>
+                    <Text size="xs" c="dimmed">-</Text>
                   ) : (
                     <Switch
                       checked={usuario.activo === 1}

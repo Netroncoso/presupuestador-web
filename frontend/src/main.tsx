@@ -7,6 +7,7 @@ import './styles.css'
 import './index.css'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
+import 'mantine-react-table/styles.css'
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

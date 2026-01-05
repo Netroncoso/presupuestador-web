@@ -41,20 +41,10 @@ export class PrestacionesService {
           (SELECT valor_asignado 
            FROM prestador_servicio_valores v 
            WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
-             AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+             AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)
              AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
            ORDER BY 
-             CASE 
-               WHEN v.sucursal_id IS NOT NULL 
-                 AND DATEDIFF(v.fecha_inicio, 
-                   (SELECT MAX(v2.fecha_inicio) FROM prestador_servicio_valores v2 
-                    WHERE v2.id_prestador_servicio = v.id_prestador_servicio 
-                    AND v2.sucursal_id IS NULL 
-                    AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
-                 ) >= -30
-               THEN 1
-               ELSE 2
-             END,
+             CASE WHEN v.sucursal_id = ? THEN 1 ELSE 2 END,
              v.fecha_inicio DESC
            LIMIT 1),
           ps.valor_sugerido
@@ -63,20 +53,10 @@ export class PrestacionesService {
           (SELECT valor_facturar 
            FROM prestador_servicio_valores v 
            WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
-             AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+             AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)
              AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
            ORDER BY 
-             CASE 
-               WHEN v.sucursal_id IS NOT NULL 
-                 AND DATEDIFF(v.fecha_inicio, 
-                   (SELECT MAX(v2.fecha_inicio) FROM prestador_servicio_valores v2 
-                    WHERE v2.id_prestador_servicio = v.id_prestador_servicio 
-                    AND v2.sucursal_id IS NULL 
-                    AND ? BETWEEN v2.fecha_inicio AND COALESCE(v2.fecha_fin, '9999-12-31'))
-                 ) >= -30
-               THEN 1
-               ELSE 2
-             END,
+             CASE WHEN v.sucursal_id = ? THEN 1 ELSE 2 END,
              v.fecha_inicio DESC
            LIMIT 1),
           ps.valor_facturar
@@ -85,15 +65,14 @@ export class PrestacionesService {
           (SELECT DATEDIFF(CURDATE(), MAX(fecha_inicio))
            FROM prestador_servicio_valores v
            WHERE v.id_prestador_servicio = ps.id_prestador_servicio
-             AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)),
+             AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)),
           999
         ) AS dias_sin_actualizar
        FROM prestador_servicio AS ps
        JOIN servicios AS s ON ps.id_servicio = s.id_servicio
        WHERE ps.idobra_social = ? AND ps.activo = 1
-       HAVING valor_facturar IS NOT NULL
        LIMIT ? OFFSET ?`, 
-      [sucursalId, fecha, fecha, sucursalId, fecha, fecha, sucursalId, prestadorId, limit, offset]
+      [sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, prestadorId, limit, offset]
     );
 
     const [[{ total }]] = await pool.query<RowDataPacket[]>(

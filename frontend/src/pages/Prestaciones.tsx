@@ -39,9 +39,10 @@ interface Props {
   financiadorId?: string | null
   onFinanciadorChange?: (financiadorId: string | null, financiadorInfo: any) => void
   soloLectura?: boolean
+  sucursalId?: number | null
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false }: Props) {
+export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false, sucursalId }: Props) {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([])
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
@@ -142,12 +143,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const cargarPrestacionesPorFinanciador = async (financiadorId: string, fecha?: string) => {
     setLoading(true)
     try {
-      let sucursalId: number | undefined;
-      if (presupuestoId) {
-        const presupuestoRes = await api.get(`/presupuestos/${presupuestoId}`);
-        sucursalId = presupuestoRes.data.sucursal_id;
-      }
-      const data = await getPrestacionesPorPrestador(financiadorId, fecha, sucursalId)
+      const data = await getPrestacionesPorPrestador(financiadorId, fecha, sucursalId || undefined)
       setPrestacionesDisponibles(data)
     } catch (error) {
       notifications.show({
@@ -488,6 +484,8 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
               searchable
               disabled={soloLectura}
               checkIconPosition="right"
+              clearable
+              allowDeselect
             />
             {financiadorInfo && Object.keys(financiadorInfo).length > 0 && (
               <Group gap="xs" wrap="wrap">
@@ -601,7 +599,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
             <Stack gap="xs">
               <Title order={5}>Prestaciones Seleccionadas</Title>
               <Table.ScrollContainer minWidth={1000}>
-                <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
+                <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '12px' }}>Prestación</Table.Th>

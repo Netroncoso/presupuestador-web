@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Table, Paper, TextInput, Group, ActionIcon, Select, Loader, Text } from '@mantine/core';
-import { PencilSquareIcon, MagnifyingGlassIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Paper, ActionIcon, Select, Loader, Text, Group } from '@mantine/core';
+import { PencilSquareIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table';
 import { api } from '../api/api';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
 
@@ -35,11 +36,6 @@ interface ListaPresupuestosProps {
 export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, soloConsulta = false, onVerDetalle }: ListaPresupuestosProps) {
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroNombre, setFiltroNombre] = useState('');
-  const [filtroRentabilidad, setFiltroRentabilidad] = useState('');
-  const [filtroMonto, setFiltroMonto] = useState('');
-  const [filtroId, setFiltroId] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroAuditor, setFiltroAuditor] = useState('todos');
   const [filtroCreador, setFiltroCreador] = useState('todos');
 
@@ -64,103 +60,44 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     cargarPresupuestos();
   }, [recargarTrigger, cargarPresupuestos, filtroAuditor, filtroCreador]);
 
-  const filtrados = useMemo(() => {
-    let resultado = presupuestos;
-
-    if (filtroId) {
-      resultado = resultado.filter(p => String(p.idPresupuestos).includes(filtroId));
-    }
-
-    if (filtroNombre) {
-      const filtroLower = filtroNombre.toLowerCase();
-      resultado = resultado.filter(p => 
-        p.Nombre_Apellido.toLowerCase().includes(filtroLower) ||
-        String(p.DNI).includes(filtroNombre)
-      );
-    }
-
-    if (filtroRentabilidad) {
-      const rentMin = parseFloat(filtroRentabilidad);
-      if (!isNaN(rentMin)) {
-        resultado = resultado.filter(p => Number(p.rentabilidad) >= rentMin);
-      }
-    }
-
-    if (filtroMonto) {
-      const montoMin = parseFloat(filtroMonto);
-      if (!isNaN(montoMin)) {
-        resultado = resultado.filter(p => Number(p.total_facturar) >= montoMin);
-      }
-    }
-
-    if (filtroEstado) {
-      resultado = resultado.filter(p => p.estado === filtroEstado);
-    }
-
-    return resultado;
-  }, [presupuestos, filtroNombre, filtroRentabilidad, filtroMonto, filtroId, filtroEstado]);
-
-  if (loading) {
-    return <Loader />;
-  }
-
-  return (
-    <Paper shadow="sm" p="md" radius="md" withBorder>
-      <Group mb="md" grow>
-        <TextInput
-          placeholder="Buscar por ID"
-          value={filtroId}
-          onChange={(e) => setFiltroId(e.currentTarget.value)}
-          type="number"
-          rightSection={
-            filtroId ? (
-              <ActionIcon variant="subtle" onClick={() => setFiltroId('')}>
-                <XMarkIcon style={ICON_SIZE} />
-              </ActionIcon>
-            ) : null
-          }
-        />
-        <TextInput
-          placeholder="Buscar por nombre o DNI"
-          leftSection={<MagnifyingGlassIcon style={ICON_SIZE} />}
-          value={filtroNombre}
-          onChange={(e) => setFiltroNombre(e.currentTarget.value)}
-          rightSection={
-            filtroNombre ? (
-              <ActionIcon variant="subtle" onClick={() => setFiltroNombre('')}>
-                <XMarkIcon style={ICON_SIZE} />
-              </ActionIcon>
-            ) : null
-          }
-        />
-        {esAuditor && (
-          <Select
-            placeholder="Auditor"
-            value={filtroAuditor}
-            onChange={(value) => setFiltroAuditor(value || 'todos')}
-            data={[
-              { value: 'todos', label: 'Todos' },
-              { value: 'mis-auditorias', label: 'Mis auditorías' }
-            ]}
-          />
-        )}
-        {!esAuditor && !soloConsulta && (
-          <Select
-            placeholder="Creador"
-            value={filtroCreador}
-            onChange={(value) => setFiltroCreador(value || 'todos')}
-            data={[
-              { value: 'todos', label: 'Todos' },
-              { value: 'solo-mios', label: 'Solo míos' }
-            ]}
-          />
-        )}
-        <Select
-          placeholder="Filtrar por estado"
-          value={filtroEstado}
-          onChange={(value) => setFiltroEstado(value || '')}
-          data={[
-            { value: '', label: 'Todos' },
+  const columns = useMemo<MRT_ColumnDef<Presupuesto>[]>(
+    () => [
+      {
+        accessorKey: 'idPresupuestos',
+        header: 'ID',
+        size: 80,
+        enableColumnFilter: true,
+      },
+      {
+        accessorKey: 'Nombre_Apellido',
+        header: 'Paciente',
+        size: 180,
+      },
+      {
+        accessorKey: 'DNI',
+        header: 'DNI',
+        size: 120,
+      },
+      {
+        accessorKey: 'Sucursal',
+        header: 'Sucursal',
+        size: 150,
+      },
+      {
+        accessorKey: 'estado',
+        header: 'Estado',
+        size: 180,
+        Cell: ({ cell }) => {
+          const estado = cell.getValue<string>();
+          return (
+            <Text size="sm" fw={400} c={getEstadoBadgeColor(estado)}>
+              {getEstadoLabel(estado)}
+            </Text>
+          );
+        },
+        filterVariant: 'select',
+        mantineFilterSelectProps: {
+          data: [
             { value: 'borrador', label: 'Borrador' },
             { value: 'pendiente_administrativa', label: 'Pendiente G. Admin' },
             { value: 'en_revision_administrativa', label: 'En Revisión G. Admin' },
@@ -170,116 +107,124 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             { value: 'en_revision_general', label: 'En Revisión G. General' },
             { value: 'aprobado', label: 'Aprobado' },
             { value: 'aprobado_condicional', label: 'Aprobado Condicional' },
-            { value: 'rechazado', label: 'Rechazado' }
-          ]}
-          clearable
-        />
-        <TextInput
-          placeholder="Rentabilidad mínima (%)"
-          value={filtroRentabilidad}
-          onChange={(e) => setFiltroRentabilidad(e.currentTarget.value)}
-          type="number"
-          rightSection={
-            filtroRentabilidad ? (
-              <ActionIcon variant="subtle" onClick={() => setFiltroRentabilidad('')}>
-                <XMarkIcon style={ICON_SIZE} />
-              </ActionIcon>
-            ) : null
-          }
-        />
-        <TextInput
-          placeholder="Monto mínimo a facturar"
-          value={filtroMonto}
-          onChange={(e) => setFiltroMonto(e.currentTarget.value)}
-          type="number"
-          rightSection={
-            filtroMonto ? (
-              <ActionIcon variant="subtle" onClick={() => setFiltroMonto('')}>
-                <XMarkIcon style={ICON_SIZE} />
-              </ActionIcon>
-            ) : null
-          }
-        />
-      </Group>
+            { value: 'rechazado', label: 'Rechazado' },
+          ],
+        },
+      },
+      {
+        accessorKey: 'utilidad',
+        header: 'Utilidad',
+        size: 120,
+        Cell: ({ cell }) => {
+          const utilidad = cell.getValue<number>();
+          return (
+            <Text size="sm" c={utilidad >= 0 ? 'green' : 'red'} fw={500}>
+              ${Number(utilidad || 0).toFixed(2)}
+            </Text>
+          );
+        },
+      },
+      {
+        accessorKey: 'rentabilidad',
+        header: 'Rent. %',
+        size: 100,
+        Cell: ({ cell }) => {
+          const rent = cell.getValue<number>();
+          return (
+            <Text size="sm" c={rent >= 40 ? 'green' : rent >= 35 ? 'yellow' : 'red'} fw={500}>
+              {Number(rent || 0).toFixed(2)}%
+            </Text>
+          );
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Fecha',
+        size: 120,
+        Cell: ({ cell }) => new Date(cell.getValue<string>()).toLocaleDateString(),
+      },
+    ],
+    []
+  );
 
-      <Table.ScrollContainer>
-        <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>ID</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Paciente</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>DNI</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Sucursal</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Estado</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Facturar</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Utilidad</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Rent.</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Fecha</Table.Th>
-            <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acción</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {filtrados.length === 0 ? (
-            <Table.Tr>
-              <Table.Td colSpan={11}>
-                <Text ta="center" c="dimmed">No se encontraron presupuestos</Text>
-              </Table.Td>
-            </Table.Tr>
-          ) : (
-            filtrados.map((p) => (
-              <Table.Tr key={p.idPresupuestos}>
-                <Table.Td>{p.idPresupuestos}</Table.Td>
-                <Table.Td>{p.Nombre_Apellido}</Table.Td>
-                <Table.Td>{p.DNI}</Table.Td>
-                <Table.Td>{p.Sucursal}</Table.Td>
-                <Table.Td>
-                  <Text size="sm" fw={400} c={getEstadoBadgeColor(p.estado)}>
-                    {getEstadoLabel(p.estado)}
-                  </Text>
-                </Table.Td>
-                <Table.Td>${Number(p.costo_total || 0).toFixed(2)}</Table.Td>
-                <Table.Td>${Number(p.total_facturar || 0).toFixed(2)}</Table.Td>
-                <Table.Td>
-                  <Text size="sm" c={p.utilidad >= 0 ? 'green' : 'red'} fw={500}>
-                    ${Number(p.utilidad || 0).toFixed(2)}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm" c={Number(p.rentabilidad) >= 40 ? 'green' : Number(p.rentabilidad) >= 35 ? 'yellow' : 'red'} fw={500}>
-                    {Number(p.rentabilidad || 0).toFixed(2)}%
-                  </Text>
-                </Table.Td>
-                <Table.Td>{new Date(p.created_at).toLocaleDateString()}</Table.Td>
-                <Table.Td>
-                  <Group gap={4} wrap="nowrap">
-                    {(esAuditor || soloConsulta) ? (
-                      <ActionIcon 
-                        variant="transparent" 
-                        color="blue" 
-                        onClick={() => onVerDetalle?.(p)} 
-                        title="Ver detalle del presupuesto"
-                      >
-                        <EyeIcon style={{ width: 16, height: 16 }} />
-                      </ActionIcon>
-                    ) : (
-                      <>
-                        <ActionIcon variant="transparent" color="teal" onClick={() => onEditarPresupuesto(p, true)} title="Ver presupuesto">
-                          <EyeIcon style={{ width: 16, height: 16 }} />
-                        </ActionIcon>
-                        <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(p, false)} title="Editar (nueva versión)">
-                          <PencilSquareIcon style={{ width: 16, height: 16 }} />
-                        </ActionIcon>
-                      </>
-                    )}
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))
+  const table = useMantineReactTable({
+    columns,
+    data: presupuestos,
+    enableColumnResizing: true,
+    enableGlobalFilter: true,
+    enableColumnFilters: true,
+    enableSorting: true,
+    enablePagination: true,
+    initialState: {
+      pagination: { pageSize: 20, pageIndex: 0 },
+      density: 'xs',
+    },
+    mantineTableProps: {
+      striped: 'odd',
+      highlightOnHover: true,
+    },
+    enableRowActions: true,
+    positionActionsColumn: 'last',
+    renderRowActions: ({ row }) => (
+      <Group gap={4} wrap="nowrap">
+        {(esAuditor || soloConsulta) ? (
+          <ActionIcon 
+            variant="transparent" 
+            color="blue" 
+            onClick={() => onVerDetalle?.(row.original)} 
+            title="Ver detalle del presupuesto"
+          >
+            <EyeIcon style={{ width: 16, height: 16 }} />
+          </ActionIcon>
+        ) : (
+          <>
+            <ActionIcon variant="transparent" color="teal" onClick={() => onEditarPresupuesto(row.original, true)} title="Ver presupuesto">
+              <EyeIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+            <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(row.original, false)} title="Editar (nueva versión)">
+              <PencilSquareIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+          </>
+        )}
+      </Group>
+    ),
+  });
+
+  if (loading) {
+    return <Loader />;
+  }
+
+  return (
+    <Paper shadow="sm" p="md" radius="md" withBorder>
+      {(esAuditor || !soloConsulta) && (
+        <Group mb="md">
+          {esAuditor && (
+            <Select
+              placeholder="Auditor"
+              value={filtroAuditor}
+              onChange={(value) => setFiltroAuditor(value || 'todos')}
+              data={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'mis-auditorias', label: 'Mis auditorías' }
+              ]}
+              style={{ width: 200 }}
+            />
           )}
-        </Table.Tbody>
-      </Table>
-      </Table.ScrollContainer>
+          {!esAuditor && !soloConsulta && (
+            <Select
+              placeholder="Creador"
+              value={filtroCreador}
+              onChange={(value) => setFiltroCreador(value || 'todos')}
+              data={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'solo-mios', label: 'Solo míos' }
+              ]}
+              style={{ width: 200 }}
+            />
+          )}
+        </Group>
+      )}
+      <MantineReactTable table={table} />
     </Paper>
   );
 }

@@ -40,9 +40,10 @@ const winstonLogger = winston.createLogger({
   ]
 });
 
-// En desarrollo, también mostrar en consola
+// En desarrollo, también mostrar en consola (solo errores y warnings)
 if (process.env.NODE_ENV !== 'production') {
   winstonLogger.add(new winston.transports.Console({
+    level: 'warn', // Solo warnings y errors en consola
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.simple()
