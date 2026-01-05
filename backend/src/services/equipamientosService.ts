@@ -495,17 +495,4 @@ export class EquipamientosService {
   }
 }
 
-export const equipamientosService = new EquipamientosService();(!valoresMap.has(v.id_equipamiento)) {
-          valoresMap.set(v.id_equipamiento, v.valor_facturar);
-        }
-      });
-    }
-
-    return rows.map(eq => ({
-      ...eq,
-      precio_facturar: valoresMap.get(eq.id_equipamiento) || eq.precio_facturar
-    }));
-  }
-}
-
 export const equipamientosService = new EquipamientosService();
