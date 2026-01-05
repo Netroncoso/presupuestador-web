@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2';
 import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
+import { cacheService } from './cacheService';
 
 export class EquipamientosService {
   
@@ -45,16 +46,26 @@ export class EquipamientosService {
 
   // Métodos de datos
   async obtenerTodos() {
+    const cacheKey = 'catalogos:equipamientos:all';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const [rows] = await pool.query(
       `SELECT e.id, e.nombre, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
        FROM equipamientos e
        LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
        ORDER BY e.nombre`
     );
+    
+    cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }
 
   async obtenerActivos() {
+    const cacheKey = 'catalogos:equipamientos:activos';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const [rows] = await pool.query(
       `SELECT e.*, te.nombre as tipo 
        FROM equipamientos e
@@ -62,6 +73,8 @@ export class EquipamientosService {
        WHERE e.activo = 1 
        ORDER BY te.nombre, e.nombre`
     );
+    
+    cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }
 
@@ -259,7 +272,13 @@ export class EquipamientosService {
   }
 
   async obtenerTipos() {
+    const cacheKey = 'catalogos:tipos_equipamiento';
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+    
     const [rows] = await pool.query('SELECT * FROM tipos_equipamiento ORDER BY nombre');
+    
+    cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }
 
