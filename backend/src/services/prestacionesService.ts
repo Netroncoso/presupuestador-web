@@ -21,8 +21,16 @@ export class PrestacionesService {
   async obtenerPrestacionesPorPrestador(
     prestadorId: string, 
     fecha: string, 
-    sucursalId: number | null
+    sucursalId: number | null,
+    page: number = 1,
+    limit: number = 100
   ) {
+    const cacheKey = `prestaciones:${prestadorId}:${fecha}:${sucursalId}:${page}:${limit}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const offset = (page - 1) * limit;
+
     const [rows] = await pool.query(
       `SELECT 
         ps.id_servicio,
@@ -83,11 +91,28 @@ export class PrestacionesService {
        FROM prestador_servicio AS ps
        JOIN servicios AS s ON ps.id_servicio = s.id_servicio
        WHERE ps.idobra_social = ? AND ps.activo = 1
-       HAVING valor_facturar IS NOT NULL`, 
-      [sucursalId, fecha, fecha, sucursalId, fecha, fecha, sucursalId, prestadorId]
+       HAVING valor_facturar IS NOT NULL
+       LIMIT ? OFFSET ?`, 
+      [sucursalId, fecha, fecha, sucursalId, fecha, fecha, sucursalId, prestadorId, limit, offset]
     );
+
+    const [[{ total }]] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as total FROM prestador_servicio ps WHERE ps.idobra_social = ? AND ps.activo = 1`,
+      [prestadorId]
+    );
+
+    const result = {
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total: total as number,
+        totalPages: Math.ceil((total as number) / limit)
+      }
+    };
     
-    return rows;
+    cacheService.set(cacheKey, result, 900); // 15 min
+    return result;
   }
 
   async obtenerPrestadorInfo(prestadorId: string) {

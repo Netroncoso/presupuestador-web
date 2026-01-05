@@ -2,17 +2,47 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcrypt';
 import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
+import { cacheService } from './cacheService';
 
 export class UsuariosService {
   
-  async obtenerTodos() {
+  async obtenerTodos(page: number = 1, limit: number = 50) {
+    const cacheKey = `usuarios:page:${page}:limit:${limit}`;
+    const cached = cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const offset = (page - 1) * limit;
+
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT u.id, u.username, u.rol, u.activo, u.sucursal_id, s.Sucursales_mh as sucursal_nombre
        FROM usuarios u 
        LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID 
-       ORDER BY u.username`
+       ORDER BY u.username
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
-    return rows;
+
+    const [[{ total }]] = await pool.query<RowDataPacket[]>(
+      'SELECT COUNT(*) as total FROM usuarios'
+    );
+
+    const result = {
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total: total as number,
+        totalPages: Math.ceil((total as number) / limit)
+      }
+    };
+
+    cacheService.set(cacheKey, result, 900); // 15 min
+    return result;
+  }
+
+  private invalidateCache() {
+    const keys = cacheService.keys();
+    keys.filter((k: string) => k.startsWith('usuarios:')).forEach((k: string) => cacheService.del(k));
   }
 
   async crear(username: string, password: string, rol?: string, sucursal_id?: number) {
@@ -45,6 +75,7 @@ export class UsuariosService {
       [username, hashedPassword, rol || 'user', sucursal_id || null]
     );
     
+    this.invalidateCache();
     return { message: 'Usuario creado exitosamente' };
   }
 
@@ -87,6 +118,7 @@ export class UsuariosService {
     params.push(id);
     
     await pool.query<ResultSetHeader>(query, params);
+    this.invalidateCache();
     return { message: 'Usuario actualizado exitosamente' };
   }
 
@@ -113,6 +145,7 @@ export class UsuariosService {
       [activo, id]
     );
     
+    this.invalidateCache();
     return { message: 'Estado actualizado exitosamente' };
   }
 
@@ -131,6 +164,7 @@ export class UsuariosService {
       [id]
     );
     
+    this.invalidateCache();
     return { message: 'Usuario eliminado exitosamente' };
   }
 }

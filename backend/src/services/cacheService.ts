@@ -24,8 +24,12 @@ class CacheService {
     return this.cache.set(key, value, ttl || 300);
   }
   
-  del(key: string): number {
+  del(key: string | string[]): number {
     return this.cache.del(key);
+  }
+  
+  keys(): string[] {
+    return this.cache.keys();
   }
   
   flush(): void {

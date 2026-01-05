@@ -62,7 +62,8 @@ export default function GestionEquipamientosBase() {
   const cargarEquipamientos = async () => {
     try {
       const response = await api.get('/equipamientos/admin');
-      setEquipamientos(response.data);
+      const data = response.data.data || response.data;
+      setEquipamientos(Array.isArray(data) ? data : []);
     } catch (error) {
       notifications.show({
         title: 'Error',

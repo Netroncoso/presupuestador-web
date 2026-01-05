@@ -4,7 +4,10 @@ import { usuariosService } from '../services/usuariosService';
 import { AuthenticatedRequest } from '../types/express';
 
 export const getUsuarios = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const usuarios = await usuariosService.obtenerTodos();
+  const page = req.query.page ? Number(req.query.page) : 1;
+  const limit = req.query.limit ? Number(req.query.limit) : 50;
+  
+  const usuarios = await usuariosService.obtenerTodos(page, limit);
   res.json(usuarios);
 });
 
