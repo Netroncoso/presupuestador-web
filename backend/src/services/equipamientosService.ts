@@ -320,7 +320,7 @@ export class EquipamientosService {
     cacheService.del('catalogos:tipos_equipamiento');
   }
 
-  async agregarValorAdmin(equipamientoId: string, datos: any) {(equipamientoId: string, datos: any) {
+  async agregarValorAdmin(equipamientoId: string, datos: any) {
     const validEquipamientoId = this.validateEquipamientoId(equipamientoId);
     const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, financiador_id } = datos;
 
@@ -483,6 +483,19 @@ export class EquipamientosService {
 
       valores.forEach(v => {
         if (!valoresMap.has(v.id_equipamiento)) {
+          valoresMap.set(v.id_equipamiento, v.valor_facturar);
+        }
+      });
+    }
+
+    return rows.map(eq => ({
+      ...eq,
+      precio_facturar: valoresMap.get(eq.id_equipamiento) || eq.precio_facturar
+    }));
+  }
+}
+
+export const equipamientosService = new EquipamientosService();(!valoresMap.has(v.id_equipamiento)) {
           valoresMap.set(v.id_equipamiento, v.valor_facturar);
         }
       });
