@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip, Modal } from '@mantine/core'
 import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
-import { getPrestadores, getPrestacionesPorPrestador } from '../api/api'
+import { getFinanciadores, getPrestacionesPorFinanciador } from '../api/api'
 import { api } from '../api/api'
 
 interface Prestacion {
@@ -26,7 +26,7 @@ interface PrestacionDisponible {
 }
 
 interface Financiador {
-  idobra_social: string
+  id: string
   Financiador: string
   activo: number
 }
@@ -37,13 +37,11 @@ interface Props {
   onTotalChange: (totalCosto: number, totalFacturar: number) => void
   presupuestoId: number | null
   financiadorId?: string | null
-  onFinanciadorChange?: (financiadorId: string | null, financiadorInfo: any) => void
   soloLectura?: boolean
   sucursalId?: number | null
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, onFinanciadorChange, soloLectura = false, sucursalId }: Props) {
-  const [financiadores, setFinanciadores] = useState<Financiador[]>([])
+export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, soloLectura = false, sucursalId }: Props) {
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
   const [alertasConfig, setAlertasConfig] = useState<any[]>([])
@@ -54,8 +52,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
   const [nuevaCantidad, setNuevaCantidad] = useState(1)
   const [nuevoValor, setNuevoValor] = useState(0)
-  const [modalConfirmacionAbierto, setModalConfirmacionAbierto] = useState(false)
-  const [nuevoFinanciadorPendiente, setNuevoFinanciadorPendiente] = useState<string | null>(null)
 
   const totalCosto = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
@@ -72,21 +68,13 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     [prestacionSeleccionada, prestacionesDisponibles]
   )
 
-  const financiadoresOptions = useMemo(() => 
-    financiadores.map(p => ({
-      value: String(p.idobra_social),
-      label: p.activo === 1 ? p.Financiador : `${p.Financiador} (Comunicarse con cobranza)`,
-      disabled: p.activo !== 1
-    })),
-    [financiadores]
-  )
+
 
   useEffect(() => {
     onTotalChange(totalCosto, totalFacturar)
   }, [totalCosto, totalFacturar, onTotalChange])
 
   useEffect(() => {
-    cargarFinanciadores()
     cargarAlertasConfig()
   }, [])
 
@@ -115,7 +103,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         cargarPrestacionesPorFinanciador(financiadorIdStr)
       }
       
-      api.get(`/prestaciones/prestador/${financiadorIdStr}/info`).then(infoRes => {
+      api.get(`/prestaciones/financiador/${financiadorIdStr}/info`).then(infoRes => {
         setFinanciadorInfo(infoRes.data)
       }).catch((err: any) => console.error('Error loading financiador info:', err))
     } else if (!presupuestoId) {
@@ -125,25 +113,14 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       setValorAsignado('')
       setFinanciadorInfo({})
     }
-  }, [presupuestoId, financiadorId, soloLectura])
+  }, [presupuestoId, financiadorId, soloLectura, sucursalId])
 
-  const cargarFinanciadores = async () => {
-    try {
-      const data = await getPrestadores()
-      setFinanciadores(data)
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar los financiadores',
-        color: 'red'
-      })
-    }
-  }
+
 
   const cargarPrestacionesPorFinanciador = async (financiadorId: string, fecha?: string) => {
     setLoading(true)
     try {
-      const data = await getPrestacionesPorPrestador(financiadorId, fecha, sucursalId || undefined)
+      const data = await getPrestacionesPorFinanciador(financiadorId, fecha, sucursalId || undefined)
       setPrestacionesDisponibles(data)
     } catch (error) {
       notifications.show({
@@ -156,95 +133,12 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     }
   }
 
-  const handleFinanciadorChange = async (value: string | null) => {
-    // Si hay prestaciones y cambia el financiador, mostrar modal de confirmación
-    if (value !== financiadorId && prestacionesSeleccionadas.length > 0) {
-      setNuevoFinanciadorPendiente(value)
-      setModalConfirmacionAbierto(true)
-      return
-    }
-    
-    // Si no hay prestaciones, cambiar directamente
-    await aplicarCambioFinanciador(value)
-  }
-
-  const aplicarCambioFinanciador = async (value: string | null) => {
-    // Limpiar prestaciones si cambia el financiador
-    if (value !== financiadorId && prestacionesSeleccionadas.length > 0) {
-      // Eliminar prestaciones de BD si hay presupuestoId
-      if (presupuestoId) {
-        try {
-          for (const prestacion of prestacionesSeleccionadas) {
-            await api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
-              data: { id_servicio: prestacion.id_servicio }
-            })
-          }
-        } catch (error) {
-          console.error('Error eliminando prestaciones:', error)
-        }
-      }
-      setPrestacionesSeleccionadas([])
-      notifications.show({
-        title: 'Prestaciones Eliminadas',
-        message: 'Las prestaciones anteriores fueron eliminadas al cambiar el financiador',
-        color: 'orange'
-      })
-    }
-    
-    setPrestacionesDisponibles([])
-    setPrestacionSeleccionada(null)
-    setCantidad('1')
-    setValorAsignado('')
-    
-    if (value) {
-      // Guardar automáticamente en BD si hay presupuestoId
-      if (presupuestoId) {
-        try {
-          await api.put(`/presupuestos/${presupuestoId}/prestador`, {
-            idobra_social: value
-          })
-        } catch (error) {
-          console.error('Error guardando financiador:', error)
-        }
-      }
-      
-      // Cargar prestaciones disponibles
-      await cargarPrestacionesPorFinanciador(value)
-      
-      // Cargar info del financiador
-      if (onFinanciadorChange) {
-        try {
-          const infoRes = await api.get(`/prestaciones/prestador/${value}/info`)
-          setFinanciadorInfo(infoRes.data)
-          onFinanciadorChange(value, infoRes.data)
-        } catch (error) {
-          console.error('Error loading financiador info:', error)
-          setFinanciadorInfo({})
-          onFinanciadorChange(value, {})
-        }
-      }
-    } else if (onFinanciadorChange) {
-      setFinanciadorInfo({})
-      onFinanciadorChange(null, {})
-    }
-  }
-
-  const confirmarCambioFinanciador = async () => {
-    await aplicarCambioFinanciador(nuevoFinanciadorPendiente)
-    setModalConfirmacionAbierto(false)
-    setNuevoFinanciadorPendiente(null)
-  }
-
-  const cancelarCambioFinanciador = () => {
-    setModalConfirmacionAbierto(false)
-    setNuevoFinanciadorPendiente(null)
-  }
-
-
 
   const valoresDisponibles = useMemo(() => {
     if (!prestacionSeleccionadaData?.valor_sugerido) return []
     const vs = Number(prestacionSeleccionadaData.valor_sugerido)
+    if (vs === 0) return []
+    
     return [
       { value: String(vs * 0.8), label: `$${(vs * 0.8).toFixed(2)}` },
       { value: String(vs * 0.9), label: `$${(vs * 0.9).toFixed(2)}` },
@@ -260,7 +154,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     if (value) {
       const prestacionData = prestacionesDisponibles.find(p => p.id_servicio === value)
       if (prestacionData) {
-        setCantidad(String(prestacionData.cant_total || 1))
+        setCantidad('1')
         setValorAsignado(String(prestacionData.valor_sugerido || 0))
         
         // Alerta si la prestación está desactualizada
@@ -370,7 +264,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
       message: `Se agregó ${prestacionData.nombre}`,
       color: 'blue'
     })
-  }, [prestacionSeleccionada, cantidad, valorAsignado, prestacionesDisponibles, prestacionesSeleccionadas, setPrestacionesSeleccionadas, alertasConfig])
+  }, [prestacionSeleccionada, cantidad, valorAsignado, prestacionesDisponibles, prestacionesSeleccionadas, setPrestacionesSeleccionadas, alertasConfig, presupuestoId])
 
   const eliminarPrestacion = useCallback((index: number) => {
     const prestacion = prestacionesSeleccionadas[index]
@@ -450,52 +344,16 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         </Paper>
       )}
 
-      <Modal
-        opened={modalConfirmacionAbierto}
-        onClose={cancelarCambioFinanciador}
-        title="Confirmar Cambio de Financiador"
-        centered
-      >
-        <Text size="sm" mb="md">
-          Al cambiar el financiador se eliminarán todas las prestaciones seleccionadas ({prestacionesSeleccionadas.length}).
-        </Text>
-        <Text size="sm" fw={500} mb="lg">
-          ¿Desea continuar?
-        </Text>
-        <Group justify="flex-end" gap="sm">
-          <Button variant="outline" onClick={cancelarCambioFinanciador}>
-            Cancelar
-          </Button>
-          <Button color="orange" onClick={confirmarCambioFinanciador}>
-            Confirmar Cambio
-          </Button>
-        </Group>
-      </Modal>
+      {!financiadorId && (
+        <Paper p="md" withBorder>
+          <Text size="sm" c="dimmed" ta="center">
+            Debe seleccionar un financiador en Datos del Paciente
+          </Text>
+        </Paper>
+      )}
 
       <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
         <Stack gap="xl">
-          <Stack gap="xs">
-            <Title order={5}>Financiador</Title>
-            <Select
-              placeholder="Seleccione un financiador"
-              data={financiadoresOptions}
-              value={financiadorId ? String(financiadorId) : null}
-              onChange={handleFinanciadorChange}
-              searchable
-              disabled={soloLectura}
-              checkIconPosition="right"
-              clearable
-              allowDeselect
-            />
-            {financiadorInfo && Object.keys(financiadorInfo).length > 0 && (
-              <Group gap="xs" wrap="wrap">
-                <Badge variant="dot" color="blue" style={{ fontWeight: 500, fontSize: '10px' }}>Tasa: {financiadorInfo.tasa_mensual || 'N/A'}%</Badge>
-                <Badge variant="dot" color="orange" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Teórico: {financiadorInfo.dias_cobranza_teorico || 'N/A'}d</Badge>
-                <Badge variant="dot" color="green" style={{ fontWeight: 500, fontSize: '10px' }}>Cobranza Real: {financiadorInfo.dias_cobranza_real || 'N/A'}d</Badge>
-                <Badge variant="dot" color="teal" style={{ fontWeight: 500, fontSize: '10px' }}>{financiadorInfo.acuerdo_nombre || 'Sin Acuerdo'}</Badge>
-              </Group>
-            )}
-          </Stack>
 
           {financiadorId && prestacionesDisponibles.length > 0 && (
             <>
@@ -512,11 +370,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                         <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
                           <Tooltip label="Valor a facturar por unidad de servicio">
                             <span>Valor a Facturar</span>
-                          </Tooltip>
-                        </Table.Th>
-                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                          <Tooltip label="Cantidad sugerida inicial para el presupuesto">
-                            <span>Cant. Sugerida</span>
                           </Tooltip>
                         </Table.Th>
                       </Table.Tr>
@@ -545,7 +398,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                           </Table.Td>
                           <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || '-'}</Table.Td>
                           <Table.Td>${Number(p.valor_facturar || 0).toFixed(2)}</Table.Td>
-                          <Table.Td>{p.cant_total || 0}</Table.Td>
                         </Table.Tr> 
                       ))}
                     </Table.Tbody>
@@ -573,7 +425,6 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                     min="1"
                     size="sm"
                     disabled={!prestacionSeleccionada || soloLectura}
-                    description={prestacionSeleccionadaData ? `Total Mensual ${prestacionSeleccionadaData.cant_total || 1}` : 'Seleccione prestación'}
                   />
                   <Select
                     label={<Text size="sm" fw={400}>Valor</Text>}

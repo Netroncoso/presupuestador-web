@@ -87,7 +87,7 @@ router.get('/pendientes', authenticateToken, requireAuditor, asyncHandler(async 
   const [rows] = await pool.query(`
     SELECT 
       p.idPresupuestos, p.version, p.estado,
-      p.Nombre_Apellido, p.DNI, p.sucursal_id, ps.Sucursales_mh as Sucursal, p.idobra_social,
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, ps.Sucursales_mh as Sucursal, p.financiador_id,
       p.costo_total, p.rentabilidad, p.dificil_acceso,
       p.created_at, u.username as creador, s.Sucursales_mh as sucursal_nombre,
       DATEDIFF(NOW(), p.created_at) as dias_pendiente

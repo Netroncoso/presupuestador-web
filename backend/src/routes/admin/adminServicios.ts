@@ -9,10 +9,10 @@ import { AuthenticatedRequest } from '../../types/express';
 // VALIDATION MIDDLEWARE
 // ============================================================================
 
-const validatePrestadorId = (req: Request, res: Response, next: NextFunction) => {
-  const id = parseInt(req.params.prestadorId);
+const validateFinanciadorId = (req: Request, res: Response, next: NextFunction) => {
+  const id = parseInt(req.params.financiadorId);
   if (isNaN(id) || id <= 0) {
-    return res.status(400).json({ error: 'ID de prestador debe ser un número válido' });
+    return res.status(400).json({ error: 'ID de financiador debe ser un número válido' });
   }
   next();
 };
@@ -75,8 +75,8 @@ router.use(requireAdmin);
  *       403:
  *         description: Acceso denegado - Solo admin
  */
-router.get('/prestadores', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  logger.info('Obteniendo prestadores activos', { usuario: req.user.id });
+router.get('/financiadores', asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  logger.info('Obteniendo financiadores activos', { usuario: req.user.id });
   
   const resultado = await getPrestadoresActivos(req, res, () => {});
   return resultado;
@@ -123,11 +123,11 @@ router.get('/prestadores', asyncHandler(async (req: AuthenticatedRequest, res: R
  *                   activo:
  *                     type: boolean
  */
-router.get('/prestador/:prestadorId/servicios', validatePrestadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const prestadorId = parseInt(req.params.prestadorId);
+router.get('/financiador/:financiadorId/servicios', validateFinanciadorId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const financiadorId = parseInt(req.params.financiadorId);
   
-  logger.info('Obteniendo servicios por prestador', { 
-    prestadorId, 
+  logger.info('Obteniendo servicios por financiador', { 
+    financiadorId, 
     usuario: req.user.id 
   });
   
@@ -178,13 +178,13 @@ router.get('/prestador/:prestadorId/servicios', validatePrestadorId, asyncHandle
  *       200:
  *         description: Servicio actualizado
  */
-router.put('/prestador/:prestadorId/servicio/:servicioId', validatePrestadorId, validateServicioId, validateServicioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const prestadorId = parseInt(req.params.prestadorId);
+router.put('/financiador/:financiadorId/servicio/:servicioId', validateFinanciadorId, validateServicioId, validateServicioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const financiadorId = parseInt(req.params.financiadorId);
   const servicioId = parseInt(req.params.servicioId);
   const { valor_asignado, valor_facturar, cantidad_sugerida } = req.body;
   
-  logger.info('Actualizando servicio de prestador', { 
-    prestadorId, 
+  logger.info('Actualizando servicio de financiador', { 
+    financiadorId, 
     servicioId, 
     valor_asignado, 
     valor_facturar, 
@@ -194,8 +194,8 @@ router.put('/prestador/:prestadorId/servicio/:servicioId', validatePrestadorId, 
   
   const resultado = await createOrUpdateServicioPrestador(req, res, () => {});
   
-  logger.info('Servicio de prestador actualizado exitosamente', { 
-    prestadorId, 
+  logger.info('Servicio de financiador actualizado exitosamente', { 
+    financiadorId, 
     servicioId, 
     usuario: req.user.id 
   });

@@ -122,12 +122,14 @@ export class EquipamientosService {
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT 
         fe.id_equipamiento, v.valor_asignado, v.valor_facturar,
-        v.fecha_inicio, DATEDIFF(CURDATE(), v.fecha_inicio) as dias_sin_actualizar
+        v.fecha_inicio, v.sucursal_id,
+        DATEDIFF(CURDATE(), v.fecha_inicio) as dias_sin_actualizar
        FROM financiador_equipamiento fe
        JOIN financiador_equipamiento_valores v ON fe.id = v.id_financiador_equipamiento
-       WHERE fe.idobra_social = ? AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
+       WHERE fe.financiador_id = ? 
+         AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
          AND ? BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
-       ORDER BY fe.id_equipamiento, v.sucursal_id DESC, v.fecha_inicio DESC`,
+       ORDER BY fe.id_equipamiento, v.fecha_inicio DESC`,
       [financiadorId, sucursalId, fecha]
     );
     return rows;
@@ -135,9 +137,38 @@ export class EquipamientosService {
 
   private mergeEquipamientosWithValores(equipamientos: RowDataPacket[], valores: RowDataPacket[]) {
     const valoresMap = new Map();
+    
+    // Agrupar valores por equipamiento
+    const valoresPorEquipamiento = new Map<number, RowDataPacket[]>();
     valores.forEach(v => {
-      if (!valoresMap.has(v.id_equipamiento)) {
-        valoresMap.set(v.id_equipamiento, v);
+      if (!valoresPorEquipamiento.has(v.id_equipamiento)) {
+        valoresPorEquipamiento.set(v.id_equipamiento, []);
+      }
+      valoresPorEquipamiento.get(v.id_equipamiento)!.push(v);
+    });
+
+    // Aplicar lógica de prioridad con anti-obsolescencia
+    valoresPorEquipamiento.forEach((vals, equipId) => {
+      const valorEspecifico = vals.find(v => v.sucursal_id !== null);
+      const valorGeneral = vals.find(v => v.sucursal_id === null);
+      
+      // Si hay específico y general, verificar obsolescencia (30 días)
+      if (valorEspecifico && valorGeneral) {
+        const diasDiferencia = Math.abs(
+          new Date(valorEspecifico.fecha_inicio).getTime() - 
+          new Date(valorGeneral.fecha_inicio).getTime()
+        ) / (1000 * 60 * 60 * 24);
+        
+        // Si específico está obsoleto (>30 días diferencia), usar general
+        if (diasDiferencia > 30) {
+          valoresMap.set(equipId, valorGeneral);
+        } else {
+          valoresMap.set(equipId, valorEspecifico);
+        }
+      } else if (valorEspecifico) {
+        valoresMap.set(equipId, valorEspecifico);
+      } else if (valorGeneral) {
+        valoresMap.set(equipId, valorGeneral);
       }
     });
 
@@ -178,7 +209,7 @@ export class EquipamientosService {
 
   async guardarValor(id: string, datos: any) {
     let financiadorEquipamientoId = Number(id);
-    const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, id_equipamiento, idobra_social } = datos;
+    const { valor_asignado, valor_facturar, fecha_inicio, sucursal_id, id_equipamiento, financiador_id } = datos;
 
     if (!valor_asignado || !valor_facturar || !fecha_inicio) {
       throw new AppError(400, "Datos incompletos: valor_asignado, valor_facturar y fecha_inicio requeridos");
@@ -195,21 +226,21 @@ export class EquipamientosService {
 
       // Si no existe financiadorEquipamientoId, crear registro
       if (!financiadorEquipamientoId || isNaN(financiadorEquipamientoId)) {
-        if (!id_equipamiento || !idobra_social) {
-          throw new AppError(400, "id_equipamiento e idobra_social requeridos para crear acuerdo nuevo");
+        if (!id_equipamiento || !financiador_id) {
+          throw new AppError(400, "id_equipamiento e financiador_id requeridos para crear acuerdo nuevo");
         }
 
         const [existing] = await connection.query<RowDataPacket[]>(
-          'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND idobra_social = ?',
-          [id_equipamiento, idobra_social]
+          'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND financiador_id = ?',
+          [id_equipamiento, financiador_id]
         );
 
         if (existing.length > 0) {
           financiadorEquipamientoId = existing[0].id;
         } else {
           const [result]: any = await connection.query(
-            'INSERT INTO financiador_equipamiento (id_equipamiento, idobra_social, activo) VALUES (?, ?, 1)',
-            [id_equipamiento, idobra_social]
+            'INSERT INTO financiador_equipamiento (id_equipamiento, financiador_id, activo) VALUES (?, ?, 1)',
+            [id_equipamiento, financiador_id]
           );
           financiadorEquipamientoId = result.insertId;
         }
@@ -346,7 +377,7 @@ export class EquipamientosService {
       }
 
       let [existing] = await connection.query<RowDataPacket[]>(
-        'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND idobra_social = ?',
+        'SELECT id FROM financiador_equipamiento WHERE id_equipamiento = ? AND financiador_id = ?',
         [validEquipamientoId, financiadorIdNum]
       );
 
@@ -355,7 +386,7 @@ export class EquipamientosService {
         financiadorEquipamientoId = existing[0].id;
       } else {
         const [result]: any = await connection.query(
-          'INSERT INTO financiador_equipamiento (id_equipamiento, idobra_social, activo) VALUES (?, ?, 1)',
+          'INSERT INTO financiador_equipamiento (id_equipamiento, financiador_id, activo) VALUES (?, ?, 1)',
           [validEquipamientoId, financiadorIdNum]
         );
         financiadorEquipamientoId = result.insertId;
@@ -387,7 +418,7 @@ export class EquipamientosService {
 
   async obtenerValoresAdmin(equipamientoId: string) {
     const [rows] = await pool.query(
-      `SELECT v.id, v.valor_asignado, v.valor_facturar, v.fecha_inicio, v.fecha_fin, v.sucursal_id, fe.idobra_social as financiador_id
+      `SELECT v.id, v.valor_asignado, v.valor_facturar, v.fecha_inicio, v.fecha_fin, v.sucursal_id, fe.financiador_id
        FROM financiador_equipamiento_valores v
        JOIN financiador_equipamiento fe ON v.id_financiador_equipamiento = fe.id
        WHERE fe.id_equipamiento = ?
@@ -407,7 +438,7 @@ export class EquipamientosService {
               (SELECT sucursal_id FROM financiador_equipamiento_valores v WHERE v.id_financiador_equipamiento = fe.id AND v.fecha_fin IS NULL ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC LIMIT 1) as sucursal_id_vigente
        FROM equipamientos e
        LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-       LEFT JOIN financiador_equipamiento fe ON e.id = fe.id_equipamiento AND fe.idobra_social = ?
+       LEFT JOIN financiador_equipamiento fe ON e.id = fe.id_equipamiento AND fe.financiador_id = ?
        WHERE e.activo = 1
        ORDER BY te.nombre, e.nombre`,
       [financiadorId]
@@ -454,7 +485,7 @@ export class EquipamientosService {
     }
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT pe.*, p.idobra_social, p.sucursal_id
+      `SELECT pe.*, p.financiador_id, p.sucursal_id
        FROM presupuesto_equipamiento pe
        JOIN presupuestos p ON pe.idPresupuestos = p.idPresupuestos
        WHERE pe.idPresupuestos = ? ORDER BY pe.nombre LIMIT 100`,
@@ -464,7 +495,7 @@ export class EquipamientosService {
     if (rows.length === 0) return [];
 
     const equipamientoIds = rows.map(eq => eq.id_equipamiento).filter(Boolean);
-    const obraSocial = rows[0]?.idobra_social;
+    const obraSocial = rows[0]?.financiador_id;
     const sucursalId = rows[0]?.sucursal_id;
 
     let valoresMap = new Map();
@@ -474,7 +505,7 @@ export class EquipamientosService {
         `SELECT fe.id_equipamiento, v.valor_facturar
          FROM financiador_equipamiento fe
          JOIN financiador_equipamiento_valores v ON fe.id = v.id_financiador_equipamiento
-         WHERE fe.idobra_social = ? AND fe.id_equipamiento IN (${placeholders})
+         WHERE fe.financiador_id = ? AND fe.id_equipamiento IN (${placeholders})
            AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
            AND CURDATE() BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
          ORDER BY fe.id_equipamiento, v.sucursal_id DESC, v.fecha_inicio DESC`,

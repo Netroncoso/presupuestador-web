@@ -5,27 +5,27 @@ import { cacheService } from './cacheService';
 
 export class PrestacionesService {
   
-  async obtenerPrestadores() {
-    const cacheKey = 'catalogos:prestadores';
+  async obtenerFinanciadores() {
+    const cacheKey = 'catalogos:financiadores';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
     
     const [rows] = await pool.query(
-      'SELECT idobra_social, Financiador, activo FROM financiador ORDER BY activo DESC, Financiador'
+      'SELECT id, Financiador, activo FROM financiador ORDER BY activo DESC, Financiador'
     );
     
     cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }
 
-  async obtenerPrestacionesPorPrestador(
-    prestadorId: string, 
+  async obtenerPrestacionesPorFinanciador(
+    financiadorId: string, 
     fecha: string, 
     sucursalId: number | null,
     page: number = 1,
     limit: number = 100
   ) {
-    const cacheKey = `prestaciones:${prestadorId}:${fecha}:${sucursalId}:${page}:${limit}`;
+    const cacheKey = `prestaciones:${financiadorId}:${fecha}:${sucursalId}:${page}:${limit}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
@@ -39,8 +39,8 @@ export class PrestacionesService {
         ps.cant_total,
         COALESCE(
           (SELECT valor_asignado 
-           FROM prestador_servicio_valores v 
-           WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
+           FROM financiador_servicio_valores v 
+           WHERE v.financiador_servicio_id = ps.id 
              AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)
              AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
            ORDER BY 
@@ -51,8 +51,8 @@ export class PrestacionesService {
         ) AS valor_sugerido,
         COALESCE(
           (SELECT valor_facturar 
-           FROM prestador_servicio_valores v 
-           WHERE v.id_prestador_servicio = ps.id_prestador_servicio 
+           FROM financiador_servicio_valores v 
+           WHERE v.financiador_servicio_id = ps.id 
              AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)
              AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
            ORDER BY 
@@ -63,21 +63,21 @@ export class PrestacionesService {
         ) AS valor_facturar,
         COALESCE(
           (SELECT DATEDIFF(CURDATE(), MAX(fecha_inicio))
-           FROM prestador_servicio_valores v
-           WHERE v.id_prestador_servicio = ps.id_prestador_servicio
+           FROM financiador_servicio_valores v
+           WHERE v.financiador_servicio_id = ps.id
              AND (? IS NULL OR v.sucursal_id = ? OR v.sucursal_id IS NULL)),
           999
         ) AS dias_sin_actualizar
-       FROM prestador_servicio AS ps
+       FROM financiador_servicio AS ps
        JOIN servicios AS s ON ps.id_servicio = s.id_servicio
-       WHERE ps.idobra_social = ? AND ps.activo = 1
+       WHERE ps.financiador_id = ? AND ps.activo = 1
        LIMIT ? OFFSET ?`, 
-      [sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, prestadorId, limit, offset]
+      [sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, fecha, sucursalId, sucursalId, sucursalId, financiadorId, limit, offset]
     );
 
     const [[{ total }]] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) as total FROM prestador_servicio ps WHERE ps.idobra_social = ? AND ps.activo = 1`,
-      [prestadorId]
+      `SELECT COUNT(*) as total FROM financiador_servicio ps WHERE ps.financiador_id = ? AND ps.activo = 1`,
+      [financiadorId]
     );
 
     const result = {
@@ -94,18 +94,18 @@ export class PrestacionesService {
     return result;
   }
 
-  async obtenerPrestadorInfo(prestadorId: string) {
-    if (!prestadorId || isNaN(Number(prestadorId))) {
-      throw new AppError(400, 'ID de prestador inválido');
+  async obtenerFinanciadorInfo(financiadorId: string) {
+    if (!financiadorId || isNaN(Number(financiadorId))) {
+      throw new AppError(400, 'ID de financiador inválido');
     }
 
-    const cacheKey = `catalogos:prestador:${prestadorId}`;
+    const cacheKey = `catalogos:financiador:${financiadorId}`;
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT 
-         f.idobra_social, 
+         f.id, 
          f.Financiador, 
          f.activo, 
          f.tasa_mensual, 
@@ -115,17 +115,17 @@ export class PrestacionesService {
          COALESCE(a.nombre, NULL) as acuerdo_nombre
        FROM financiador f
        LEFT JOIN financiador_acuerdo a ON f.id_acuerdo = a.id_acuerdo
-       WHERE f.idobra_social = ?`,
-      [prestadorId]
+       WHERE f.id = ?`,
+      [financiadorId]
     );
     
     if (rows.length === 0) {
-      throw new AppError(404, 'Prestador no encontrado');
+      throw new AppError(404, 'Financiador no encontrado');
     }
     
-    const prestadorInfo = rows[0];
-    cacheService.set(cacheKey, prestadorInfo, 1800); // 30 min
-    return prestadorInfo;
+    const financiadorInfo = rows[0];
+    cacheService.set(cacheKey, financiadorInfo, 1800); // 30 min
+    return financiadorInfo;
   }
 }
 

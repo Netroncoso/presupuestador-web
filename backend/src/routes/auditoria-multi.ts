@@ -73,7 +73,7 @@ router.get('/pendientes', requireAnyGerencia, asyncHandler(async (req: Authentic
       DATEDIFF(NOW(), p.created_at) as dias_pendiente
     FROM presupuestos p
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN usuarios revisor ON p.revisor_id = revisor.id
     WHERE p.estado = ?
@@ -114,7 +114,7 @@ router.get('/mis-casos', requireAnyGerencia, asyncHandler(async (req: Authentica
       TIMESTAMPDIFF(MINUTE, p.revisor_asignado_at, NOW()) as minutos_asignado
     FROM presupuestos p
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     WHERE p.revisor_id = ?
       AND p.estado IN ('en_revision_administrativa', 'en_revision_prestacional', 'en_revision_general')
@@ -141,7 +141,7 @@ router.get('/mis-auditorias', requireAnyGerencia, asyncHandler(async (req: Authe
     FROM presupuestos p
     INNER JOIN auditorias_presupuestos a ON p.idPresupuestos = a.presupuesto_id
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     WHERE a.auditor_id = ?
       AND p.es_ultima_version = 1

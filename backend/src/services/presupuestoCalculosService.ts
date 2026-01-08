@@ -8,16 +8,16 @@ export class PresupuestoCalculosService {
         COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as total_insumos_facturar,
         COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as total_prestaciones_costo,
         COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as total_prestaciones_facturar,
-        p.idobra_social,
+        p.financiador_id,
         f.tasa_mensual,
         f.dias_cobranza_real,
         f.dias_cobranza_teorico
       FROM presupuestos p
       LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
       LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
-      LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+      LEFT JOIN financiador f ON p.financiador_id = f.id
       WHERE p.idPresupuestos = ?
-      GROUP BY p.idPresupuestos, p.idobra_social, f.tasa_mensual, f.dias_cobranza_real, f.dias_cobranza_teorico
+      GROUP BY p.idPresupuestos, p.financiador_id, f.tasa_mensual, f.dias_cobranza_real, f.dias_cobranza_teorico
     `, [presupuestoId]);
     
     if (result.length === 0) return;
@@ -31,7 +31,7 @@ export class PresupuestoCalculosService {
     
     let rentabilidadConPlazo = rentabilidad;
     
-    if (data.idobra_social && costoTotal > 0 && data.tasa_mensual) {
+    if (data.financiador_id && costoTotal > 0 && data.tasa_mensual) {
       const diasCobranza = data.dias_cobranza_real || data.dias_cobranza_teorico || 30;
       const tasaMensual = (data.tasa_mensual || 2) / 100;
       const mesesCobranza = Math.floor(diasCobranza / 30);

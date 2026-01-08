@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
-import { getAllPrestadores, updatePrestador, getAcuerdos } from '../../controllers/admin/adminPrestadoresController';
+import { getAllFinanciadores, updateFinanciador, getAcuerdos } from '../../controllers/admin/adminFinanciadoresController';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { logger } from '../../utils/logger';
 import { AuthenticatedRequest } from '../../types/express';
@@ -9,15 +9,15 @@ import { AuthenticatedRequest } from '../../types/express';
 // VALIDATION MIDDLEWARE
 // ============================================================================
 
-const validatePrestadorId = (req: Request, res: Response, next: NextFunction) => {
+const validateFinanciadorId = (req: Request, res: Response, next: NextFunction) => {
   const id = parseInt(req.params.id);
   if (isNaN(id) || id <= 0) {
-    return res.status(400).json({ error: 'ID de prestador debe ser un número válido' });
+    return res.status(400).json({ error: 'ID de financiador debe ser un número válido' });
   }
   next();
 };
 
-const validatePrestadorData = (req: Request, res: Response, next: NextFunction) => {
+const validateFinanciadorData = (req: Request, res: Response, next: NextFunction) => {
   const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real } = req.body;
   
   if (Financiador !== undefined && !Financiador?.trim()) {
@@ -80,8 +80,8 @@ router.use(requireAdmin);
  *         description: Acceso denegado - Solo admin
  */
 router.get('/', (req: Request, res: Response, next: NextFunction) => {
-  logger.info('Listando prestadores admin', { usuario: (req as AuthenticatedRequest).user.id });
-  getAllPrestadores(req, res, next);
+  logger.info('Listando financiadores admin', { usuario: (req as AuthenticatedRequest).user.id });
+  getAllFinanciadores(req, res, next);
 });
 
 /**
@@ -156,12 +156,12 @@ router.get('/acuerdos', (req: Request, res: Response, next: NextFunction) => {
  *       404:
  *         description: Financiador no encontrado
  */
-router.put('/:id', validatePrestadorId, validatePrestadorData, (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', validateFinanciadorId, validateFinanciadorData, (req: Request, res: Response, next: NextFunction) => {
   const id = parseInt(req.params.id);
   const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, acuerdo_asignado } = req.body;
   
-  logger.info('Actualizando prestador', { 
-    prestadorId: id, 
+  logger.info('Actualizando financiador', { 
+    financiadorId: id, 
     Financiador, 
     tasa_mensual, 
     dias_cobranza_teorico, 
@@ -170,10 +170,10 @@ router.put('/:id', validatePrestadorId, validatePrestadorData, (req: Request, re
     usuario: (req as AuthenticatedRequest).user.id 
   });
   
-  updatePrestador(req, res, next);
+  updateFinanciador(req, res, next);
   
-  logger.info('Prestador actualizado exitosamente', { 
-    prestadorId: id, 
+  logger.info('Financiador actualizado exitosamente', { 
+    financiadorId: id, 
     usuario: (req as AuthenticatedRequest).user.id 
   });
 });

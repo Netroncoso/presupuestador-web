@@ -4,11 +4,11 @@ import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
 
 interface Props {
-  onPresupuestoCreado: (id: number, nombre: string, sucursal: string, porcentajeInsumos: number, financiadorId?: string) => void
+  onPresupuestoCreado: (id: number, nombre: string, dni: string, sucursal: string, porcentajeInsumos: number, financiadorId?: string, sucursalId?: number) => void
   onNuevoPresupuesto: () => void
   esCargaHistorial?: boolean
   setEsCargaHistorial?: (esHistorial: boolean) => void
-  datosHistorial?: { nombre: string; dni: string; sucursal: string; sucursal_id?: number }
+  datosHistorial?: { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string }
   soloLectura?: boolean
 }
 
@@ -17,8 +17,10 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const [dni, setDni] = useState('')
   const [sucursal, setSucursal] = useState('')
   const [sucursalId, setSucursalId] = useState<number | null>(null)
+  const [financiadorId, setFinanciadorId] = useState<string | null>(null)
   const [dificilAcceso, setDificilAcceso] = useState(false)
   const [sucursales, setSucursales] = useState<{ID: number, Sucursales_mh: string, suc_porcentaje_insumos: number}[]>([])
+  const [financiadores, setFinanciadores] = useState<any[]>([])
   const [presupuestoCreado, setPresupuestoCreado] = useState(false)
   const [modalDNI, setModalDNI] = useState(false)
   const [presupuestoExistente, setPresupuestoExistente] = useState<any>(null)
@@ -27,20 +29,24 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const setEsCargaHistorial = setEsCargaHistorialProp ?? setEsCargaHistorialLocal
 
   useEffect(() => {
-    const fetchSucursales = async () => {
+    const fetchData = async () => {
       try {
-        const res = await api.get('/sucursales')
-        setSucursales(res.data)
+        const [sucursalesRes, financiadoresRes] = await Promise.all([
+          api.get('/sucursales'),
+          api.get('/prestaciones/financiadores')
+        ])
+        setSucursales(sucursalesRes.data)
+        setFinanciadores(financiadoresRes.data)
       } catch (error) {
-        console.error('Error fetching sucursales:', error)
+        console.error('❌ Error fetching data:', error)
         notifications.show({
           title: 'Error',
-          message: 'Error al cargar sucursales',
+          message: 'Error al cargar datos',
           color: 'red'
         })
       }
     }
-    fetchSucursales()
+    fetchData()
   }, [])
 
   useEffect(() => {
@@ -48,20 +54,20 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       setNombre(datosHistorial.nombre)
       setDni(datosHistorial.dni)
       setSucursal(datosHistorial.sucursal)
-      if (datosHistorial.sucursal_id) {
-        setSucursalId(datosHistorial.sucursal_id)
-      }
+      setSucursalId(datosHistorial.sucursal_id || null)
+      setFinanciadorId(datosHistorial.financiador_id || null)
       setPresupuestoCreado(true)
-    } else if (!esCargaHistorial) {
-      // Si no hay datosHistorial y no es carga histórica, limpiar todo
+    } else {
+      // Limpiar TODOS los campos cuando no hay datosHistorial
       setNombre('')
       setDni('')
       setSucursal('')
       setSucursalId(null)
+      setFinanciadorId(null)
       setDificilAcceso(false)
       setPresupuestoCreado(false)
     }
-  }, [datosHistorial, esCargaHistorial])
+  }, [datosHistorial])
 
   const verificarDNI = async () => {
     if (!dni || !/^\d{7,8}$/.test(dni)) {
@@ -101,12 +107,13 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         nombre,
         dni,
         sucursal_id: sucursalId,
+        financiador_id: financiadorId,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
       })
       
       setPresupuestoCreado(true)
-      onPresupuestoCreado(res.data.id, nombre, sucursal, porcentajeInsumos)
+      onPresupuestoCreado(res.data.id, nombre, dni, sucursal, porcentajeInsumos, financiadorId || undefined, sucursalId || undefined)
       notifications.show({
         title: 'Guardado',
         message: `Presupuesto creado con ID: ${res.data.id}`,
@@ -131,12 +138,13 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         nombre: nombreParam,
         dni,
         sucursal_id: sucursalData?.ID,
+        financiador_id: financiadorId,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
       })
       
       setPresupuestoCreado(true)
-      onPresupuestoCreado(res.data.id, nombreParam, sucursalParam, porcentajeInsumos)
+      onPresupuestoCreado(res.data.id, nombreParam, dni, sucursalParam, porcentajeInsumos, financiadorId || undefined, sucursalData?.ID)
       notifications.show({
         title: 'Guardado',
         message: `Nuevo presupuesto creado con ID: ${res.data.id}`,
@@ -192,6 +200,9 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         setDni(presupuestoCompleto.DNI)
         setSucursal(presupuestoCompleto.Sucursal)
         setDificilAcceso(presupuestoCompleto.dificil_acceso === 'si')
+        if (presupuestoCompleto.financiador_id) {
+          setFinanciadorId(presupuestoCompleto.financiador_id.toString())
+        }
         
         const sucursalData = sucursales.find(s => s.Sucursales_mh === presupuestoCompleto.Sucursal)
         const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
@@ -200,10 +211,12 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         setEsCargaHistorial(true)
         onPresupuestoCreado(
           presupuestoCompleto.idPresupuestos, 
-          presupuestoCompleto.Nombre_Apellido, 
+          presupuestoCompleto.Nombre_Apellido,
+          presupuestoCompleto.DNI,
           presupuestoCompleto.Sucursal,
           porcentajeInsumos,
-          presupuestoCompleto.idobra_social
+          presupuestoCompleto.financiador_id?.toString(),
+          sucursalData?.ID
         )
         
         // Cargar insumos, prestaciones y equipamientos como el botón "Editar"
@@ -213,7 +226,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
             presupuestoCompleto.idPresupuestos,
             presupuestoCompleto.Nombre_Apellido,
             presupuestoCompleto.Sucursal,
-            presupuestoCompleto.idobra_social
+            presupuestoCompleto.financiador_id
           )
         }
         setModalDNI(false)
@@ -229,10 +242,10 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   }
 
   const guardarYContinuar = async () => {
-    if (!nombre || !dni || !sucursalId) {
+    if (!nombre || !dni || !sucursalId || !financiadorId) {
       notifications.show({
         title: 'Campos vacíos',
-        message: 'Complete todos los campos obligatorios (Nombre, DNI y Sucursal)',
+        message: 'Complete todos los campos obligatorios (Nombre, DNI, Sucursal y Financiador)',
         color: 'red'
       })
       return
@@ -246,17 +259,13 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
     setDni('')
     setSucursal('')
     setSucursalId(null)
+    setFinanciadorId(null)
     setDificilAcceso(false)
     setPresupuestoCreado(false)
     setModalDNI(false)
     setPresupuestoExistente(null)
     setEsCargaHistorial(false)
     onNuevoPresupuesto()
-    notifications.show({
-      title: 'Nuevo Presupuesto',
-      message: 'Listo para un nuevo presupuesto',
-      color: 'blue'
-    })
   }
 
   return (
@@ -285,15 +294,15 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           required
-          disabled={esCargaHistorial || soloLectura}
-          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
+          disabled={presupuestoCreado || esCargaHistorial || soloLectura}
+          variant={(presupuestoCreado || esCargaHistorial || soloLectura) ? "filled" : "default"}
         />
         
         <TextInput
           label="DNI"
           value={dni}
-          disabled={esCargaHistorial || soloLectura}
-          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
+          disabled={presupuestoCreado || esCargaHistorial || soloLectura}
+          variant={(presupuestoCreado || esCargaHistorial || soloLectura) ? "filled" : "default"}
           onChange={(e) => setDni(e.target.value)}
           required
         />
@@ -304,7 +313,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
             value: s.ID.toString(),
             label: s.Sucursales_mh
           }))}
-          value={sucursalId?.toString() || ''}
+          value={sucursalId !== null ? sucursalId.toString() : null}
           onChange={(value) => {
             const id = value ? parseInt(value) : null
             setSucursalId(id)
@@ -313,17 +322,76 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           }}
           placeholder="Seleccione una sucursal"
           required
-          disabled={esCargaHistorial || soloLectura}
-          variant={(esCargaHistorial || soloLectura) ? "filled" : "default"}
+          disabled={presupuestoCreado || esCargaHistorial || soloLectura}
+          variant={(presupuestoCreado || esCargaHistorial || soloLectura) ? "filled" : "default"}
+          searchable
+          clearable
+          checkIconPosition="right"
+        />
+        
+        <Select
+          label="Financiador"
+          data={financiadores.map(f => ({
+            value: f.id.toString(),
+            label: f.Financiador
+          }))}
+          value={financiadorId}
+          onChange={async (value) => {
+            setFinanciadorId(value)
+            // Si es carga histórica y hay presupuesto creado, actualizar en BD
+            if (esCargaHistorial && presupuestoCreado && value) {
+              try {
+                const presupuestoIdActual = datosHistorial ? await api.get(`/presupuestos/verificar-dni/${dni}`).then(res => res.data.presupuesto?.idPresupuestos) : null
+                if (presupuestoIdActual) {
+                  await api.put(`/presupuestos/${presupuestoIdActual}/financiador`, {
+                    financiador_id: parseInt(value)
+                  })
+                  notifications.show({
+                    title: 'Financiador actualizado',
+                    message: 'El financiador se guardó correctamente',
+                    color: 'green'
+                  })
+                  onPresupuestoCreado(
+                    presupuestoIdActual,
+                    nombre,
+                    dni,
+                    sucursal,
+                    sucursales.find(s => s.ID === sucursalId)?.suc_porcentaje_insumos || 0,
+                    value,
+                    sucursalId || undefined
+                  )
+                }
+              } catch (error) {
+                console.error('Error actualizando financiador:', error)
+                notifications.show({
+                  title: 'Error',
+                  message: 'No se pudo actualizar el financiador',
+                  color: 'red'
+                })
+              }
+            }
+          }}
+          placeholder={!financiadorId && esCargaHistorial ? "Seleccione financiador" : "Seleccione un financiador"}
+          required
+          disabled={soloLectura || (presupuestoCreado && !esCargaHistorial) || (esCargaHistorial && financiadorId !== null)}
+          variant={(presupuestoCreado || (esCargaHistorial && financiadorId !== null) || soloLectura) ? "filled" : "default"}
           searchable
           checkIconPosition="right"
         />
+        
+        {esCargaHistorial && !financiadorId && !soloLectura && (
+          <Paper p="xs" withBorder style={{ backgroundColor: '#fff3cd' }}>
+            <Text size="sm" c="orange">
+              ⚠️ Este presupuesto no tiene financiador asignado. Seleccione uno para continuar.
+            </Text>
+          </Paper>
+        )}
         
         <Checkbox
           label="Difícil Acceso"
           checked={dificilAcceso}
           onChange={(e) => setDificilAcceso(e.target.checked)}
-          disabled={soloLectura}
+          disabled={presupuestoCreado || soloLectura}
         />
         
         {!soloLectura && (

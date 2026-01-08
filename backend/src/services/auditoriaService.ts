@@ -69,7 +69,7 @@ export class AuditoriaService {
     }
   }
 
-  async actualizarFinanciador(id: number, idobra_social: number) {
+  async actualizarFinanciador(id: number, financiador_id: number) {
     const connection = await pool.getConnection();
 
     try {
@@ -77,8 +77,8 @@ export class AuditoriaService {
 
       // Actualizar financiador
       await connection.query(
-        'UPDATE presupuestos SET idobra_social = ? WHERE idPresupuestos = ?',
-        [idobra_social, id]
+        'UPDATE presupuestos SET financiador_id = ? WHERE idPresupuestos = ?',
+        [financiador_id, id]
       );
 
       // Obtener presupuesto actualizado
@@ -94,10 +94,10 @@ export class AuditoriaService {
       const current = presupuesto[0];
 
       // Recalcular rentabilidad con plazo si hay financiador y totales
-      if (idobra_social && current.costo_total > 0) {
+      if (financiador_id && current.costo_total > 0) {
         const [financiador] = await connection.query<any[]>(
-          'SELECT tasa_mensual, dias_cobranza_real, dias_cobranza_teorico FROM financiador WHERE idobra_social = ?',
-          [idobra_social]
+          'SELECT tasa_mensual, dias_cobranza_real, dias_cobranza_teorico FROM financiador WHERE id = ?',
+          [financiador_id]
         );
 
         if (financiador.length > 0) {

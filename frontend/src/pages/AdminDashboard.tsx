@@ -8,8 +8,8 @@ import ResponsiveContainer from '../components/ResponsiveContainer';
 const ICON_SIZE = { width: 20, height: 20 };
 
 import GestionInsumos from './admin/GestionInsumos';
-import GestionPrestadores from './admin/GestionPrestadores';
-import ServiciosPorPrestador from './admin/ServiciosPorPrestador';
+import GestionFinanciadores from './admin/GestionFinanciadores';
+import ServiciosPorFinanciador from './admin/ServiciosPorFinanciador';
 import GestionServicios from './admin/GestionServicios';
 import GestionSucursales from './admin/GestionSucursales';
 import GestionUsuarios from './admin/GestionUsuarios';
@@ -110,11 +110,11 @@ export default function AdminDashboard() {
         </Tabs.Panel>
 
         <Tabs.Panel value="prestadores" pt="md">
-          <GestionPrestadores />
+          <GestionFinanciadores />
         </Tabs.Panel>
 
         <Tabs.Panel value="servicios-prestador" pt="md">
-          <ServiciosPorPrestador />
+          <ServiciosPorFinanciador />
         </Tabs.Panel>
 
         <Tabs.Panel value="servicios" pt="md">

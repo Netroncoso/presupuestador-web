@@ -11,7 +11,7 @@ export const usePresupuesto = () => {
   const [financiadorInfo, setFinanciadorInfo] = useState<FinanciadorInfo>({});
   const [guardandoTotales, setGuardandoTotales] = useState(false);
 
-  const crearPresupuesto = useCallback((
+  const crearPresupuesto = useCallback(async (
     id: number,
     nombre: string,
     sucursal: string,
@@ -22,6 +22,18 @@ export const usePresupuesto = () => {
     setClienteNombre(nombre);
     setPorcentajeInsumos(porcentaje);
     setFinanciadorId(financiadorIdParam || null);
+    
+    // Cargar información del financiador si existe
+    if (financiadorIdParam) {
+      try {
+        const { api } = await import('../api/api');
+        const infoRes = await api.get(`/prestaciones/financiador/${financiadorIdParam}/info`);
+        setFinanciadorInfo(infoRes.data);
+      } catch (error) {
+        console.error('Error loading financiador info:', error);
+        setFinanciadorInfo({});
+      }
+    }
   }, []);
 
   const resetPresupuesto = useCallback(() => {
@@ -56,14 +68,14 @@ export const usePresupuesto = () => {
       ]);
 
       // Cargar financiador desde el presupuesto (prioridad) o parámetro
-      const financiadorFinal = presupuestoData.idobra_social || financiadorIdParam;
+      const financiadorFinal = presupuestoData.financiador_id || financiadorIdParam;
       setFinanciadorId(financiadorFinal);
 
       // Cargar información del financiador si existe
       if (financiadorFinal) {
         try {
           const { api } = await import('../api/api');
-          const infoRes = await api.get(`/prestaciones/prestador/${financiadorFinal}/info`);
+          const infoRes = await api.get(`/prestaciones/financiador/${financiadorFinal}/info`);
           setFinanciadorInfo(infoRes.data);
         } catch (error) {
           console.error('Error loading financiador info:', error);
@@ -128,13 +140,6 @@ export const usePresupuesto = () => {
     setGuardandoTotales(true);
     try {
       const response = await presupuestoService.finalizarPresupuesto(presupuestoId, totales);
-      
-      notifications.show({
-        title: 'Presupuesto Finalizado',
-        message: response.mensaje,
-        color: response.estado === 'pendiente' ? 'orange' : 'green',
-      });
-      
       return response;
     } catch (error) {
       notifications.show({

@@ -4,7 +4,7 @@ export interface FinanciadorInfo {
   dias_cobranza_real?: number;
   acuerdo_nombre?: string | null;
   Financiador?: string;
-  idobra_social?: string;
+  id?: string;
 }
 
 export interface Insumo {
@@ -41,7 +41,7 @@ export interface Presupuesto {
   Nombre_Apellido: string;
   DNI: string;
   Sucursal: string;
-  idobra_social?: string;
+  financiador_id?: string;
   porcentaje_insumos?: number;
   total_insumos?: number;
   total_prestaciones?: number;

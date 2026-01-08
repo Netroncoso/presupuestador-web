@@ -6,14 +6,14 @@ import { api } from '../../api/api';
 
 
 interface Financiador {
-  idobra_social: string;
+  id: string;
   Financiador: string;
 }
 
-interface ServicioPrestador {
+interface ServicioFinanciador {
   id_servicio: string;
   nombre: string;
-  id_prestador_servicio: number | null;
+  id_financiador_servicio: number | null;
   valor_facturar: number | null;
   activo: number | null;
   cant_total: number | null;
@@ -31,18 +31,18 @@ interface Sucursal {
   suc_porcentaje_insumos: number;
 }
 
-export default function ServiciosPorPrestador() {
+export default function ServiciosPorFinanciador() {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
   const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string>('');
-  const [servicios, setServicios] = useState<ServicioPrestador[]>([]);
+  const [servicios, setServicios] = useState<ServicioFinanciador[]>([]);
   const [filtroServicio, setFiltroServicio] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingServicio, setEditingServicio] = useState<ServicioPrestador | null>(null);
+  const [editingServicio, setEditingServicio] = useState<ServicioFinanciador | null>(null);
   const [loading, setLoading] = useState(false);
   const [valoresHistoricos, setValoresHistoricos] = useState<any[]>([]);
   const [valoresVigentes, setValoresVigentes] = useState<any[]>([]);
   const [modalValoresOpen, setModalValoresOpen] = useState(false);
-  const [servicioValores, setServicioValores] = useState<ServicioPrestador | null>(null);
+  const [servicioValores, setServicioValores] = useState<ServicioFinanciador | null>(null);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [nuevosValores, setNuevosValores] = useState<Array<{
     valor_asignado: string;
@@ -85,7 +85,7 @@ export default function ServiciosPorPrestador() {
 
   const cargarFinanciadores = async () => {
     try {
-      const response = await api.get('/admin/servicios/prestadores');
+      const response = await api.get('/admin/servicios/financiadores');
       setFinanciadores(response.data);
     } catch (error) {
       notifications.show({
@@ -110,7 +110,7 @@ export default function ServiciosPorPrestador() {
     
     setLoading(true);
     try {
-      const response = await api.get(`/admin/servicios/prestador/${financiadorSeleccionado}/servicios`);
+      const response = await api.get(`/admin/servicios/financiador/${financiadorSeleccionado}/servicios`);
       setServicios(response.data);
     } catch (error) {
       notifications.show({
@@ -127,7 +127,7 @@ export default function ServiciosPorPrestador() {
     if (!editingServicio) return;
     
     try {
-      await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
+      await api.put(`/admin/servicios/financiador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
         valor_facturar: 0,
         activo: activo,
         cant_total: editingServicio.cant_total || 0,
@@ -155,14 +155,14 @@ export default function ServiciosPorPrestador() {
     }
   };
 
-  const handleEdit = (servicio: ServicioPrestador) => {
+  const handleEdit = (servicio: ServicioFinanciador) => {
     setEditingServicio(servicio);
     setModalOpen(true);
   };
 
-  const handleVerValores = async (servicio: ServicioPrestador) => {
+  const handleVerValores = async (servicio: ServicioFinanciador) => {
     try {
-      const res = await api.get(`/prestaciones/servicio/${servicio.id_prestador_servicio}/valores`);
+      const res = await api.get(`/prestaciones/servicio/${servicio.id_financiador_servicio}/valores`);
       const vigentes = res.data.filter((v: any) => !v.fecha_fin);
       setValoresVigentes(vigentes);
       setServicioValores(servicio);
@@ -176,7 +176,7 @@ export default function ServiciosPorPrestador() {
     }
   };
 
-  const renderValorCell = (servicio: ServicioPrestador, valor: number | null | undefined, tipo: 'facturar' | 'asignado') => {
+  const renderValorCell = (servicio: ServicioFinanciador, valor: number | null | undefined, tipo: 'facturar' | 'asignado') => {
     const count = servicio.count_valores_vigentes ?? 0;
     
     if (count > 1) {
@@ -213,7 +213,7 @@ export default function ServiciosPorPrestador() {
         value={financiadorSeleccionado}
         onChange={(value) => setFinanciadorSeleccionado(value || '')}
         data={financiadores.map(p => ({
-          value: String(p.idobra_social),
+          value: String(p.id),
           label: formatName(p.Financiador)
         }))}
         searchable
@@ -260,7 +260,7 @@ export default function ServiciosPorPrestador() {
               {servicios
                 .filter(s => s.nombre.toLowerCase().includes(filtroServicio.toLowerCase()))
                 .map((servicio) => (
-                <Table.Tr key={`servicio-${servicio.id_servicio}-${servicio.id_prestador_servicio || 'no-prestador'}`}>
+                <Table.Tr key={`servicio-${servicio.id_servicio}-${servicio.id_financiador_servicio || 'no-financiador'}`}>
                   <Table.Td>{formatName(servicio.nombre)}</Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || '-'}</Table.Td>
                   <Table.Td>
@@ -328,7 +328,7 @@ export default function ServiciosPorPrestador() {
                     if (e.currentTarget.checked) {
                       // Validar que tenga valores VIGENTES (para todos los servicios)
                       try {
-                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 0}/valores`);
+                        const res = await api.get(`/prestaciones/servicio/${editingServicio.id_financiador_servicio || 0}/valores`);
                         const vigentes = res.data.filter((v: any) => !v.fecha_fin);
                         if (vigentes.length === 0) {
                           notifications.show({
@@ -371,13 +371,13 @@ export default function ServiciosPorPrestador() {
                       allowNegative={false}
                       style={{ width: 100 }}
                     />
-                    {editingServicio.id_prestador_servicio && (
+                    {editingServicio.id_financiador_servicio && (
                       <Button 
                         size="xs"
                         variant="light"
                         onClick={async () => {
                           try {
-                            await api.put(`/admin/servicios/prestador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
+                            await api.put(`/admin/servicios/financiador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
                               valor_facturar: 0,
                               activo: editingServicio.activo || 0,
                               cant_total: editingServicio.cant_total || 0,
@@ -515,19 +515,19 @@ export default function ServiciosPorPrestador() {
                       try {
                         // Guardar todos los valores
                         for (const valor of nuevosValores) {
-                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_prestador_servicio || 0}/valores`, {
+                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_financiador_servicio || 0}/valores`, {
                             valor_asignado: parseFloat(valor.valor_asignado),
                             valor_facturar: parseFloat(valor.valor_facturar),
                             fecha_inicio: valor.fecha_inicio,
                             sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
                             id_servicio: editingServicio.id_servicio,
-                            idobra_social: financiadorSeleccionado
+                            financiador_id: financiadorSeleccionado
                           });
                           // Actualizar id_prestador_servicio si se creó nuevo
-                          if (!editingServicio.id_prestador_servicio && response.data.id_prestador_servicio) {
+                          if (!editingServicio.id_financiador_servicio && response.data.id_financiador_servicio) {
                             setEditingServicio({
                               ...editingServicio,
-                              id_prestador_servicio: response.data.id_prestador_servicio,
+                              id_financiador_servicio: response.data.id_financiador_servicio,
                               activo: 1
                             });
                           }
@@ -547,8 +547,8 @@ export default function ServiciosPorPrestador() {
                         }]);
                         
                         // Recargar histórico solo si existe id_prestador_servicio
-                        if (editingServicio.id_prestador_servicio) {
-                          const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                        if (editingServicio.id_financiador_servicio) {
+                          const res = await api.get(`/prestaciones/servicio/${editingServicio.id_financiador_servicio}/valores`);
                           setValoresHistoricos(res.data);
                         }
                         cargarServicios();
@@ -615,7 +615,7 @@ export default function ServiciosPorPrestador() {
               <Button 
                 variant="subtle" 
                 onClick={async () => {
-                  if (!editingServicio.id_prestador_servicio) {
+                  if (!editingServicio.id_financiador_servicio) {
                     notifications.show({
                       title: 'Sin valores',
                       message: 'Este servicio aún no tiene valores históricos configurados',
@@ -624,7 +624,7 @@ export default function ServiciosPorPrestador() {
                     return;
                   }
                   try {
-                    const res = await api.get(`/prestaciones/servicio/${editingServicio.id_prestador_servicio}/valores`);
+                    const res = await api.get(`/prestaciones/servicio/${editingServicio.id_financiador_servicio}/valores`);
                     setValoresHistoricos(res.data);
                     if (res.data.length === 0) {
                       notifications.show({

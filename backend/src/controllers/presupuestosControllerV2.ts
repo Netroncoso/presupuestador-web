@@ -19,7 +19,7 @@ function calcularTotalesPresupuesto(presupuesto: any) {
   const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
   
   let rentabilidadConPlazo = rentabilidad;
-  if (presupuesto.idobra_social && presupuesto.tasa_mensual && costoTotal > 0) {
+  if (presupuesto.financiador_id && presupuesto.tasa_mensual && costoTotal > 0) {
     const diasCobranza = presupuesto.dias_cobranza_real || presupuesto.dias_cobranza_teorico || 30;
     const tasaMensual = (presupuesto.tasa_mensual || 2) / 100;
     const mesesCobranza = Math.floor(diasCobranza / 30);
@@ -103,7 +103,7 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado,
-      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.idobra_social, 
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, 
       p.total_insumos, p.total_prestaciones, p.costo_total, 
       p.total_facturar, (p.total_facturar - p.costo_total) AS utilidad, p.rentabilidad, p.rentabilidad_con_plazo, 
       p.created_at, u.username as usuario_creador
@@ -120,7 +120,7 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
 
 // Crear presupuesto (versión 1)
 export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
-  const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos } = req.body;
+  const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos, financiador_id } = req.body;
   const usuario_id = req.user?.id;
   
   if (!nombre || !dni || !sucursal_id) {
@@ -130,9 +130,9 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
   try {
     const [result] = await pool.query<MutationResult>(`
       INSERT INTO presupuestos 
-      (Nombre_Apellido, DNI, sucursal_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
-      VALUES (?,?,?,?,?,?, ?, 1, ?)
-    `, [nombre.trim(), dni, sucursal_id, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+      (Nombre_Apellido, DNI, sucursal_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+      VALUES (?,?,?,?,?,?,?, ?, 1, ?)
+    `, [nombre.trim(), dni, sucursal_id, financiador_id || null, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
     
     res.status(201).json({ id: result.insertId, version: 1 });
   } catch (error) {
@@ -212,7 +212,7 @@ export const obtenerPendientes = asyncHandler(async (req: Request, res: Response
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN sucursales_mh s ON u.sucursal_id = s.ID
     LEFT JOIN sucursales_mh ps ON p.sucursal_id = ps.ID
-    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    LEFT JOIN financiador f ON p.financiador_id = f.id
     WHERE p.estado IN ('pendiente', 'en_revision') 
     AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
@@ -233,7 +233,7 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
       p.sucursal_id,
       p.estado,
       s.Sucursales_mh as Sucursal, 
-      p.idobra_social, 
+      p.financiador_id, 
       p.created_at 
     FROM presupuestos p
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
@@ -261,7 +261,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
       COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar
     FROM presupuestos p 
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+    LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
@@ -293,10 +293,10 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
   });
 });
 
-export const actualizarPrestador = asyncHandler(async (req: Request, res: Response) => {
+export const actualizarFinanciador = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  const { idobra_social } = req.body;
+  const { financiador_id } = req.body;
   
-  const resultado = await auditoriaService.actualizarFinanciador(id, idobra_social);
+  const resultado = await auditoriaService.actualizarFinanciador(id, financiador_id);
   res.json(resultado);
 });

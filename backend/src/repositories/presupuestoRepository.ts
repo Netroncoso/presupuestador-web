@@ -15,7 +15,7 @@ export class PresupuestoRepository {
       FROM presupuestos p
       LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
       LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
-      LEFT JOIN financiador f ON p.idobra_social = f.idobra_social
+      LEFT JOIN financiador f ON p.financiador_id = f.id
       WHERE p.idPresupuestos = ? AND p.es_ultima_version = 1
       GROUP BY p.idPresupuestos
     `, [id]);

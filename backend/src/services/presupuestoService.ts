@@ -36,7 +36,7 @@ export class PresupuestoService {
 
     let rentabilidadConPlazo = rentabilidad;
 
-    if (presupuesto.idobra_social) {
+    if (presupuesto.financiador_id) {
       const diasCobranza = getDiasCobranza(presupuesto.dias_cobranza_real, presupuesto.dias_cobranza_teorico);
       const tasaMensual = getTasaMensual(presupuesto.tasa_mensual);
       

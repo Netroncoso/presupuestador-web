@@ -18,7 +18,7 @@ import insumosRoutes from './routes/insumos';
 import prestacionesRoutes from './routes/prestaciones';
 import authRoutes from './routes/auth';
 import adminInsumosRoutes from './routes/admin/adminInsumos';
-import adminPrestadoresRoutes from './routes/admin/adminPrestadores';
+import adminFinanciadoresRoutes from './routes/admin/adminFinanciadores';
 import adminServiciosRoutes from './routes/admin/adminServicios';
 import adminServiciosCrudRoutes from './routes/admin/adminServiciosCrud';
 import adminSucursalesRoutes from './routes/admin/adminSucursales';
@@ -96,7 +96,7 @@ app.use('/api/prestaciones', prestacionesRoutes);
 
 // Admin routes
 app.use('/api/admin/insumos', adminInsumosRoutes);
-app.use('/api/admin/prestadores', adminPrestadoresRoutes);
+app.use('/api/admin/financiadores', adminFinanciadoresRoutes);
 app.use('/api/admin/servicios', adminServiciosRoutes);
 app.use('/api/admin/servicios-crud', adminServiciosCrudRoutes);
 app.use('/api/admin/sucursales', adminSucursalesRoutes);

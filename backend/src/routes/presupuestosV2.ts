@@ -491,18 +491,18 @@ router.post('/:id/version/editar', auth, validatePresupuestoId, asyncHandler(asy
  *       200:
  *         description: Financiador actualizado
  */
-router.put('/:id/prestador', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id/financiador', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
-  const { idobra_social } = req.body;
+  const { financiador_id } = req.body;
   
-  if (!idobra_social || isNaN(parseInt(idobra_social))) {
-    throw new AppError(400, 'ID de obra social válido es requerido');
+  if (!financiador_id || isNaN(parseInt(financiador_id))) {
+    throw new AppError(400, 'ID de financiador válido es requerido');
   }
   
-  logger.info('Actualizando prestador', { presupuestoId: id, obraSocial: idobra_social, usuario: req.user.id });
-  const resultado = await presupuestosController.actualizarPrestador(req, res, () => {});
+  logger.info('Actualizando financiador', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
+  const resultado = await presupuestosController.actualizarFinanciador(req, res, () => {});
   
-  logger.info('Prestador actualizado exitosamente', { presupuestoId: id, obraSocial: idobra_social, usuario: req.user.id });
+  logger.info('Financiador actualizado exitosamente', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
   return resultado;
 }));
 

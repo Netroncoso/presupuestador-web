@@ -75,12 +75,12 @@ export class ReportesFinancierosService {
         AVG(p.rentabilidad) as rentabilidad_promedio,
         COALESCE(f.dias_cobranza_real, f.dias_cobranza_teorico, 30) as dias_cobranza
       FROM presupuestos p
-      INNER JOIN financiador f ON p.idobra_social = f.idobra_social
+      INNER JOIN financiador f ON p.financiador_id = f.id
       LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
       WHERE p.es_ultima_version = 1
         AND p.estado IN ('aprobado', 'aprobado_condicional')
         ${whereClause}
-      GROUP BY f.idobra_social
+      GROUP BY f.id
       ORDER BY facturacion_total DESC
       LIMIT 10
     `);
@@ -130,7 +130,7 @@ export class ReportesFinancierosService {
     
     let filtroFinanciador = '';
     if (financiadorId) {
-      filtroFinanciador = 'AND f.idobra_social = ?';
+      filtroFinanciador = 'AND f.id = ?';
       params.push(financiadorId);
     }
     
@@ -143,11 +143,11 @@ export class ReportesFinancierosService {
     const offset = (page - 1) * limit;
     
     const [countRows] = await pool.query<RowDataPacket[]>(`
-      SELECT COUNT(DISTINCT CONCAT(f.idobra_social, '-', s.id_servicio)) as total
+      SELECT COUNT(DISTINCT CONCAT(f.id, '-', s.id_servicio)) as total
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
       INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
-      INNER JOIN financiador f ON p.idobra_social = f.idobra_social
+      INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
         ${whereClause}
@@ -168,13 +168,13 @@ export class ReportesFinancierosService {
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
       INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
-      INNER JOIN financiador f ON p.idobra_social = f.idobra_social
+      INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
         ${whereClause}
         ${filtroFinanciador}
         ${filtroServicio}
-      GROUP BY f.idobra_social, s.id_servicio
+      GROUP BY f.id, s.id_servicio
       ORDER BY veces_usado DESC
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]);
@@ -251,10 +251,10 @@ export class ReportesFinancierosService {
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
       INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
-      INNER JOIN financiador f ON p.idobra_social = f.idobra_social
+      INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
-        AND f.idobra_social = ?
+        AND f.id = ?
         ${whereClause}
       ORDER BY s.nombre
     `, params);

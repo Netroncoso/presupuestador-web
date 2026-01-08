@@ -7,7 +7,7 @@ interface FinanciadorInfo {
   dias_cobranza_real?: number;
   acuerdo_nombre?: string | null;
   Financiador?: string;
-  idobra_social?: string;
+  id?: string;
 }
 
 export const useFinanciador = (
@@ -18,7 +18,7 @@ export const useFinanciador = (
     const cargarInfoFinanciador = async () => {
       if (financiadorId) {
         try {
-          const response = await api.get(`/prestaciones/prestador/${financiadorId}/info`);
+          const response = await api.get(`/prestaciones/financiador/${financiadorId}/info`);
           setFinanciadorInfo(response.data || {});
         } catch (error) {
           console.error('Error cargando información del financiador:', error);

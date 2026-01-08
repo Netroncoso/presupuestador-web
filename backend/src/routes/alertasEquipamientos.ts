@@ -29,8 +29,8 @@ const validateAlertaEquipamiento = (req: Request, res: Response, next: NextFunct
     return res.status(400).json({ error: 'Color de alerta debe ser orange, red o yellow' });
   }
   
-  if (activo_alerta !== undefined && typeof activo_alerta !== 'boolean') {
-    return res.status(400).json({ error: 'Activo alerta debe ser boolean' });
+  if (activo_alerta !== undefined && ![0, 1, true, false].includes(activo_alerta)) {
+    return res.status(400).json({ error: 'Activo alerta debe ser 0, 1, true o false' });
   }
   
   next();

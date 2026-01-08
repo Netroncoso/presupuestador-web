@@ -30,6 +30,7 @@ interface Props {
   onTotalChange: (totalCosto: number, totalFacturar: number) => void;
   presupuestoId: number | null;
   financiadorId?: string | null;
+  sucursalId?: number | null;
   soloLectura?: boolean;
 }
 
@@ -39,6 +40,7 @@ export default function Equipamiento({
   onTotalChange,
   presupuestoId,
   financiadorId,
+  sucursalId,
   soloLectura = false
 }: Props) {
   const [equipamientosDisponibles, setEquipamientosDisponibles] = useState<EquipamientoDisponible[]>([]);
@@ -72,11 +74,14 @@ export default function Equipamiento({
     if (financiadorId) {
       cargarEquipamientos();
     }
-  }, [financiadorId]);
+  }, [financiadorId, sucursalId]);
 
   const cargarEquipamientos = async () => {
     try {
-      const response = await api.get(`/equipamientos/financiador/${financiadorId}`);
+      const url = sucursalId 
+        ? `/equipamientos/financiador/${financiadorId}?sucursal_id=${sucursalId}`
+        : `/equipamientos/financiador/${financiadorId}`;
+      const response = await api.get(url);
       setEquipamientosDisponibles(response.data);
     } catch (error) {
       notifications.show({
@@ -317,6 +322,7 @@ export default function Equipamiento({
                           <Table.Th style={{ width: '100px', fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
                           <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Costo</Table.Th>
                           <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Precio</Table.Th>
+                          <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Acuerdo</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -343,6 +349,7 @@ export default function Equipamiento({
                             <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{eq.tipo}</Table.Td>
                             <Table.Td>{formatPeso(eq.valor_asignado)}</Table.Td>
                             <Table.Td>{formatPeso(eq.valor_facturar)}</Table.Td>
+                            <Table.Td>{eq.tiene_acuerdo ? 'Sí' : 'No'}</Table.Td>
                           </Table.Tr>
                         ))}
                       </Table.Tbody>
@@ -385,7 +392,7 @@ export default function Equipamiento({
           <Stack gap="xs">
             <Title order={5}>Equipamientos Seleccionados</Title>
             <Table.ScrollContainer minWidth={1000}>
-              <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
+              <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '12px' }}>Equipamiento</Table.Th>

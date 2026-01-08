@@ -154,7 +154,7 @@ presupuestos,revisor_asignado_at,21,timestamp,timestamp,NULL,YES,NULL,MUL,,,NULL
 presupuestos,version,22,int,int,NULL,YES,1,,,,NULL,NULL,NULL
 presupuestos,porcentaje_insumos,23,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
 servicios,id_servicio,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-servicios,nombre,2,varchar(100),varchar,100,NO,NULL,,,,NULL,NULL,NULL
+servicios,nombre,2,varchar(100),varchar,100,NO,NULL,MUL,,,NULL,NULL,NULL
 servicios,tipo_unidad,3,varchar(50),varchar,50,YES,NULL,MUL,,,fk_servicios_tipo_unidad,tipos_unidad,nombre
 servicios,max_unidades_sugerido,4,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 sucursales_mh,ID,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL

@@ -6,7 +6,7 @@ import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
 
 interface Financiador {
-  idobra_social: string;
+  id: string;
   Financiador: string;
   activo: number;
   tasa_mensual: number;
@@ -16,7 +16,7 @@ interface Financiador {
   acuerdo_nombre?: string | null;
 }
 
-export default function GestionPrestadores() {
+export default function GestionFinanciadores() {
   const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
   const [filtro, setFiltro] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
@@ -45,7 +45,7 @@ export default function GestionPrestadores() {
     // prefetch acuerdos so modal can show them quickly
     (async () => {
       try {
-        const data = await api.get('/admin/prestadores/acuerdos');
+        const data = await api.get('/admin/financiadores/acuerdos');
         setAcuerdos(data.data);
       } catch (err) {
         // not critical
@@ -55,7 +55,7 @@ export default function GestionPrestadores() {
 
   const cargarFinanciadores = async () => {
     try {
-      const response = await api.get('/admin/prestadores');
+      const response = await api.get('/admin/financiadores');
       setFinanciadores(response.data);
     } catch (error) {
       notifications.show({
@@ -70,7 +70,7 @@ export default function GestionPrestadores() {
     const nuevoEstado = financiador.activo === 1 ? 0 : 1;
     
     try {
-      await api.put(`/admin/prestadores/${financiador.idobra_social}`, {
+      await api.put(`/admin/financiadores/${financiador.id}`, {
         activo: nuevoEstado,
         tasa_mensual: financiador.tasa_mensual || 0,
         dias_cobranza_teorico: financiador.dias_cobranza_teorico || 0,
@@ -109,7 +109,7 @@ export default function GestionPrestadores() {
 
     setLoading(true);
     try {
-      await api.put(`/admin/prestadores/${editingFinanciador.idobra_social}`, {
+      await api.put(`/admin/financiadores/${editingFinanciador.id}`, {
         activo: editingFinanciador.activo,
         tasa_mensual: editingFinanciador.tasa_mensual || 0,
         dias_cobranza_teorico: editingFinanciador.dias_cobranza_teorico || 0,
@@ -181,7 +181,7 @@ export default function GestionPrestadores() {
         </Table.Thead>
         <Table.Tbody>
           {financiadoresFiltrados.map((financiador) => (
-            <Table.Tr key={financiador.idobra_social}>
+            <Table.Tr key={financiador.id}>
               <Table.Td>{formatFinanciadorName(financiador.Financiador)}</Table.Td>
               <Table.Td>
                 <Group gap="sm" align="center">

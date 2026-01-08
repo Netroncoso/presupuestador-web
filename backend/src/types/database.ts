@@ -43,7 +43,7 @@ export interface ConfiguracionSistema extends RowDataPacket {
 }
 
 export interface Financiador extends RowDataPacket {
-  idobra_social: number;
+  id: number;
   Financiador?: string;
   activo: boolean;
   tasa_mensual?: number;
@@ -74,9 +74,9 @@ export interface Notificaciones extends RowDataPacket {
   creado_en?: Date;
 }
 
-export interface PrestadorServicio extends RowDataPacket {
-  id_prestador_servicio: number;
-  idobra_social: number;
+export interface FinanciadorServicio extends RowDataPacket {
+  id: number;
+  financiador_id: number;
   id_servicio: number;
   valor_facturar: number;
   total_mes?: number;
@@ -86,9 +86,9 @@ export interface PrestadorServicio extends RowDataPacket {
   valor_sugerido?: number;
 }
 
-export interface PrestadorServicioValores extends RowDataPacket {
+export interface FinanciadorServicioValores extends RowDataPacket {
   id: number;
-  id_prestador_servicio: number;
+  financiador_servicio_id: number;
   valor_asignado: number;
   valor_facturar: number;
   fecha_inicio: Date;
@@ -129,7 +129,7 @@ export interface Presupuestos extends RowDataPacket {
   total_insumos?: number;
   dificil_acceso: string;
   total_prestaciones?: number;
-  idobra_social?: number;
+  financiador_id?: number;
   costo_total?: number;
   created_at?: Date;
   updated_at?: Date;
@@ -195,7 +195,8 @@ export interface PrestacionConValores extends RowDataPacket {
   valor_sugerido?: number;
   valor_facturar?: number;
   valor_asignado?: number;
-  id_prestador_servicio?: number;
+  id_financiador_servicio?: number;
+  financiador_servicio_id?: number;
 }
 
 export interface PresupuestoCompleto extends Presupuestos {

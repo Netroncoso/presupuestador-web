@@ -5,7 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 
 interface Financiador {
-  idobra_social: string;
+  id: string;
   Financiador: string;
 }
 
@@ -77,7 +77,7 @@ export default function GestionEquipamientos() {
 
   const cargarFinanciadores = async () => {
     try {
-      const response = await api.get('/admin/servicios/prestadores');
+      const response = await api.get('/admin/financiadores');
       setFinanciadores(response.data);
     } catch (error) {
       notifications.show({
@@ -189,7 +189,7 @@ export default function GestionEquipamientos() {
           fecha_inicio: valor.fecha_inicio,
           sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
           id_equipamiento: editando?.id,
-          idobra_social: financiadorSeleccionado
+          financiador_id: financiadorSeleccionado
         });
       }
       
@@ -272,7 +272,7 @@ export default function GestionEquipamientos() {
         value={financiadorSeleccionado}
         onChange={(value) => setFinanciadorSeleccionado(value || '')}
         data={financiadores.map(f => ({
-          value: String(f.idobra_social),
+          value: String(f.id),
           label: formatName(f.Financiador)
         }))}
         searchable

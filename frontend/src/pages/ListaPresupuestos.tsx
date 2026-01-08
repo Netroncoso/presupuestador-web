@@ -13,7 +13,7 @@ interface Presupuesto {
   Nombre_Apellido: string;
   DNI: string;
   Sucursal: string;
-  idobra_social: string | null;
+  financiador_id: string | null;
   total_insumos: number;
   total_prestaciones: number;
   costo_total: number;

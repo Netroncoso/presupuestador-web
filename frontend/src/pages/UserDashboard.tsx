@@ -80,21 +80,23 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<
-    { nombre: string; dni: string; sucursal: string; sucursal_id?: number } | undefined
+    { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string } | undefined
   >();
   const [recargarHistorial, setRecargarHistorial] = useState(0);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
+  const [auditoriaAutomatica, setAuditoriaAutomatica] = useState(false);
   const [presupuestoParaEditar, setPresupuestoParaEditar] = useState<any>(null);
   const [infoEdicion, setInfoEdicion] = useState<any>(null);
   const [soloLectura, setSoloLectura] = useState(false);
   const [itemsFaltantes, setItemsFaltantes] = useState<any[]>([]);
   const [validacionCompletada, setValidacionCompletada] = useState(false);
+  const [configDefaults, setConfigDefaults] = useState({ tasa: 2, dias: 30 });
 
   const {
     modalAuditoriaAbierto,
     modalEdicionAbierto,
     modalValidacionAbierto,
-    abrirModalAuditoria: abrirModalAuditoriaBase,
+    abrirModalAuditoria,
     cerrarModalAuditoria,
     abrirModalEdicion,
     cerrarModalEdicion,
@@ -118,6 +120,17 @@ export default function UserDashboard() {
     cargarPresupuesto,
   } = usePresupuesto();
 
+  const handlePresupuestoCreado = useCallback((id: number, nombre: string, dni: string, sucursal: string, porcentajeInsumos: number, financiadorId?: string, sucursalId?: number) => {
+    crearPresupuesto(id, nombre, sucursal, porcentajeInsumos, financiadorId);
+    setDatosHistorial({ 
+      nombre, 
+      dni, 
+      sucursal, 
+      sucursal_id: sucursalId,
+      financiador_id: financiadorId
+    });
+  }, [crearPresupuesto]);
+
   const {
     totalInsumos,
     totalPrestaciones,
@@ -139,6 +152,14 @@ export default function UserDashboard() {
   );
 
   useFinanciador(financiadorId, setFinanciadorInfo);
+
+  useEffect(() => {
+    api.get('/configuracion?categoria=financiero').then(({ data }) => {
+      const tasa = data.find((c: any) => c.clave === 'financiero.tasaMensualDefault')?.valor || 2;
+      const dias = data.find((c: any) => c.clave === 'financiero.diasCobranzaDefault')?.valor || 30;
+      setConfigDefaults({ tasa, dias });
+    }).catch(() => {});
+  }, []);
 
   const { validarItems, procesarItem } = useItemValidation(presupuestoId);
 
@@ -186,11 +207,29 @@ export default function UserDashboard() {
         rentabilidadConPlazo,
       };
 
-      await finalizarPresupuesto(totales);
+      const resultado = await finalizarPresupuesto(totales);
       setRecargarHistorial((prev) => prev + 1);
       setValidacionCompletada(false);
 
-      // Primero ir al historial, luego limpiar
+      // Si requiere auditoría, abrir modal y marcar como automática
+      if (resultado.estado === 'pendiente_administrativa') {
+        setAuditoriaAutomatica(true);
+        abrirModalAuditoria();
+        return; // IMPORTANTE: No limpiar ni ir al historial
+      }
+
+      // Si fue aprobado automáticamente
+      if (resultado.estado === 'aprobado') {
+        notifications.show({
+          title: '✅ Presupuesto Aprobado',
+          message: 'El presupuesto cumple con las reglas de negocio y fue aprobado automáticamente',
+          color: 'green',
+          position: 'top-center',
+          autoClose: 5000,
+        });
+      }
+
+      // Solo ir al historial y limpiar si NO requiere auditoría
       setActiveTab('historial');
       setTimeout(() => {
         handleNuevoPresupuesto();
@@ -208,6 +247,7 @@ export default function UserDashboard() {
     rentabilidad,
     rentabilidadConPlazo,
     handleNuevoPresupuesto,
+    abrirModalAuditoria,
   ]);
 
   const handleFinalizarPresupuesto = useCallback(async () => {
@@ -240,17 +280,11 @@ export default function UserDashboard() {
     async (presupuesto: any, soloLecturaParam: boolean = true) => {
       if (soloLecturaParam) {
         setSoloLectura(true);
-        setDatosHistorial({
-          nombre: presupuesto.Nombre_Apellido,
-          dni: presupuesto.DNI,
-          sucursal: presupuesto.Sucursal,
-          sucursal_id: presupuesto.sucursal_id
-        });
         await cargarPresupuesto(
           presupuesto.idPresupuestos,
           presupuesto.Nombre_Apellido,
           presupuesto.Sucursal,
-          presupuesto.idobra_social,
+          presupuesto.financiador_id,
           setInsumosSeleccionados,
           setPrestacionesSeleccionadas,
           setEsCargaHistorial,
@@ -258,6 +292,14 @@ export default function UserDashboard() {
           setTotalesDesdeBaseDatos,
           setEquipamientosSeleccionados
         );
+        // Setear datosHistorial DESPUÉS de cargar
+        setDatosHistorial({
+          nombre: presupuesto.Nombre_Apellido,
+          dni: presupuesto.DNI,
+          sucursal: presupuesto.Sucursal,
+          sucursal_id: presupuesto.sucursal_id,
+          financiador_id: presupuesto.financiador_id?.toString()
+        });
       } else {
         try {
           const response = await crearVersionParaEdicion(
@@ -273,18 +315,11 @@ export default function UserDashboard() {
           }
 
           setSoloLectura(false);
-          setDatosHistorial({
-            nombre: presupuesto.Nombre_Apellido,
-            dni: presupuesto.DNI,
-            sucursal: presupuesto.Sucursal,
-            sucursal_id: presupuesto.sucursal_id
-          });
-
           await cargarPresupuesto(
             response.id,
             presupuesto.Nombre_Apellido,
             presupuesto.Sucursal,
-            presupuesto.idobra_social,
+            presupuesto.financiador_id,
             setInsumosSeleccionados,
             setPrestacionesSeleccionadas,
             setEsCargaHistorial,
@@ -292,6 +327,14 @@ export default function UserDashboard() {
             setTotalesDesdeBaseDatos,
             setEquipamientosSeleccionados
           );
+          // Setear datosHistorial DESPUÉS de cargar
+          setDatosHistorial({
+            nombre: presupuesto.Nombre_Apellido,
+            dni: presupuesto.DNI,
+            sucursal: presupuesto.Sucursal,
+            sucursal_id: presupuesto.sucursal_id,
+            financiador_id: presupuesto.financiador_id?.toString()
+          });
         } catch (error) {
           console.error("Error al preparar edición:", error);
         }
@@ -323,13 +366,7 @@ export default function UserDashboard() {
     };
   }, [cargarPresupuesto]);
 
-  const handleFinanciadorChange = useCallback(
-    (id: string | null, info: any) => {
-      setFinanciadorId(id);
-      setFinanciadorInfo(info);
-    },
-    [setFinanciadorId, setFinanciadorInfo]
-  );
+
 
   const { generarPDF } = usePdfGenerator({
     presupuestoId,
@@ -345,27 +382,26 @@ export default function UserDashboard() {
     rentabilidad: rentabilidadFinal,
   });
 
-  const abrirModalAuditoria = useCallback(() => {
-    if (presupuestoId) abrirModalAuditoriaBase();
-  }, [presupuestoId, abrirModalAuditoriaBase]);
-
   const handlePedirAuditoria = useCallback(
     async (mensaje: string) => {
       if (!presupuestoId) return;
 
       setEnviandoAuditoria(true);
       try {
-        const totales = {
-          totalInsumos,
-          totalPrestaciones,
-          costoTotal,
-          totalFacturar,
-          rentabilidad,
-          rentabilidadConPlazo,
-        };
+        // Si NO es auditoría automática, finalizar primero
+        if (!auditoriaAutomatica) {
+          const totales = {
+            totalInsumos,
+            totalPrestaciones,
+            costoTotal,
+            totalFacturar,
+            rentabilidad,
+            rentabilidadConPlazo,
+          };
+          await finalizarPresupuesto(totales);
+        }
         
-        await finalizarPresupuesto(totales);
-        
+        // Enviar mensaje a auditoría
         await api.put(`/auditoria/pedir/${presupuestoId}`, {
           mensaje: mensaje || null,
         });
@@ -376,10 +412,11 @@ export default function UserDashboard() {
             "La Gerencia Administrativa será notificada para revisar el presupuesto",
           color: "blue",
           position: "top-center",
-          autoClose: false,
+          autoClose: 5000,
         });
         
         cerrarModalAuditoria();
+        setAuditoriaAutomatica(false); // Reset
         setRecargarHistorial((prev) => prev + 1);
         
         setActiveTab('historial');
@@ -400,7 +437,7 @@ export default function UserDashboard() {
         setEnviandoAuditoria(false);
       }
     },
-    [presupuestoId, cerrarModalAuditoria, finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, handleNuevoPresupuesto]
+    [presupuestoId, auditoriaAutomatica, finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, cerrarModalAuditoria, handleNuevoPresupuesto]
   );
 
   const handleContinuarValidacion = useCallback((continuar: boolean) => {
@@ -427,14 +464,15 @@ export default function UserDashboard() {
         nombre: presupuestoParaEditar.Nombre_Apellido,
         dni: presupuestoParaEditar.DNI,
         sucursal: presupuestoParaEditar.Sucursal,
-        sucursal_id: presupuestoParaEditar.sucursal_id
+        sucursal_id: presupuestoParaEditar.sucursal_id,
+        financiador_id: presupuestoParaEditar.financiador_id?.toString()
       });
 
       await cargarPresupuesto(
         response.id,
         presupuestoParaEditar.Nombre_Apellido,
         presupuestoParaEditar.Sucursal,
-        presupuestoParaEditar.idobra_social,
+        presupuestoParaEditar.financiador_id,
         setInsumosSeleccionados,
         setPrestacionesSeleccionadas,
         setEsCargaHistorial,
@@ -500,9 +538,38 @@ export default function UserDashboard() {
                     </Text>
                   </Group>
                   {financiadorInfo?.Financiador && (
-                    <Text fw={400} size="xs" c="dimmed" pl={24}>
-                      Financiador: {financiadorInfo.Financiador}
-                    </Text>
+                    <>
+                      <Text fw={400} size="xs" c="dimmed" pl={24}>
+                        Financiador: {financiadorInfo.Financiador}
+                      </Text>
+                      <Group gap="xs" pl={24} wrap="wrap">
+                        <Text size="xs" c={(financiadorInfo.tasa_mensual !== undefined && financiadorInfo.tasa_mensual !== null) ? "blue" : "gray"}>
+                          Tasa: {(financiadorInfo.tasa_mensual !== undefined && financiadorInfo.tasa_mensual !== null) ? financiadorInfo.tasa_mensual : configDefaults.tasa}%
+                          {(financiadorInfo.tasa_mensual === undefined || financiadorInfo.tasa_mensual === null) && <Text component="span" fs="italic"> (default)</Text>}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Cobranza:
+                          {financiadorInfo.dias_cobranza_teorico !== undefined && (
+                            <Text component="span" c="orange"> Teórico {financiadorInfo.dias_cobranza_teorico}d</Text>
+                          )}
+                          {financiadorInfo.dias_cobranza_real !== undefined && (
+                            <Text component="span" c="green"> Real {financiadorInfo.dias_cobranza_real}d</Text>
+                          )}
+                          {!financiadorInfo.dias_cobranza_teorico && !financiadorInfo.dias_cobranza_real && (
+                            <Text component="span" c="gray" fs="italic"> {configDefaults.dias}d (default)</Text>
+                          )}
+                        </Text>
+                        {financiadorInfo.acuerdo_nombre ? (
+                          <Text size="xs" c="teal">
+                            {financiadorInfo.acuerdo_nombre}
+                          </Text>
+                        ) : (
+                          <Text size="xs" c="gray" fs="italic">
+                            Sin convenio Firmado
+                          </Text>
+                        )}
+                      </Group>
+                    </>
                   )}
                 </Flex>
 
@@ -738,7 +805,7 @@ export default function UserDashboard() {
 
         <Tabs.Panel value="datos" pt="md">
           <DatosPresupuesto
-            onPresupuestoCreado={crearPresupuesto}
+            onPresupuestoCreado={handlePresupuestoCreado}
             onNuevoPresupuesto={handleNuevoPresupuesto}
             esCargaHistorial={esCargaHistorial}
             setEsCargaHistorial={setEsCargaHistorial}
@@ -766,7 +833,6 @@ export default function UserDashboard() {
             onTotalChange={setTotalesPrestaciones}
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
-            onFinanciadorChange={handleFinanciadorChange}
             soloLectura={soloLectura}
             sucursalId={datosHistorial?.sucursal_id || null}
           />
@@ -776,6 +842,7 @@ export default function UserDashboard() {
           <Equipamiento
             presupuestoId={presupuestoId}
             financiadorId={financiadorId}
+            sucursalId={datosHistorial?.sucursal_id || null}
             equipamientosSeleccionados={equipamientosSeleccionados}
             setEquipamientosSeleccionados={setEquipamientosSeleccionados}
             onTotalChange={(costo, facturar) => {
@@ -800,7 +867,10 @@ export default function UserDashboard() {
 
       <ModalAuditoria
         opened={modalAuditoriaAbierto}
-        onClose={cerrarModalAuditoria}
+        onClose={() => {
+          cerrarModalAuditoria();
+          setAuditoriaAutomatica(false); // Reset al cerrar
+        }}
         tipo="solicitar"
         presupuesto={{
           id: presupuestoId || 0,

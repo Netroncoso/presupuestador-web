@@ -6,7 +6,7 @@ export class FinanciadoresService {
   
   async obtenerTodos() {
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT f.idobra_social, f.Financiador, f.activo, f.tasa_mensual, 
+      `SELECT f.id, f.Financiador, f.activo, f.tasa_mensual, 
               f.dias_cobranza_teorico, f.dias_cobranza_real, f.id_acuerdo, 
               COALESCE(a.nombre, NULL) as acuerdo_nombre
        FROM financiador f
@@ -30,7 +30,7 @@ export class FinanciadoresService {
     const { activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo } = datos;
 
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE financiador SET activo = ?, tasa_mensual = ?, dias_cobranza_teorico = ?, dias_cobranza_real = ?, id_acuerdo = ? WHERE idobra_social = ?',
+      'UPDATE financiador SET activo = ?, tasa_mensual = ?, dias_cobranza_teorico = ?, dias_cobranza_real = ?, id_acuerdo = ? WHERE id = ?',
       [activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo ?? null, id]
     );
 

@@ -50,9 +50,8 @@ export const useRealtimeUpdates = () => {
 
         eventSource.onopen = () => {
           setIsConnected(true);
-          retryCountRef.current = 0; // Reset retry count on successful connection
+          retryCountRef.current = 0;
           lastUpdateRef.current = Date.now();
-          console.log('SSE connected');
         };
 
         eventSource.addEventListener('notifications', (event) => {

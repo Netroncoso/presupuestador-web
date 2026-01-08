@@ -66,7 +66,7 @@ class ApiClient {
         const response = await fetch(url, {
           ...options,
           headers,
-          signal: AbortSignal.timeout(10000) // 10s timeout
+          signal: AbortSignal.timeout(30000) // 30s timeout
         });
         return response;
       } catch (error) {
@@ -129,24 +129,24 @@ export async function getInsumos() {
   return res.data;
 }
 
-export async function getPrestadores() {
-  const res = await api.get('/prestaciones/prestadores');
+export async function getFinanciadores() {
+  const res = await api.get('/prestaciones/financiadores');
   return res.data;
 }
 
 export async function getFinanciadorAcuerdos() {
-  const res = await api.get('/admin/prestadores/acuerdos');
+  const res = await api.get('/admin/financiadores/acuerdos');
   return res.data;
 }
 
-export async function getPrestacionesPorPrestador(id: string, fecha?: string, sucursalId?: number) {
+export async function getPrestacionesPorFinanciador(id: string, fecha?: string, sucursalId?: number) {
   const params = new URLSearchParams();
   if (fecha) params.append('fecha', fecha);
   if (sucursalId) params.append('sucursal_id', sucursalId.toString());
   
   const url = params.toString() 
-    ? `/prestaciones/prestador/${id}?${params.toString()}`
-    : `/prestaciones/prestador/${id}`;
+    ? `/prestaciones/financiador/${id}?${params.toString()}`
+    : `/prestaciones/financiador/${id}`;
   const res = await api.get(url);
   // Backend retorna { data: [], pagination: {} }, extraer solo data
   return res.data.data || res.data;

@@ -44,8 +44,12 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
 
   const renderSolicitar = () => (
     <>
-      <Text size="sm" mb="md">
+      <Text size="sm" mb="xs">
         <strong>Presupuesto:</strong> #{presupuesto.id} - {presupuesto.nombre}
+      </Text>
+      
+      <Text size="sm" c="orange" mb="md">
+        ⚠️ Este presupuesto no cumple con las reglas automáticas y requiere revisión gerencial.
       </Text>
       
       <Textarea
@@ -62,21 +66,21 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       <Group justify="flex-end" gap="md">
         <Button 
           variant="outline" 
-          color="red"
+          color="gray"
           size="xs"
           onClick={handleClose}
           disabled={loading}
         >
-          Cancelar
+          Seguir Editando
         </Button>
         <Button 
-          color="green" 
+          color="orange" 
           size="xs"
           onClick={() => handleConfirmar()}
           loading={loading}
           rightSection={<ShieldCheckIcon style={ICON_SIZE} />}
         >
-          Solicitar Auditoría
+          Enviar a Auditoría
         </Button>
       </Group>
     </>

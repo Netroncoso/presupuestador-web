@@ -13,7 +13,7 @@ export const guardarPrestacionPresupuesto = asyncHandler(async (req: Request, re
 
   // Obtener fecha y financiador del presupuesto
   const [presupuesto] = await pool.query<any[]>(
-    'SELECT created_at, idobra_social FROM presupuestos WHERE idPresupuestos = ?',
+    'SELECT created_at, financiador_id FROM presupuestos WHERE idPresupuestos = ?',
     [presupuestoId]
   );
   
@@ -22,28 +22,28 @@ export const guardarPrestacionPresupuesto = asyncHandler(async (req: Request, re
   }
   
   const fechaPresupuesto = new Date(presupuesto[0].created_at).toISOString().slice(0, 10);
-  const idobra_social = presupuesto[0].idobra_social;
+  const financiador_id = presupuesto[0].financiador_id;
   
-  // Obtener id_prestador_servicio desde id_servicio
+  // Obtener id de financiador_servicio
   const [servicio] = await pool.query<any[]>(
-    'SELECT id_prestador_servicio FROM prestador_servicio WHERE id_servicio = ? AND idobra_social = ?',
-    [id_servicio, idobra_social]
+    'SELECT id as id_financiador_servicio FROM financiador_servicio WHERE id_servicio = ? AND financiador_id = ?',
+    [id_servicio, financiador_id]
   );
   
   if (!servicio.length) {
     throw new AppError(400, 'Servicio no encontrado para este financiador');
   }
   
-  const id_prestador_servicio = servicio[0].id_prestador_servicio;
+  const id_financiador_servicio = servicio[0].id_financiador_servicio;
   
   // Consultar valor_facturar histórico (valor_asignado viene del usuario)
   const [valores] = await pool.query<any[]>(
     `SELECT valor_facturar 
-     FROM prestador_servicio_valores 
-     WHERE id_prestador_servicio = ? 
+     FROM financiador_servicio_valores 
+     WHERE financiador_servicio_id = ? 
        AND ? BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
      LIMIT 1`,
-    [id_prestador_servicio, fechaPresupuesto]
+    [id_financiador_servicio, fechaPresupuesto]
   );
   
   let valor_facturar_final;
@@ -54,10 +54,10 @@ export const guardarPrestacionPresupuesto = asyncHandler(async (req: Request, re
     // Si no hay valores históricos, usar el enviado por el frontend
     valor_facturar_final = valor_facturar;
   } else {
-    // Fallback a tabla prestador_servicio
+    // Fallback a tabla financiador_servicio
     const [fallback] = await pool.query<any[]>(
-      'SELECT valor_facturar FROM prestador_servicio WHERE id_prestador_servicio = ?',
-      [id_prestador_servicio]
+      'SELECT valor_facturar FROM financiador_servicio WHERE id = ?',
+      [id_financiador_servicio]
     );
     
     if (!fallback.length) {
@@ -107,7 +107,7 @@ export const eliminarPrestacionPresupuesto = asyncHandler(async (req: Request, r
  * @param soloLectura - Query param que determina el comportamiento:
  *   - true: Devuelve valores históricos guardados (para visualización)
  *   - false: Mantiene valor_asignado original pero actualiza valor_facturar
- *            con precios vigentes actuales de prestador_servicio_valores (para edición)
+ *            con precios vigentes actuales de financiador_servicio_valores (para edición)
  */
 export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const presupuestoId = parseInt(req.params.id);
@@ -140,11 +140,11 @@ export const obtenerPrestacionesPresupuesto = asyncHandler(async (req: Request, 
       s.tipo_unidad
     FROM presupuesto_prestaciones pp
     INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-    LEFT JOIN prestador_servicio ps 
+    LEFT JOIN financiador_servicio ps 
       ON pp.id_servicio = ps.id_servicio 
-      AND ps.idobra_social = p.idobra_social
-    LEFT JOIN prestador_servicio_valores psv 
-      ON ps.id_prestador_servicio = psv.id_prestador_servicio
+      AND ps.financiador_id = p.financiador_id
+    LEFT JOIN financiador_servicio_valores psv 
+      ON ps.id = psv.financiador_servicio_id
       AND CURDATE() BETWEEN psv.fecha_inicio AND COALESCE(psv.fecha_fin, '9999-12-31')
     LEFT JOIN servicios s ON pp.id_servicio = s.id_servicio
     WHERE pp.idPresupuestos = ?

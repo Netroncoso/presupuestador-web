@@ -131,7 +131,7 @@ export default function GerenciaFinanciera() {
 
   const cargarFinanciadores = async () => {
     try {
-      const response = await api.get('/prestaciones/prestadores');
+      const response = await api.get('/prestaciones/financiadores');
       setFinanciadores(response.data);
     } catch (error) {
       console.error('Error cargando financiadores:', error);
@@ -361,7 +361,7 @@ export default function GerenciaFinanciera() {
               placeholder="Seleccionar financiador"
               value={filtroFinanciador}
               onChange={(value) => setFiltroFinanciador(value || '')}
-              data={financiadores.map(f => ({ value: f.idobra_social.toString(), label: f.Financiador }))}
+              data={financiadores.map(f => ({ value: f.id.toString(), label: f.Financiador }))}
               clearable
               searchable
             />

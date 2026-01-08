@@ -46,7 +46,7 @@ export class VersioningService {
       const presupuestoPadreId = original.presupuesto_padre || idOriginal;
 
       // Obtener datos necesarios
-      const [[maxVersion], [insumos], [prestaciones], [sucursal]] = await Promise.all([
+      const [[maxVersion], [insumos], [prestaciones], [equipamientos], [sucursal]] = await Promise.all([
         connection.query<any[]>(
           'SELECT MAX(version) as max_version FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?',
           [presupuestoPadreId, presupuestoPadreId]
@@ -57,6 +57,10 @@ export class VersioningService {
         ),
         connection.query<any[]>(
           'SELECT id_servicio, prestacion, valor_asignado, valor_facturar, cantidad FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+          [idOriginal]
+        ),
+        connection.query<any[]>(
+          'SELECT id_equipamiento, cantidad, costo, precio_facturar FROM presupuesto_equipamiento WHERE idPresupuestos = ?',
           [idOriginal]
         ),
         connection.query<any[]>(
@@ -78,14 +82,14 @@ export class VersioningService {
       const [resultPresupuesto] = await connection.query<any>(`
         INSERT INTO presupuestos 
         (version, presupuesto_padre, es_ultima_version, estado, usuario_id,
-         Nombre_Apellido, DNI, sucursal_id, dificil_acceso, idobra_social,
+         Nombre_Apellido, DNI, sucursal_id, dificil_acceso, financiador_id,
          porcentaje_insumos, total_insumos, total_prestaciones, costo_total, total_facturar, 
          rentabilidad, rentabilidad_con_plazo)
         VALUES (?, ?, 1, 'borrador', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         nuevaVersion, presupuestoPadreId, usuario_id,
         original.Nombre_Apellido, original.DNI, original.sucursal_id,
-        original.dificil_acceso, original.idobra_social,
+        original.dificil_acceso, original.financiador_id,
         porcentajeActual,
         original.total_insumos, original.total_prestaciones,
         original.costo_total, original.total_facturar,
@@ -94,7 +98,7 @@ export class VersioningService {
 
       const nuevoId = resultPresupuesto.insertId;
 
-      // Copiar insumos y prestaciones
+      // Copiar insumos, prestaciones y equipamientos
       if (insumos.length > 0) {
         const insumosValues = insumos.map(i => [nuevoId, i.producto, i.costo, i.precio_facturar, i.cantidad]);
         await connection.query(
@@ -110,6 +114,16 @@ export class VersioningService {
         await connection.query(
           'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES ?',
           [prestacionesValues]
+        );
+      }
+
+      if (equipamientos.length > 0) {
+        const equipamientosValues = equipamientos.map(e => [
+          nuevoId, e.id_equipamiento, e.cantidad, e.costo, e.precio_facturar
+        ]);
+        await connection.query(
+          'INSERT INTO presupuesto_equipamiento (idPresupuestos, id_equipamiento, cantidad, costo, precio_facturar) VALUES ?',
+          [equipamientosValues]
         );
       }
 
