@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Paper, ActionIcon, Select, Loader, Text, Group } from '@mantine/core';
-import { PencilSquareIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table';
 import { api } from '../api/api';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
+import { pdfClientService } from '../services/pdfClientService';
+import { notifications } from '@mantine/notifications';
 
 const ICON_SIZE = { width: 16, height: 16 };
 const ICON_SIZE_LG = { width: 20, height: 20 };
@@ -23,6 +25,7 @@ interface Presupuesto {
   rentabilidad_con_plazo: number | null;
   created_at: string;
   estado?: string;
+  usuario_creador?: string;
 }
 
 interface ListaPresupuestosProps {
@@ -38,6 +41,38 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
   const [loading, setLoading] = useState(true);
   const [filtroAuditor, setFiltroAuditor] = useState('todos');
   const [filtroCreador, setFiltroCreador] = useState('todos');
+
+  const handleGenerarPDF = useCallback(async (presupuestoId: number) => {
+    try {
+      const response = await api.get(`/presupuestos/${presupuestoId}`);
+      const presupuesto = response.data;
+
+      pdfClientService.generarYDescargar({
+        cliente: presupuesto.Nombre_Apellido,
+        dni: presupuesto.DNI,
+        sucursal: presupuesto.Sucursal,
+        presupuestoId: presupuesto.idPresupuestos,
+        insumos: presupuesto.insumos || [],
+        prestaciones: presupuesto.prestaciones || [],
+        equipamientos: presupuesto.equipamientos || [],
+        totales: {
+          totalInsumos: Number(presupuesto.total_insumos) || 0,
+          totalPrestaciones: Number(presupuesto.total_prestaciones) || 0,
+          totalEquipamientos: Number(presupuesto.total_equipamiento) || 0,
+          costoTotal: Number(presupuesto.costo_total) || 0,
+          totalFacturar: Number(presupuesto.total_facturar) || 0,
+          rentabilidad: Number(presupuesto.rentabilidad) || 0,
+        },
+      });
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo generar el PDF',
+        color: 'red',
+      });
+    }
+  }, []);
 
   const cargarPresupuestos = useCallback(async () => {
     try {
@@ -82,6 +117,15 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         accessorKey: 'Sucursal',
         header: 'Sucursal',
         size: 150,
+      },
+      {
+        accessorKey: 'usuario_creador',
+        header: 'Usuario',
+        size: 120,
+        Cell: ({ cell }) => {
+          const usuario = cell.getValue<string>();
+          return <Text size="sm">{usuario || 'N/A'}</Text>;
+        },
       },
       {
         accessorKey: 'estado',
@@ -165,17 +209,32 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     },
     enableRowActions: true,
     positionActionsColumn: 'last',
+    displayColumnDefOptions: {
+      'mrt-row-actions': {
+        size: 120,
+      },
+    },
     renderRowActions: ({ row }) => (
       <Group gap={4} wrap="nowrap">
         {(esAuditor || soloConsulta) ? (
-          <ActionIcon 
-            variant="transparent" 
-            color="blue" 
-            onClick={() => onVerDetalle?.(row.original)} 
-            title="Ver detalle del presupuesto"
-          >
-            <EyeIcon style={{ width: 16, height: 16 }} />
-          </ActionIcon>
+          <>
+            <ActionIcon 
+              variant="transparent" 
+              color="blue" 
+              onClick={() => onVerDetalle?.(row.original)} 
+              title="Ver detalle del presupuesto"
+            >
+              <EyeIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+            <ActionIcon
+              variant="transparent"
+              color="orange"
+              onClick={() => handleGenerarPDF(row.original.idPresupuestos)}
+              title="Descargar PDF"
+            >
+              <ArrowDownTrayIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+          </>
         ) : (
           <>
             <ActionIcon variant="transparent" color="teal" onClick={() => onEditarPresupuesto(row.original, true)} title="Ver presupuesto">
@@ -183,6 +242,14 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             </ActionIcon>
             <ActionIcon variant="transparent" color="green" onClick={() => onEditarPresupuesto(row.original, false)} title="Editar (nueva versión)">
               <PencilSquareIcon style={{ width: 16, height: 16 }} />
+            </ActionIcon>
+            <ActionIcon
+              variant="transparent"
+              color="orange"
+              onClick={() => handleGenerarPDF(row.original.idPresupuestos)}
+              title="Descargar PDF"
+            >
+              <ArrowDownTrayIcon style={{ width: 16, height: 16 }} />
             </ActionIcon>
           </>
         )}
