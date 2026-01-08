@@ -1,188 +1,98 @@
-# Product Overview - Sistema Presupuestador Web
+# Product Overview
 
 ## Purpose
-Sistema integral de gestión de presupuestos médicos con auditoría automatizada, versionado, valores históricos y notificaciones en tiempo real para instituciones de salud.
+Sistema Presupuestador Web is a comprehensive medical budget management system designed for healthcare organizations. It provides intelligent quotation management, automated auditing, version control, and real-time notifications for medical supplies, services, and equipment budgets.
 
 ## Value Proposition
-- **Automatización de Auditoría**: 4 reglas automáticas que evalúan rentabilidad, costos y utilidades para determinar si un presupuesto requiere revisión gerencial
-- **Trazabilidad Completa**: Sistema de versionado que mantiene historial completo de cambios con valores de época
-- **Gestión de Precios Inteligente**: Sistema de valores históricos (timelapse) con vigencias por período y sucursal, incluyendo anti-obsolescencia automática
-- **Flujo Multi-Gerencial**: 4 gerencias especializadas con asignación FCFS y auto-liberación de casos inactivos
-- **Notificaciones en Tiempo Real**: SSE (Server-Sent Events) para actualizaciones instantáneas de estados y alertas
+- **Automated Compliance**: 4 automatic validation rules ensure budgets meet business requirements before approval
+- **Complete Traceability**: Full version control with historical values preserved for audit trails
+- **Multi-Level Governance**: 4 specialized management departments (Administrative, Prestational, General, Financial) with FCFS workflow
+- **Real-Time Collaboration**: SSE (Server-Sent Events) for instant notifications and updates
+- **Historical Accuracy**: Time-based pricing system maintains accurate historical records by period and branch
+- **Intelligent Alerts**: Configurable alerts for outdated values and quantity thresholds by type
 
 ## Key Features
 
-### 1. Cotizador Inteligente
-- Gestión completa de insumos médicos con código de producto (EAN/SKU)
-- Prestaciones médicas con valores históricos por financiador y sucursal
-- Equipamientos médicos con acuerdos específicos y precios de referencia
-- Cálculo automático de rentabilidad, utilidad y totales
-- Alertas de valores desactualizados (>45 días sin actualizar)
+### Core Capabilities
+- **Intelligent Quotation System**: Complete management of medical supplies, services, and equipment
+- **Version Control**: Full change history with complete traceability
+- **Historical Values (Timelapse)**: Price management by validity periods and branch
+- **Automated Auditing**: 4 automatic rules for budget validation
+- **Real-Time Notifications**: SSE for instant updates
+- **Read-Only Mode**: Secure visualization of historical budgets with period-accurate values
+- **Multi-Management System**: 4 specialized departments with FCFS flow and auto-release
+- **Smart Alerts**: Outdated value alerts and configurable alerts by type
+- **PDF Generation**: Export budgets in any state (draft, approved, rejected)
+- **Session Management**: Automatic detection and notification of expired sessions (401)
 
-### 2. Sistema de Versiones
-- Control de cambios con historial completo
-- Solo la última versión está activa (es_ultima_version = 1)
-- Editar presupuesto finalizado crea nueva versión automáticamente
-- Mantiene valor_asignado original (costo negociado)
-- Actualiza valor_facturar con precios actuales en nuevas versiones
+### Business Rules (Configurable)
+Budgets go to audit if they meet at least one condition:
+1. **Profitability < 15%** - Very low profitability
+2. **Total Cost > $150,000** - High amount
+3. **Profitability with Term > 25%** - Possible overpricing
+4. **Profit > $50,000** - High profit
 
-### 3. Valores Históricos (Timelapse)
-- Gestión de precios por períodos de vigencia
-- Valores diferenciados por sucursal (general o específico)
-- Cierre automático de períodos al agregar nuevos valores
-- Consulta de valores vigentes por fecha y sucursal
-- Sistema anti-obsolescencia: valores específicos >30 días pierden prioridad
-- Prioridad: Valor específico reciente > Valor general > Valor específico obsoleto
+All thresholds are configurable by super admin from Admin Panel > Business Rules.
 
-### 4. Auditoría Automatizada
-Presupuestos van a auditoría si cumplen AL MENOS UNA condición:
-- **Rentabilidad < 15%**: Rentabilidad muy baja
-- **Costo Total > $150,000**: Monto alto
-- **Rentabilidad con Plazo > 25%**: Posible sobreprecio
-- **Utilidad > $50,000**: Alta utilidad
-(Todos los umbrales configurables por super admin)
+### Multi-Management Audit Flow
+1. **Administrative Management**: First review line, can approve or forward
+2. **Prestational Management**: Technical review, can approve, observe, or escalate
+3. **General Management**: Final decision on complex cases
+4. **Financial Management**: Read-only dashboard, visualization without audit capability
 
-### 5. Sistema Multi-Gerencial (v3.0)
-- **Gerencia Administrativa**: Primera línea, puede aprobar o derivar
-- **Gerencia Prestacional**: Revisión técnica, puede aprobar, observar o escalar
-- **Gerencia General**: Decisión final en casos complejos
-- **Gerencia Financiera**: Dashboard solo lectura sin capacidad de auditar
-- Asignación FCFS (First Come First Served) con FOR UPDATE
-- Auto-liberación de casos inactivos >30 minutos
-- Aprobación condicional para casos políticos/estratégicos
-- 10 estados de presupuestos (borrador → pendiente → en_revisión → final)
-- 15 métodos de transición con notificaciones automáticas
-
-### 6. Notificaciones en Tiempo Real
-- SSE (Server-Sent Events) para actualizaciones instantáneas
-- Notificaciones de auditoría (aprobación/rechazo/derivación/escalamiento)
-- Alertas de presupuestos pendientes para gerencias
-- Indicador visual de conexión en todos los dashboards
-- Sistema de auto-reconexión automática
-- Notificaciones persistentes en tab "Notificaciones"
-
-### 7. Modo Solo Lectura
-- Visualización segura de presupuestos históricos
-- Muestra valores de época (guardados en BD)
-- No permite edición de presupuestos finalizados
-- Botón "Editar" crea nueva versión con valores actuales
-
-### 8. Alertas Inteligentes
-- Alertas de valores desactualizados (>45 días)
-- Alertas configurables por tipo de unidad (servicios)
-- Alertas configurables por tipo de equipamiento
-- Parámetros: cantidad_maxima, mensaje_alerta, color_alerta, activo_alerta
-- Gestión centralizada desde Panel Admin > Alertas/ Tipo
-
-### 9. Generación de PDF
-- Exportación de presupuestos en cualquier estado
-- Funciona en borrador, aprobado, rechazado, en auditoría
-- Incluye insumos, prestaciones y equipamientos
-- Hook reutilizable usePdfGenerator para múltiples dashboards
-
-### 10. Manejo de Sesión
-- Detección automática de sesión expirada (401)
-- Patrón Observer para detección global de errores
-- Logout automático con notificación roja
-- Tokens JWT expiran en 1 hora
+**FCFS Assignment**: First available manager takes the case
+**Auto-Release**: Inactive cases > 30 min return to available pool
 
 ## Target Users
 
-### Usuario Normal
-- Crear y editar presupuestos
-- Ver historial propio
-- Solicitar auditoría manual
-- Recibir notificaciones de aprobación/rechazo
-
-### Gerencia Administrativa
-- Primera línea de auditoría
-- Aprobar/Rechazar presupuestos
-- Derivar a Gerencia Prestacional
-- Aprobación condicional para casos estratégicos
-
-### Gerencia Prestacional
-- Segunda línea de auditoría
-- Aprobar/Rechazar presupuestos
-- Observar (devolver a usuario para correcciones)
-- Escalar a Gerencia General
-- Aprobación condicional
-
-### Gerencia General
-- Última línea de auditoría
-- Aprobar/Rechazar presupuestos
-- Devolver a otras gerencias
-- Aprobación condicional
-- Decisión final en casos complejos
-
-### Gerencia Financiera
-- Dashboard de solo lectura
-- Visualización de casos sin capacidad de auditar
-- Usa mismo dashboard que G. General pero sin acciones
-
-### Administrador
-- Gestión de usuarios
-- Gestión de financiadores, prestaciones, equipamientos e insumos
-- Gestión de valores históricos por sucursal
-- Configuración de alertas por tipo
-- Configuración de reglas de negocio
-- Acceso completo al sistema
+### User Roles
+1. **Normal User**: Create/edit budgets, view own history, request manual audit
+2. **Administrative Management**: First audit line, approve/reject/forward
+3. **Prestational Management**: Technical audit, approve/reject/observe/escalate
+4. **General Management**: Final audit line, approve/reject/return, conditional approval
+5. **Financial Management**: Read-only dashboard, visualization only
+6. **Administrator**: Full system access, user management, configuration
 
 ## Use Cases
 
-### 1. Crear Presupuesto Nuevo
-Usuario ingresa datos del paciente, selecciona financiador, agrega insumos/prestaciones/equipamientos con valores vigentes actuales, sistema calcula totales y evalúa reglas automáticas.
+### Primary Workflows
+1. **Create Budget**: User enters patient data and selects financier
+2. **Add Items**: Select supplies, services, and equipment with current values
+3. **Finalize**: System calculates totals and evaluates automatic rules
+4. **Multi-Management Audit** (if applicable):
+   - Administrative: First review, can approve or forward
+   - Prestational: Technical review, can approve, observe, or escalate
+   - General: Final decision on complex cases
+5. **FCFS Assignment**: First available manager takes the case
+6. **Auto-Release**: Inactive cases > 30 min return to available
+7. **History**: Complete record with versioning, traceability, and period values
 
-### 2. Auditoría Multi-Gerencial
-Presupuesto que cumple reglas va a auditoría → G. Administrativa revisa → puede aprobar o derivar a G. Prestacional → G. Prestacional puede aprobar, observar o escalar a G. General → G. General toma decisión final.
+### Historical Values System
+- Price management by validity periods
+- Values differentiated by branch (general or specific)
+- Automatic period closure when adding new values
+- Query current values by date and branch
+- Integration with historical budgets
+- Priority: Specific value > General value
+- Anti-obsolescence system (30 days)
 
-### 3. Editar Presupuesto Histórico
-Usuario abre presupuesto finalizado en modo solo lectura → presiona "Editar" → sistema crea nueva versión → mantiene valor_asignado original → actualiza valor_facturar con precios actuales.
+### Equipment Management
+- **Base Equipment**: CRUD with reference price (default value)
+- **Equipment/Financier Agreements**: Specific agreements with historical values by branch
+- All active equipment available for all financiers
+- If no specific agreement, uses reference price
+- Configurable alerts by equipment type
 
-### 4. Gestionar Valores Históricos
-Admin abre modal de valores históricos → selecciona sucursal ("Todas" o específica) → agrega nuevos valores con fecha de inicio → sistema cierra automáticamente período anterior → valores específicos obsoletos (>30 días) pierden prioridad.
-
-### 5. Configurar Alertas por Tipo
-Super admin accede a Panel Admin > Alertas/ Tipo → configura cantidad_maxima, mensaje_alerta, color_alerta para tipos de unidad o equipamiento → alertas se disparan automáticamente al seleccionar items.
-
-### 6. Monitorear Casos en Tiempo Real
-Gerente abre dashboard → indicador verde muestra conexión SSE activa → recibe notificación instantánea de nuevo caso pendiente → toma caso con asignación FCFS → sistema bloquea caso para otros gerentes.
-
-### 7. Aprobar Condicional
-Gerente revisa caso estratégico (cliente VIP) → selecciona "Aprobar Condicional" → ingresa justificación → presupuesto se aprueba sin pasar por otras gerencias → queda registrado en historial de auditoría.
-
-### 8. Generar PDF
-Usuario abre presupuesto en cualquier estado → presiona botón "Imprimir PDF" → sistema genera PDF con todos los datos (paciente, insumos, prestaciones, equipamientos, totales) → descarga automáticamente.
-
-## Business Rules
-
-### Reglas de Auditoría (Configurables)
-- Rentabilidad mínima: 15% (default)
-- Costo total máximo: $150,000 (default)
-- Rentabilidad con plazo máxima: 25% (default)
-- Utilidad máxima: $50,000 (default)
-
-### Sistema de Valores
-- Valores específicos tienen prioridad sobre generales (si ≤30 días diferencia)
-- Valores específicos obsoletos (>30 días) pierden prioridad
-- Al guardar valor general, cierra automáticamente específicos obsoletos
-- Sucursales sin valor no ven el servicio
-
-### Flujo de Estados
-- borrador → pendiente_auditoria → en_revision_administrativa → aprobado_administrativo/rechazado_administrativo
-- aprobado_administrativo → en_revision_prestacional → aprobado_prestacional/rechazado_prestacional/observado
-- aprobado_prestacional → en_revision_general → aprobado/rechazado
-- observado → borrador (usuario corrige)
-
-### Auto-liberación
-- Casos en revisión >30 minutos sin actividad vuelven a pendientes
-- Permite que otros gerentes tomen casos abandonados
-- Evita bloqueos indefinidos
+### Smart Alerts
+- **Outdated Values**: Triggered when selecting items > 45 days without update
+- **Configurable by Type**: Alerts for services (by unit type) and equipment (by equipment type)
+- Parameters: max_quantity, alert_message, alert_color, active_alert
+- Centralized management from Admin Panel > Alerts/Type
 
 ## Technical Highlights
-- **Backend**: Node.js + Express + TypeScript + MySQL
-- **Frontend**: React + TypeScript + Vite + Mantine UI
-- **Real-time**: SSE (Server-Sent Events)
-- **Security**: JWT tokens, bcrypt, helmet, rate limiting
-- **Database**: MySQL 8.0+ con índices optimizados
-- **Logging**: Winston con rotación diaria
-- **API**: RESTful + Swagger documentation
+- **Backend**: Node.js 18+ with TypeScript, Express, MySQL 8.0+
+- **Frontend**: React 18 + TypeScript + Vite + Mantine UI
+- **Real-Time**: SSE (Server-Sent Events) for notifications
+- **Security**: JWT authentication, role-based access control, session management
+- **Database**: MySQL with optimized indexes for high volume
+- **Architecture**: REST API + SSE, modular controllers, service layer pattern

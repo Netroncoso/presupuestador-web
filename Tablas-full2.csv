@@ -15,21 +15,6 @@ auditorias_presupuestos,estado_anterior,5,varchar(50),varchar,50,YES,NULL,,,,NUL
 auditorias_presupuestos,estado_nuevo,6,varchar(50),varchar,50,YES,NULL,,,,NULL,NULL,NULL
 auditorias_presupuestos,comentario,7,text,text,65535,YES,NULL,,,,NULL,NULL,NULL
 auditorias_presupuestos,fecha,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-backup_presupuestos_fase1,idPresupuestos,1,int,int,NULL,NO,0,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,Nombre_Apellido,2,varchar(45),varchar,45,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,DNI,3,int,int,NULL,NO,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,Sucursal,4,varchar(45),varchar,45,NO,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,total_insumos,5,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,dificil_acceso,6,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,total_prestaciones,7,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,idobra_social,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,costo_total,9,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,created_at,10,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-backup_presupuestos_fase1,updated_at,11,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
-backup_presupuestos_fase1,total_facturar,12,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,rentabilidad,13,"decimal(5,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,rentabilidad_con_plazo,14,"decimal(5,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
-backup_presupuestos_fase1,usuario_id,15,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
 configuracion_sistema,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 configuracion_sistema,clave,2,varchar(100),varchar,100,NO,NULL,UNI,,,NULL,NULL,NULL
 configuracion_sistema,valor,3,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
@@ -48,7 +33,7 @@ equipamientos,activo,7,tinyint(1),tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
 equipamientos,created_at,8,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 equipamientos,updated_at,9,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
 equipamientos,codigo_producto,10,varchar(50),varchar,50,YES,NULL,MUL,,"Código de producto para sincronización externa (EAN, SKU)",NULL,NULL,NULL
-financiador,idobra_social,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
+financiador,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 financiador,Financiador,2,varchar(250),varchar,250,YES,NULL,,,,NULL,NULL,NULL
 financiador,activo,3,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 financiador,tasa_mensual,4,"decimal(5,2)",decimal,NULL,YES,NULL,,,"Tasa mensual en porcentaje",NULL,NULL,NULL
@@ -58,7 +43,7 @@ financiador,id_acuerdo,7,int,int,NULL,YES,NULL,MUL,,"Relación con la tabla fina
 financiador_acuerdo,id_acuerdo,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 financiador_acuerdo,nombre,2,varchar(150),varchar,150,NO,NULL,UNI,,"Nombre del tipo de acuerdo",NULL,NULL,NULL
 financiador_equipamiento,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-financiador_equipamiento,idobra_social,2,int,int,NULL,NO,NULL,MUL,,,financiador_equipamiento_ibfk_1,financiador,idobra_social
+financiador_equipamiento,financiador_id,2,int,int,NULL,NO,NULL,MUL,,,fk_financiador_equipamiento_financiador,financiador,id
 financiador_equipamiento,id_equipamiento,3,int,int,NULL,NO,NULL,MUL,,,financiador_equipamiento_ibfk_2,equipamientos,id
 financiador_equipamiento,activo,4,tinyint(1),tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
 financiador_equipamiento,created_at,5,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
@@ -71,6 +56,23 @@ financiador_equipamiento_valores,fecha_inicio,5,date,date,NULL,NO,NULL,MUL,,,NUL
 financiador_equipamiento_valores,fecha_fin,6,date,date,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
 financiador_equipamiento_valores,sucursal_id,7,int,int,NULL,YES,NULL,MUL,,"NULL = todas las sucursales",financiador_equipamiento_valores_ibfk_2,sucursales_mh,ID
 financiador_equipamiento_valores,created_at,8,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
+financiador_servicio,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
+financiador_servicio,financiador_id,2,int,int,NULL,NO,NULL,MUL,,,fk_financiador_servicio_financiador,financiador,id
+financiador_servicio,id_servicio,3,int,int,NULL,NO,NULL,MUL,,,fk_financiador_servicio_servicio,servicios,id_servicio
+financiador_servicio,valor_facturar,4,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
+financiador_servicio,total_mes,5,"decimal(10,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
+financiador_servicio,condicion,6,text,text,65535,YES,NULL,,,,NULL,NULL,NULL
+financiador_servicio,activo,7,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
+financiador_servicio,cant_total,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
+financiador_servicio,valor_sugerido,9,"decimal(10,2)",decimal,NULL,YES,NULL,,,"Valor recomendado",NULL,NULL,NULL
+financiador_servicio_valores,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
+financiador_servicio_valores,financiador_servicio_id,2,int,int,NULL,NO,NULL,MUL,,,fk_financiador_servicio_valores,financiador_servicio,id
+financiador_servicio_valores,sucursal_id,3,int,int,NULL,YES,NULL,MUL,,,fk_valores_sucursal,sucursales_mh,ID
+financiador_servicio_valores,valor_asignado,4,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
+financiador_servicio_valores,valor_facturar,5,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
+financiador_servicio_valores,fecha_inicio,6,date,date,NULL,NO,NULL,MUL,,,NULL,NULL,NULL
+financiador_servicio_valores,fecha_fin,7,date,date,NULL,YES,NULL,,,,NULL,NULL,NULL
+financiador_servicio_valores,created_at,8,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 insumos,idInsumos,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 insumos,producto,2,varchar(255),varchar,255,NO,NULL,UNI,,,NULL,NULL,NULL
 insumos,costo,3,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
@@ -84,23 +86,6 @@ notificaciones,tipo,5,"enum('pendiente','aprobado','aprobado_condicional','recha
 notificaciones,mensaje,6,varchar(512),varchar,512,YES,NULL,,,,NULL,NULL,NULL
 notificaciones,estado,7,"enum('nuevo','leido')",enum,5,YES,nuevo,MUL,,,NULL,NULL,NULL
 notificaciones,creado_en,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
-prestador_servicio,id_prestador_servicio,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-prestador_servicio,idobra_social,2,int,int,NULL,NO,NULL,MUL,,,prestador_servicio_ibfk_1,financiador,idobra_social
-prestador_servicio,id_servicio,3,int,int,NULL,NO,NULL,MUL,,,prestador_servicio_ibfk_2,servicios,id_servicio
-prestador_servicio,valor_facturar,4,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
-prestador_servicio,total_mes,5,"decimal(10,2)",decimal,NULL,YES,NULL,,,,NULL,NULL,NULL
-prestador_servicio,condicion,6,text,text,65535,YES,NULL,,,,NULL,NULL,NULL
-prestador_servicio,activo,7,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
-prestador_servicio,cant_total,8,int,int,NULL,YES,NULL,,,,NULL,NULL,NULL
-prestador_servicio,valor_sugerido,9,"decimal(10,2)",decimal,NULL,YES,NULL,,,"Valor recomendado",NULL,NULL,NULL
-prestador_servicio_valores,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
-prestador_servicio_valores,id_prestador_servicio,2,int,int,NULL,NO,NULL,MUL,,,prestador_servicio_valores_ibfk_1,prestador_servicio,id_prestador_servicio
-prestador_servicio_valores,sucursal_id,3,int,int,NULL,YES,NULL,MUL,,,fk_valores_sucursal,sucursales_mh,ID
-prestador_servicio_valores,valor_asignado,4,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
-prestador_servicio_valores,valor_facturar,5,"decimal(10,2)",decimal,NULL,NO,NULL,,,,NULL,NULL,NULL
-prestador_servicio_valores,fecha_inicio,6,date,date,NULL,NO,NULL,MUL,,,NULL,NULL,NULL
-prestador_servicio_valores,fecha_fin,7,date,date,NULL,YES,NULL,,,,NULL,NULL,NULL
-prestador_servicio_valores,created_at,8,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 presupuesto_equipamiento,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 presupuesto_equipamiento,idPresupuestos,2,int,int,NULL,NO,NULL,MUL,,,presupuesto_equipamiento_ibfk_1,presupuestos,idPresupuestos
 presupuesto_equipamiento,id_equipamiento,3,int,int,NULL,NO,NULL,MUL,,,presupuesto_equipamiento_ibfk_2,equipamientos,id
@@ -138,7 +123,7 @@ presupuestos,total_insumos,5,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,
 presupuestos,dificil_acceso,6,varchar(2),varchar,2,NO,NULL,,,,NULL,NULL,NULL
 presupuestos,total_prestaciones,7,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
 presupuestos,total_equipamiento,8,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
-presupuestos,idobra_social,9,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_financiador,financiador,idobra_social
+presupuestos,financiador_id,9,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_financiador,financiador,id
 presupuestos,costo_total,10,"decimal(10,2)",decimal,NULL,YES,0.00,,,,NULL,NULL,NULL
 presupuestos,created_at,11,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,MUL,DEFAULT_GENERATED,,NULL,NULL,NULL
 presupuestos,updated_at,12,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,"DEFAULT_GENERATED on update CURRENT_TIMESTAMP",,NULL,NULL,NULL
