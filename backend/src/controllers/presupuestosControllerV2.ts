@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { pool } from '../db';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { PresupuestoService } from '../services/presupuestoService';
+import { PresupuestoRepository } from '../repositories/presupuestoRepository';
 import { VersioningService } from '../services/versioningService';
 import { AuditoriaService } from '../services/auditoriaService';
 import { BusinessRules } from '../config/businessRules';
@@ -299,4 +300,11 @@ export const actualizarFinanciador = asyncHandler(async (req: Request, res: Resp
   
   const resultado = await auditoriaService.actualizarFinanciador(id, financiador_id);
   res.json(resultado);
+});
+
+export const revertirABorrador = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const repo = new PresupuestoRepository();
+  await repo.revertirABorrador(id);
+  res.json({ success: true });
 });

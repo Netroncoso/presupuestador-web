@@ -60,7 +60,7 @@ export class VersioningService {
           [idOriginal]
         ),
         connection.query<any[]>(
-          'SELECT id_equipamiento, cantidad, costo, precio_facturar FROM presupuesto_equipamiento WHERE idPresupuestos = ?',
+          'SELECT id_equipamiento, nombre, cantidad, costo, precio_facturar FROM presupuesto_equipamiento WHERE idPresupuestos = ?',
           [idOriginal]
         ),
         connection.query<any[]>(
@@ -71,6 +71,16 @@ export class VersioningService {
 
       const nuevaVersion = (maxVersion[0]?.max_version || 0) + 1;
       const porcentajeActual = sucursal[0]?.suc_porcentaje_insumos || 0;
+
+      // CRÍTICO: Eliminar notificaciones/auditorías ANTES del UPDATE para evitar locks
+      await connection.query(
+        'DELETE FROM notificaciones WHERE presupuesto_id IN (SELECT idPresupuestos FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?)',
+        [presupuestoPadreId, presupuestoPadreId]
+      );
+      await connection.query(
+        'DELETE FROM auditorias_presupuestos WHERE presupuesto_id IN (SELECT idPresupuestos FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?)',
+        [presupuestoPadreId, presupuestoPadreId]
+      );
 
       // Marcar versiones anteriores como no actuales
       await connection.query(
@@ -119,10 +129,10 @@ export class VersioningService {
 
       if (equipamientos.length > 0) {
         const equipamientosValues = equipamientos.map(e => [
-          nuevoId, e.id_equipamiento, e.cantidad, e.costo, e.precio_facturar
+          nuevoId, e.id_equipamiento, e.nombre, e.cantidad, e.costo, e.precio_facturar
         ]);
         await connection.query(
-          'INSERT INTO presupuesto_equipamiento (idPresupuestos, id_equipamiento, cantidad, costo, precio_facturar) VALUES ?',
+          'INSERT INTO presupuesto_equipamiento (idPresupuestos, id_equipamiento, nombre, cantidad, costo, precio_facturar) VALUES ?',
           [equipamientosValues]
         );
       }

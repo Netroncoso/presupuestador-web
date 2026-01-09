@@ -25,13 +25,14 @@ export class PresupuestoService {
 
     const totalInsumos = Number(presupuesto.total_insumos_costo);
     const totalPrestaciones = Number(presupuesto.total_prestaciones_costo);
-    const costoTotal = totalInsumos + totalPrestaciones;
+    const totalEquipamientos = Number(presupuesto.total_equipamientos_costo || 0);
+    const costoTotal = totalInsumos + totalPrestaciones + totalEquipamientos;
 
     if (costoTotal === 0) {
-      throw new AppError(400, 'No se puede finalizar un presupuesto sin insumos ni prestaciones');
+      throw new AppError(400, 'No se puede finalizar un presupuesto sin insumos, prestaciones o equipamientos');
     }
 
-    const totalFacturar = Number(presupuesto.total_insumos_facturar) + Number(presupuesto.total_prestaciones_facturar);
+    const totalFacturar = Number(presupuesto.total_insumos_facturar) + Number(presupuesto.total_prestaciones_facturar) + Number(presupuesto.total_equipamientos_facturar || 0);
     const rentabilidad = this.calculos.calcularRentabilidad(costoTotal, totalFacturar);
 
     let rentabilidadConPlazo = rentabilidad;
@@ -60,6 +61,7 @@ export class PresupuestoService {
       estado: estadoFinal,
       totalInsumos,
       totalPrestaciones,
+      totalEquipamientos,
       costoTotal,
       totalFacturar,
       rentabilidad,
@@ -67,7 +69,6 @@ export class PresupuestoService {
     });
 
     if (estadoFinal === 'pendiente_administrativa') {
-      // Crear registro inicial de auditoría automática
       await this.repo.crearRegistroAuditoriaInicial(
         id,
         presupuesto.version,
@@ -89,6 +90,7 @@ export class PresupuestoService {
       totales: {
         totalInsumos,
         totalPrestaciones,
+        totalEquipamientos,
         costoTotal,
         totalFacturar,
         rentabilidad: Number(rentabilidad.toFixed(2)),

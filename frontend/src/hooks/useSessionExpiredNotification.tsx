@@ -12,6 +12,8 @@ export const useSessionExpiredNotification = () => {
         autoClose: 5000,
       });
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, []);
 };

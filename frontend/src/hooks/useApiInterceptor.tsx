@@ -9,6 +9,8 @@ export const useApiInterceptor = () => {
     const unsubscribe = api.subscribeToUnauthorized(() => {
       logout();
     });
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [logout]);
 };

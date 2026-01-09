@@ -417,6 +417,22 @@ ORDER BY v.sucursal_id DESC, v.fecha_inicio DESC;
 - Funciona en borrador, aprobado, rechazado, en auditoría
 - Requiere que presupuesto tenga datos de paciente cargados
 
+### Bug: Estado al "Seguir Editando"
+- **Problema**: Al finalizar presupuesto que no cumple reglas automáticas, si usuario hace clic en "Seguir Editando", el estado quedaba en `pendiente_administrativa`
+- **Solución**: Endpoint `/revertir-borrador` revierte estado a `borrador` y limpia notificaciones/auditorías
+
+### Bug: Crear Nueva Versión con Timeout
+- **Problema**: Botón "Crear nueva versión" quedaba trabado por deadlocks en FKs
+- **Solución**: Eliminar notificaciones/auditorías ANTES del UPDATE de `es_ultima_version`
+
+### Bug: Campo `nombre` Faltante en Equipamientos
+- **Problema**: Al copiar equipamientos en nueva versión, faltaba campo `nombre` NOT NULL
+- **Solución**: Incluir campo `nombre` en SELECT y INSERT de equipamientos
+
+### Bug: Columna `total_equipamiento`
+- **Problema**: Código usaba `total_equipamientos` (plural) pero BD tiene `total_equipamiento` (singular)
+- **Solución**: Corregir nombre de columna en queries
+
 ## 🤝 Contribuir
 
 1. Fork el proyecto

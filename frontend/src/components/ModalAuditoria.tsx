@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Modal, Text, Textarea, Group, Button, Badge, Flex } from '@mantine/core';
 import { ShieldCheckIcon,CheckBadgeIcon } from '@heroicons/react/24/outline';
+import { api } from '../api/api';
 
 const ICON_SIZE = { width: 20, height: 20 };
 
@@ -37,7 +38,14 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
     setMensaje('');
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    if (tipo === 'solicitar' && presupuesto?.id) {
+      try {
+        await api.post(`/presupuestos/${presupuesto.id}/revertir-borrador`, {});
+      } catch (error) {
+        console.error('Error revirtiendo estado:', error);
+      }
+    }
     setMensaje('');
     onClose();
   };

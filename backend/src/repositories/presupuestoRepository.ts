@@ -9,12 +9,15 @@ export class PresupuestoRepository {
         COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as total_insumos_facturar,
         COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as total_prestaciones_costo,
         COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as total_prestaciones_facturar,
+        COALESCE(SUM(e.costo * e.cantidad), 0) as total_equipamientos_costo,
+        COALESCE(SUM(e.precio_facturar * e.cantidad), 0) as total_equipamientos_facturar,
         f.tasa_mensual,
         f.dias_cobranza_real,
         f.dias_cobranza_teorico
       FROM presupuestos p
       LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
       LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
+      LEFT JOIN presupuesto_equipamiento e ON p.idPresupuestos = e.idPresupuestos
       LEFT JOIN financiador f ON p.financiador_id = f.id
       WHERE p.idPresupuestos = ? AND p.es_ultima_version = 1
       GROUP BY p.idPresupuestos
@@ -27,6 +30,7 @@ export class PresupuestoRepository {
     estado: string;
     totalInsumos: number;
     totalPrestaciones: number;
+    totalEquipamientos?: number;
     costoTotal: number;
     totalFacturar: number;
     rentabilidad: number;
@@ -34,13 +38,14 @@ export class PresupuestoRepository {
   }) {
     await pool.query(
       `UPDATE presupuestos 
-       SET estado = ?, total_insumos = ?, total_prestaciones = ?, 
+       SET estado = ?, total_insumos = ?, total_prestaciones = ?, total_equipamiento = ?,
            costo_total = ?, total_facturar = ?, rentabilidad = ?, rentabilidad_con_plazo = ? 
        WHERE idPresupuestos = ?`,
       [
         data.estado,
         data.totalInsumos,
         data.totalPrestaciones,
+        data.totalEquipamientos || 0,
         data.costoTotal,
         data.totalFacturar,
         data.rentabilidad,
@@ -80,6 +85,35 @@ export class PresupuestoRepository {
     } catch (error) {
       console.error('Error al crear registro de auditoría inicial:', error);
       throw new Error('Error al crear registro de auditoría');
+    }
+  }
+
+  async revertirABorrador(id: number) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      
+      await connection.query(
+        'UPDATE presupuestos SET estado = ? WHERE idPresupuestos = ? AND es_ultima_version = 1',
+        ['borrador', id]
+      );
+      
+      await connection.query(
+        'DELETE FROM notificaciones WHERE presupuesto_id = ? AND tipo = ?',
+        [id, 'pendiente']
+      );
+      
+      await connection.query(
+        'DELETE FROM auditorias_presupuestos WHERE presupuesto_id = ? AND estado_nuevo = ? AND estado_anterior = ?',
+        [id, 'pendiente_administrativa', 'borrador']
+      );
+      
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
   }
 }

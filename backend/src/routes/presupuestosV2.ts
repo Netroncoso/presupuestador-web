@@ -361,8 +361,7 @@ router.get('/:id', auth, validatePresupuestoId, asyncHandler(async (req: Authent
 router.get('/:id/versiones', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   logger.info('Obteniendo historial de versiones', { presupuestoId: id, usuario: req.user.id });
-  const resultado = await presupuestosController.obtenerHistorial(req, res, () => {});
-  return resultado;
+  return presupuestosController.obtenerHistorial(req, res, () => {});
 }));
 
 /**
@@ -405,12 +404,14 @@ router.get('/:id/versiones', auth, validatePresupuestoId, asyncHandler(async (re
  */
 router.post('/:id/finalizar', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
-  
   logger.info('Finalizando presupuesto', { presupuestoId: id, usuario: req.user.id });
-  const resultado = await presupuestosController.finalizarPresupuesto(req, res, () => {});
-  
+  const resultado = presupuestosController.finalizarPresupuesto(req, res, () => {});
   logger.info('Presupuesto finalizado exitosamente', { presupuestoId: id, usuario: req.user.id });
   return resultado;
+}));
+
+router.post('/:id/revertir-borrador', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  return presupuestosController.revertirABorrador(req, res, () => {});
 }));
 
 /**
@@ -451,13 +452,7 @@ router.post('/:id/finalizar', auth, validatePresupuestoId, asyncHandler(async (r
  *                   type: string
  */
 router.post('/:id/version/editar', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const id = parseInt(req.params.id);
-  
-  logger.info('Creando nueva versión para edición', { presupuestoId: id, usuario: req.user.id });
-  const resultado = await presupuestosController.crearVersionParaEdicion(req, res, () => {});
-  
-  logger.info('Nueva versión creada exitosamente', { presupuestoId: id, usuario: req.user.id });
-  return resultado;
+  return presupuestosController.crearVersionParaEdicion(req, res, () => {});
 }));
 
 /**
@@ -500,8 +495,7 @@ router.put('/:id/financiador', auth, validatePresupuestoId, asyncHandler(async (
   }
   
   logger.info('Actualizando financiador', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
-  const resultado = await presupuestosController.actualizarFinanciador(req, res, () => {});
-  
+  const resultado = presupuestosController.actualizarFinanciador(req, res, () => {});
   logger.info('Financiador actualizado exitosamente', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
   return resultado;
 }));
@@ -552,8 +546,7 @@ router.put('/:id/estado', auth, validatePresupuestoId, requireAuditor, asyncHand
   }
   
   logger.info('Cambiando estado de presupuesto', { presupuestoId: id, accion, comentario, auditor: req.user.id });
-  const resultado = await presupuestosController.cambiarEstado(req, res, () => {});
-  
+  const resultado = presupuestosController.cambiarEstado(req, res, () => {});
   logger.info('Estado de presupuesto cambiado exitosamente', { presupuestoId: id, accion, auditor: req.user.id });
   return resultado;
 }));

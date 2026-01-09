@@ -388,7 +388,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         )}
         
         <Checkbox
-          label="Difícil Acceso"
+          label="Zona Desfavorable"
           checked={dificilAcceso}
           onChange={(e) => setDificilAcceso(e.target.checked)}
           disabled={presupuestoCreado || soloLectura}
