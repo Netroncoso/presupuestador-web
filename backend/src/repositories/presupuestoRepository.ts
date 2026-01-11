@@ -68,6 +68,19 @@ export class PresupuestoRepository {
     }
   }
 
+  async notificarOperadoresCarga(presupuestoId: number, version: number, nombrePaciente: string, totalFacturar: number) {
+    try {
+      await pool.query(`
+        INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
+        SELECT u.id, ?, ?, 'carga', ?
+        FROM usuarios u WHERE u.rol = 'operador_carga' AND u.activo = 1
+      `, [presupuestoId, version, `Nuevo presupuesto para carga: ${nombrePaciente} - $${totalFacturar}`]);
+    } catch (error) {
+      console.error('Error al notificar operadores de carga:', error);
+      throw new Error('Error al crear notificaciones para operadores de carga');
+    }
+  }
+
   async crearRegistroAuditoriaInicial(
     presupuestoId: number, 
     version: number, 

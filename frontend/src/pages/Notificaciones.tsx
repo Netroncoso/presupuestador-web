@@ -210,7 +210,7 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
         </Text>
       ) : (
         <Table.ScrollContainer minWidth={900}>
-          <Table striped="odd" highlightOnHover stickyHeader fontSize="xs">
+          <Table striped="odd" highlightOnHover stickyHeader>
           <Table.Thead>
             <Table.Tr>
               <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Estado</Table.Th>
@@ -255,8 +255,9 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
                 <Table.Td>
                   <span style={{ fontSize: '14px' }}>
                     {notif.tipo === 'pendiente' ? 'Auditoría Solicitada' :
+                     notif.tipo === 'carga' ? 'Pendiente de carga' :
                      notif.tipo === 'aprobado_condicional' ? 'Aprobado Condicional' :
-                     notif.tipo === 'aprobado' ? 'Aprobado' :
+                     notif.tipo === 'pendiente_carga' ? 'Aprobado' :
                      notif.tipo === 'rechazado' ? 'Rechazado' :
                      notif.tipo === 'observado' ? 'Observado' :
                      'Notificación'}

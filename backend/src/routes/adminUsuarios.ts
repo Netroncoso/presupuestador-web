@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { authenticateToken, requireSuperAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { getUsuarios, createUsuario, updateUsuario, toggleUsuario, deleteUsuario } from '../controllers/adminUsuariosController';
 import { asyncHandler } from '../utils/asyncHandler';
 import { AppError } from '../middleware/errorHandler';
@@ -54,7 +54,7 @@ const router = Router();
  *       200:
  *         description: Lista de usuarios
  */
-router.get('/usuarios', authenticateToken, requireSuperAdmin, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.get('/usuarios', authenticateToken, requireAdmin, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   logger.info('Listando usuarios', { usuario: req.user.id });
   const resultado = await getUsuarios(req, res, () => {});
   return resultado;
@@ -89,7 +89,7 @@ router.get('/usuarios', authenticateToken, requireSuperAdmin, asyncHandler(async
  *       201:
  *         description: Usuario creado
  */
-router.post('/usuarios', authenticateToken, requireSuperAdmin, validateUsuarioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.post('/usuarios', authenticateToken, requireAdmin, validateUsuarioData, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { username, rol, sucursal_id } = req.body;
   
   logger.info('Creando usuario', { username, rol, sucursal_id, creador: req.user.id });
@@ -138,7 +138,7 @@ router.post('/usuarios', authenticateToken, requireSuperAdmin, validateUsuarioDa
  *       200:
  *         description: Usuario actualizado
  */
-router.put('/usuarios/:id', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.put('/usuarios/:id', authenticateToken, requireAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   
   logger.info('Actualizando usuario', { usuarioId: id, editor: req.user.id });
@@ -170,7 +170,7 @@ router.put('/usuarios/:id', authenticateToken, requireSuperAdmin, validateUsuari
  *       200:
  *         description: Estado actualizado
  */
-router.put('/usuarios/:id/toggle', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.put('/usuarios/:id/toggle', authenticateToken, requireAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   
   logger.info('Cambiando estado de usuario', { usuarioId: id, editor: req.user.id });
@@ -202,7 +202,7 @@ router.put('/usuarios/:id/toggle', authenticateToken, requireSuperAdmin, validat
  *       200:
  *         description: Usuario eliminado
  */
-router.delete('/usuarios/:id', authenticateToken, requireSuperAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/usuarios/:id', authenticateToken, requireAdmin, validateUsuarioId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   
   logger.info('Eliminando usuario', { usuarioId: id, eliminador: req.user.id });

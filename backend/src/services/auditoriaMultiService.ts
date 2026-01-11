@@ -414,25 +414,26 @@ export class AuditoriaMultiService {
       if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para auditar este caso');
       
+      // MODIFICACIÓN: Transición automática a pendiente_carga
+      const estadoFinal = estadoNuevo === 'aprobado' ? 'pendiente_carga' : estadoNuevo;
+      
       await connection.query(
         `UPDATE presupuestos 
          SET estado = ?,
              revisor_id = NULL,
              revisor_asignado_at = NULL
          WHERE idPresupuestos = ?`,
-        [estadoNuevo, id]
+        [estadoFinal, id]
       );
       
       await connection.query(
         `INSERT INTO auditorias_presupuestos 
          (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, presupuesto[0].version, auditorId, estadoAnterior, estadoNuevo, comentario]
+        [id, presupuesto[0].version, auditorId, estadoAnterior, estadoFinal, comentario]
       );
       
-      const mensajeAprobacion = comentario
-        ? `Presupuesto APROBADO por ${gerenciaNombre}: ${comentario}`
-        : `Presupuesto APROBADO por ${gerenciaNombre}`;
+      const mensajeAprobacion = this.construirMensajeAprobacion(estadoFinal, gerenciaNombre, comentario);
       
       // Notificar al usuario creador
       await this.notificarUsuario(
@@ -440,9 +441,23 @@ export class AuditoriaMultiService {
         presupuesto[0].usuario_id,
         id,
         presupuesto[0].version,
-        estadoNuevo,
+        estadoFinal,
         mensajeAprobacion
       );
+      
+      // Notificar a operadores de carga
+      if (estadoFinal === 'pendiente_carga') {
+        const nombrePaciente = presupuesto[0].Nombre_Apellido || 'Sin nombre';
+        const totalFacturar = presupuesto[0].total_facturar || 0;
+        await this.notificarGerencia(
+          connection,
+          id,
+          presupuesto[0].version,
+          'operador_carga',
+          `Nuevo presupuesto para carga: ${nombrePaciente} - $${totalFacturar}`,
+          'carga'
+        );
+      }
       
       // Notificar a gerencia administrativa (para seguimiento)
       await this.notificarGerencia(
@@ -451,12 +466,12 @@ export class AuditoriaMultiService {
         presupuesto[0].version,
         'gerencia_administrativa',
         mensajeAprobacion,
-        estadoNuevo
+        estadoFinal
       );
       
       await connection.commit();
       cacheService.invalidateReportes();
-      logger.info('Presupuesto aprobado', { presupuestoId: id, auditor: auditorId, gerencia: gerenciaNombre });
+      logger.info('Presupuesto aprobado', { presupuestoId: id, auditor: auditorId, gerencia: gerenciaNombre, estadoFinal });
       return { success: true };
       
     } catch (error) {
@@ -547,6 +562,18 @@ export class AuditoriaMultiService {
     }
   }
 
+  private construirMensajeAprobacion(estadoFinal: string, gerenciaNombre: string, comentario?: string): string {
+    if (estadoFinal === 'pendiente_carga') {
+      return `Presupuesto APROBADO por ${gerenciaNombre} y enviado a carga${comentario ? ': ' + comentario : ''}`;
+    }
+    
+    if (comentario) {
+      return `Presupuesto APROBADO por ${gerenciaNombre}: ${comentario}`;
+    }
+    
+    return `Presupuesto APROBADO por ${gerenciaNombre}`;
+  }
+
   private async rechazarGenerico(
     id: number,
     auditorId: number,
@@ -591,24 +618,31 @@ export class AuditoriaMultiService {
       const mensajeRechazo = `Presupuesto RECHAZADO por ${gerenciaNombre}: ${comentario}`;
       
       // Notificar al usuario creador
-      await this.notificarUsuario(
-        connection,
-        presupuesto[0].usuario_id,
-        id,
-        presupuesto[0].version,
-        'rechazado',
-        mensajeRechazo
-      );
+      const usuarioId = presupuesto[0].usuario_id;
+      const versionPresupuesto = presupuesto[0].version;
+      
+      if (usuarioId && versionPresupuesto) {
+        await this.notificarUsuario(
+          connection,
+          usuarioId,
+          id,
+          versionPresupuesto,
+          'rechazado',
+          mensajeRechazo
+        );
+      }
       
       // Notificar a gerencia administrativa (para seguimiento)
-      await this.notificarGerencia(
-        connection,
-        id,
-        presupuesto[0].version,
-        'gerencia_administrativa',
-        mensajeRechazo,
-        'rechazado'
-      );
+      if (versionPresupuesto) {
+        await this.notificarGerencia(
+          connection,
+          id,
+          versionPresupuesto,
+          'gerencia_administrativa',
+          mensajeRechazo,
+          'rechazado'
+        );
+      }
       
       await connection.commit();
       cacheService.invalidateReportes();

@@ -85,6 +85,15 @@ export class PresupuestoService {
       ).catch(err => console.error('Error notificando:', err));
     }
 
+    if (estadoFinal === 'pendiente_carga') {
+      await this.repo.notificarOperadoresCarga(
+        id,
+        presupuesto.version,
+        presupuesto.Nombre_Apellido,
+        totalFacturar
+      ).catch(err => console.error('Error notificando operadores carga:', err));
+    }
+
     return {
       estadoFinal,
       totales: {

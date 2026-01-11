@@ -68,7 +68,7 @@ export interface Notificaciones extends RowDataPacket {
   usuario_id: number;
   presupuesto_id: number;
   version_presupuesto?: number;
-  tipo?: 'pendiente' | 'aprobado' | 'rechazado' | 'nueva_version';
+  tipo?: 'pendiente' | 'aprobado' | 'rechazado' | 'nueva_version' | 'cargado' | 'devuelto';
   mensaje?: string;
   estado?: 'nuevo' | 'leido';
   creado_en?: Date;
@@ -139,11 +139,12 @@ export interface Presupuestos extends RowDataPacket {
   usuario_id?: number;
   presupuesto_padre?: number;
   es_ultima_version?: boolean;
-  estado?: 'borrador' | 'pendiente_administrativa' | 'en_revision_administrativa' | 'pendiente_prestacional' | 'en_revision_prestacional' | 'pendiente_general' | 'en_revision_general' | 'aprobado' | 'aprobado_condicional' | 'rechazado';
+  estado?: 'borrador' | 'pendiente_administrativa' | 'en_revision_administrativa' | 'pendiente_prestacional' | 'en_revision_prestacional' | 'pendiente_general' | 'en_revision_general' | 'aprobado' | 'aprobado_condicional' | 'pendiente_carga' | 'en_carga' | 'cargado' | 'rechazado';
   version?: number;
   porcentaje_insumos?: number;
   revisor_id?: number;
   revisor_asignado_at?: Date;
+  referencia_externa?: string;
 }
 
 export interface Servicios extends RowDataPacket {
@@ -173,7 +174,7 @@ export interface Usuarios extends RowDataPacket {
   id: number;
   username: string;
   password: string;
-  rol?: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general';
+  rol?: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general' | 'operador_carga';
   activo?: boolean;
   created_at?: Date;
   sucursal_id?: number;

@@ -30,11 +30,14 @@ const DEFAULT_RULES = {
       'en_revision_general',
       'aprobado',
       'aprobado_condicional',
+      'pendiente_carga',        // NUEVO
+      'en_carga',              // NUEVO
+      'cargado',               // NUEVO
       'rechazado'
     ],
     iniciales: ['borrador'],
-    finales: ['aprobado', 'aprobado_condicional', 'rechazado'],
-    requierenNotificacion: ['aprobado', 'aprobado_condicional', 'rechazado'],
+    finales: ['aprobado', 'aprobado_condicional', 'cargado', 'rechazado'],
+    requierenNotificacion: ['aprobado', 'aprobado_condicional', 'cargado', 'rechazado'],
   },
   versionado: {
     versionInicial: 1,

@@ -12,6 +12,7 @@ const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
 const GerenciaAdministrativa = React.lazy(() => import('./pages/GerenciaAdministrativa'));
 const GerenciaPrestacional = React.lazy(() => import('./pages/GerenciaPrestacional'));
 const GerenciaGeneral = React.lazy(() => import('./pages/GerenciaGeneral'));
+const OperadorCargaDashboard = React.lazy(() => import('./pages/OperadorCargaDashboard'));
 const GerenciaFinanciera = React.lazy(() => import('./pages/GerenciaFinanciera'));
 
 function AppContent() {
@@ -39,6 +40,8 @@ function AppContent() {
         return <GerenciaGeneral />;
       case 'gerencia_financiera':
         return <GerenciaFinanciera />;
+      case 'operador_carga':
+        return <OperadorCargaDashboard />;
       default:
         return <UserDashboard />;
     }

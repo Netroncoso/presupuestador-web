@@ -13,6 +13,10 @@ interface AuthRequest extends Request {
   user?: any;
 }
 
+export interface AuthenticatedRequest extends Request {
+  user: any;
+}
+
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -82,6 +86,16 @@ export const requireAnyGerencia = (req: AuthRequest, res: Response, next: NextFu
     return next(new AppError(403, 'Acceso denegado. Se requiere rol de gerencia'));
   }
   next();
+};
+
+// Middleware genérico para múltiples roles
+export const requireRole = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!roles.includes(req.user?.rol)) {
+      return next(new AppError(403, `Acceso denegado. Se requiere uno de los roles: ${roles.join(', ')}`));
+    }
+    next();
+  };
 };
 
 // Alias para compatibilidad

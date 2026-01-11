@@ -14,7 +14,7 @@ export const getUsuarios = asyncHandler(async (req: AuthenticatedRequest, res: R
 export const createUsuario = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { username, password, rol, sucursal_id } = req.body;
   
-  const result = await usuariosService.crear(username, password, rol, sucursal_id);
+  const result = await usuariosService.crear({ username, password, rol, sucursal_id });
   res.json(result);
 });
 
@@ -22,7 +22,7 @@ export const updateUsuario = asyncHandler(async (req: AuthenticatedRequest, res:
   const { id } = req.params;
   const { username, password, rol, sucursal_id } = req.body;
   
-  const result = await usuariosService.actualizar(id, username, rol, sucursal_id, password);
+  const result = await usuariosService.actualizar(id, { username, rol, sucursal_id, password });
   res.json(result);
 });
 

@@ -250,6 +250,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
             { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
             { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
             { value: 'gerencia_general', label: 'Gerencia General' },
+            { value: 'operador_carga', label: 'Operador de Carga' },
             { value: 'admin', label: 'Administrador' }
           ]}
           mb="sm"
@@ -294,6 +295,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
             { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
             { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
             { value: 'gerencia_general', label: 'Gerencia General' },
+            { value: 'operador_carga', label: 'Operador de Carga' },
             { value: 'admin', label: 'Administrador' }
           ]}
           mb="sm"
