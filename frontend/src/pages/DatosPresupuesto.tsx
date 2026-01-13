@@ -2,17 +2,39 @@ import React, { useState, useEffect } from 'react'
 import { Paper, TextInput, Select, Checkbox, Button, Group, Stack, Title, Modal, Text } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
+import { useAuth } from '../contexts/AuthContext'
+
+// Interface for the data passed when a budget is created/loaded
+export interface PresupuestoCreadoData {
+  id: number
+  nombre: string
+  dni: string
+  sucursal: string
+  porcentajeInsumos: number
+  financiadorId?: string
+  sucursalId?: number
+}
 
 interface Props {
-  onPresupuestoCreado: (id: number, nombre: string, dni: string, sucursal: string, porcentajeInsumos: number, financiadorId?: string, sucursalId?: number) => void
+  onPresupuestoCreado: (data: PresupuestoCreadoData) => void
   onNuevoPresupuesto: () => void
+  onCargarPresupuesto: (id: number, nombre: string, sucursal: string, financiadorId: string | null) => Promise<void>
   esCargaHistorial?: boolean
   setEsCargaHistorial?: (esHistorial: boolean) => void
   datosHistorial?: { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string }
   soloLectura?: boolean
 }
 
-export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupuesto, esCargaHistorial: esCargaHistorialProp, setEsCargaHistorial: setEsCargaHistorialProp, datosHistorial, soloLectura = false }: Props) {
+export default function DatosPresupuesto({ 
+  onPresupuestoCreado, 
+  onNuevoPresupuesto, 
+  onCargarPresupuesto,
+  esCargaHistorial: esCargaHistorialProp, 
+  setEsCargaHistorial: setEsCargaHistorialProp, 
+  datosHistorial, 
+  soloLectura = false 
+}: Props) {
+  const { user } = useAuth()
   const [nombre, setNombre] = useState('')
   const [dni, setDni] = useState('')
   const [sucursal, setSucursal] = useState('')
@@ -24,6 +46,8 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const [presupuestoCreado, setPresupuestoCreado] = useState(false)
   const [modalDNI, setModalDNI] = useState(false)
   const [presupuestoExistente, setPresupuestoExistente] = useState<any>(null)
+  
+  // Internal state for when props are not provided (controlled vs uncontrolled handling could be better but keeping simple for now)
   const [esCargaHistorialLocal, setEsCargaHistorialLocal] = useState(false)
   const esCargaHistorial = esCargaHistorialProp ?? esCargaHistorialLocal
   const setEsCargaHistorial = setEsCargaHistorialProp ?? setEsCargaHistorialLocal
@@ -49,6 +73,22 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
     fetchData()
   }, [])
 
+  // Pre-seleccionar sucursal del usuario
+  useEffect(() => {
+    if (sucursales.length > 0 && !presupuestoCreado && !datosHistorial && sucursalId === null) {
+      const userSucursalId = user?.sucursal_id
+      
+      if (userSucursalId) {
+        const sucursalData = sucursales.find(s => Number(s.ID) === Number(userSucursalId))
+        
+        if (sucursalData) {
+          setSucursalId(sucursalData.ID)
+          setSucursal(sucursalData.Sucursales_mh)
+        }
+      }
+    }
+  }, [sucursales, user, presupuestoCreado, datosHistorial, sucursalId])
+
   useEffect(() => {
     if (datosHistorial) {
       setNombre(datosHistorial.nombre)
@@ -59,15 +99,20 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       setPresupuestoCreado(true)
     } else {
       // Limpiar TODOS los campos cuando no hay datosHistorial
-      setNombre('')
-      setDni('')
-      setSucursal('')
-      setSucursalId(null)
-      setFinanciadorId(null)
-      setDificilAcceso(false)
-      setPresupuestoCreado(false)
+      // Esto solo debe ocurrir si explícitamente se limpia datosHistorial (ej: nuevo presupuesto)
+      // Para evitar borrar la sucursal pre-seleccionada al inicio, verificamos si realmente queremos resetear
+      if (!datosHistorial && presupuestoCreado) {
+         setNombre('')
+         setDni('')
+         // No reseteamos sucursal aqui para mantener la del usuario si empieza de nuevo
+         // setSucursal('') 
+         // setSucursalId(null)
+         setFinanciadorId(null)
+         setDificilAcceso(false)
+         setPresupuestoCreado(false)
+      }
     }
-  }, [datosHistorial])
+  }, [datosHistorial]) // Removed presupuestoCreado from dependency to avoid loop, logic handled inside
 
   const verificarDNI = async () => {
     if (!dni || !/^\d{7,8}$/.test(dni)) {
@@ -113,7 +158,15 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       })
       
       setPresupuestoCreado(true)
-      onPresupuestoCreado(res.data.id, nombre, dni, sucursal, porcentajeInsumos, financiadorId || undefined, sucursalId || undefined)
+      onPresupuestoCreado({
+        id: res.data.id, 
+        nombre, 
+        dni, 
+        sucursal, 
+        porcentajeInsumos, 
+        financiadorId: financiadorId || undefined, 
+        sucursalId: sucursalId || undefined
+      })
       notifications.show({
         title: 'Guardado',
         message: `Presupuesto creado con ID: ${res.data.id}`,
@@ -144,7 +197,15 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
       })
       
       setPresupuestoCreado(true)
-      onPresupuestoCreado(res.data.id, nombreParam, dni, sucursalParam, porcentajeInsumos, financiadorId || undefined, sucursalData?.ID)
+      onPresupuestoCreado({
+        id: res.data.id, 
+        nombre: nombreParam, 
+        dni, 
+        sucursal: sucursalParam, 
+        porcentajeInsumos, 
+        financiadorId: financiadorId || undefined, 
+        sucursalId: sucursalData?.ID
+      })
       notifications.show({
         title: 'Guardado',
         message: `Nuevo presupuesto creado con ID: ${res.data.id}`,
@@ -163,14 +224,12 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const cargarPresupuestoExistente = async () => {
     if (presupuestoExistente) {
       try {
-        // Usar la misma lógica que el botón "Editar" - crear nueva versión si está finalizado
         const response = await api.post(`/presupuestos/${presupuestoExistente.idPresupuestos}/version/editar`, {
           confirmar: false
         })
 
         let presupuestoCompleto
         if (response.data.requiereConfirmacion) {
-          // Si requiere confirmación, crear nueva versión automáticamente
           const responseConfirmado = await api.post(`/presupuestos/${presupuestoExistente.idPresupuestos}/version/editar`, {
             confirmar: true
           })
@@ -184,7 +243,6 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
             color: 'green'
           })
         } else {
-          // Si no requiere confirmación, cargar directamente
           const res = await api.get(`/presupuestos/${response.data.id}`)
           presupuestoCompleto = res.data
           
@@ -195,7 +253,7 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           })
         }
         
-        // Actualizar los campos del formulario
+        // Actualizar formulario
         setNombre(presupuestoCompleto.Nombre_Apellido)
         setDni(presupuestoCompleto.DNI)
         setSucursal(presupuestoCompleto.Sucursal)
@@ -209,26 +267,26 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
         
         setPresupuestoCreado(true)
         setEsCargaHistorial(true)
-        onPresupuestoCreado(
-          presupuestoCompleto.idPresupuestos, 
-          presupuestoCompleto.Nombre_Apellido,
-          presupuestoCompleto.DNI,
-          presupuestoCompleto.Sucursal,
-          porcentajeInsumos,
-          presupuestoCompleto.financiador_id?.toString(),
-          sucursalData?.ID
-        )
         
-        // Cargar insumos, prestaciones y equipamientos como el botón "Editar"
-        // Simular el callback que usa UserDashboard
-        if (window.cargarPresupuestoCallback) {
-          await window.cargarPresupuestoCallback(
+        // 1. Notificar datos básicos
+        onPresupuestoCreado({
+            id: presupuestoCompleto.idPresupuestos, 
+            nombre: presupuestoCompleto.Nombre_Apellido,
+            dni: presupuestoCompleto.DNI,
+            sucursal: presupuestoCompleto.Sucursal,
+            porcentajeInsumos,
+            financiadorId: presupuestoCompleto.financiador_id?.toString(),
+            sucursalId: sucursalData?.ID
+        })
+        
+        // 2. Cargar datos adicionales (items) usando prop en lugar de window callback
+        await onCargarPresupuesto(
             presupuestoCompleto.idPresupuestos,
             presupuestoCompleto.Nombre_Apellido,
             presupuestoCompleto.Sucursal,
             presupuestoCompleto.financiador_id
-          )
-        }
+        )
+
         setModalDNI(false)
       } catch (error) {
         console.error('Error cargando presupuesto:', error)
@@ -257,14 +315,26 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
   const nuevoPresupuesto = () => {
     setNombre('')
     setDni('')
-    setSucursal('')
-    setSucursalId(null)
     setFinanciadorId(null)
     setDificilAcceso(false)
     setPresupuestoCreado(false)
     setModalDNI(false)
     setPresupuestoExistente(null)
     setEsCargaHistorial(false)
+    
+    // Restaurar sucursal del usuario
+    const userSucursalId = user?.sucursal_id
+    if (userSucursalId) {
+      const sucursalData = sucursales.find(s => Number(s.ID) === Number(userSucursalId))
+      if (sucursalData) {
+        setSucursalId(sucursalData.ID)
+        setSucursal(sucursalData.Sucursales_mh)
+      }
+    } else {
+      setSucursalId(null)
+      setSucursal('')
+    }
+    
     onNuevoPresupuesto()
   }
 
@@ -333,14 +403,19 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
           label="Financiador"
           data={financiadores.map(f => ({
             value: f.id.toString(),
-            label: f.Financiador
+            label: f.activo === 1 ? f.Financiador : `${f.Financiador} (Consultar estado con cobranzas)`,
+            disabled: f.activo === 0
           }))}
           value={financiadorId}
           onChange={async (value) => {
+            // Solo actualizamos el estado local. Si queremos guardar en BD, debería ser con un botón explícito o confirmación
+            // pero para mantener la funcionalidad existente de edición "en caliente" (que es peligrosa):
             setFinanciadorId(value)
+            
             // Si es carga histórica y hay presupuesto creado, actualizar en BD
             if (esCargaHistorial && presupuestoCreado && value) {
-              try {
+                // TODO: Considerar mover esto a una función auxiliar o requerir confirmación del usuario
+               try {
                 const presupuestoIdActual = datosHistorial ? await api.get(`/presupuestos/verificar-dni/${dni}`).then(res => res.data.presupuesto?.idPresupuestos) : null
                 if (presupuestoIdActual) {
                   await api.put(`/presupuestos/${presupuestoIdActual}/financiador`, {
@@ -351,15 +426,15 @@ export default function DatosPresupuesto({ onPresupuestoCreado, onNuevoPresupues
                     message: 'El financiador se guardó correctamente',
                     color: 'green'
                   })
-                  onPresupuestoCreado(
-                    presupuestoIdActual,
+                  onPresupuestoCreado({
+                    id: presupuestoIdActual,
                     nombre,
                     dni,
                     sucursal,
-                    sucursales.find(s => s.ID === sucursalId)?.suc_porcentaje_insumos || 0,
-                    value,
-                    sucursalId || undefined
-                  )
+                    porcentajeInsumos: sucursales.find(s => s.ID === sucursalId)?.suc_porcentaje_insumos || 0,
+                    financiadorId: value,
+                    sucursalId: sucursalId || undefined
+                  })
                 }
               } catch (error) {
                 console.error('Error actualizando financiador:', error)

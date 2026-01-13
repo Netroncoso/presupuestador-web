@@ -3,6 +3,8 @@ import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, 
 import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon, PlusIcon, TrashIcon, SwatchIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import { numberFormat } from '../../utils/numberFormat';
+import { CurrencyInput } from '../../components/CurrencyInput';
 
 interface Financiador {
   id: string;
@@ -51,14 +53,6 @@ export default function GestionEquipamientos() {
     fecha_inicio: new Date().toISOString().slice(0, 10),
     sucursal_id: ''
   }]);
-
-  const formatPeso = (value: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(value);
-  };
 
   const formatName = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -251,7 +245,7 @@ export default function GestionEquipamientos() {
     if (count === 1) {
       return (
         <div>
-          <Text size="sm">{formatPeso(valor || 0)}</Text>
+          <Text size="sm">{numberFormat.formatCurrency(valor || 0)}</Text>
           <Text size="xs" c="dimmed">
             ({equipo.sucursal_id_vigente 
               ? sucursales.find(s => s.ID === equipo.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
@@ -327,7 +321,7 @@ export default function GestionEquipamientos() {
                   <Table.Tr key={equipo.id}>
                     <Table.Td>{equipo.nombre}</Table.Td>
                     <Table.Td style={{ textTransform: 'capitalize' }}>{equipo.tipo}</Table.Td>
-                    <Table.Td>{formatPeso(equipo.precio_referencia)}</Table.Td>
+                    <Table.Td>{numberFormat.formatCurrency(equipo.precio_referencia)}</Table.Td>
                     <Table.Td>{renderValorCell(equipo, 'costo')}</Table.Td>
                     <Table.Td>{renderValorCell(equipo, 'precio')}</Table.Td>
                     <Table.Td>
@@ -450,7 +444,7 @@ export default function GestionEquipamientos() {
                       style={{ flex: 1 }}
                       clearable
                     />
-                    <NumberInput
+                    <CurrencyInput
                       label={
                         <Tooltip label="Valor mensual">
                           <span style={{ cursor: 'help' }}>Costo</span>
@@ -462,14 +456,9 @@ export default function GestionEquipamientos() {
                         updated[index].valor_asignado = val?.toString() || '';
                         setNuevosValores(updated);
                       }}
-                      decimalScale={2}
-                      fixedDecimalScale
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="$ "
                       style={{ flex: 1 }}
                     />
-                    <NumberInput
+                    <CurrencyInput
                       label={
                         <Tooltip label="Valor mensual">
                           <span style={{ cursor: 'help' }}>Precio</span>
@@ -481,11 +470,6 @@ export default function GestionEquipamientos() {
                         updated[index].valor_facturar = val?.toString() || '';
                         setNuevosValores(updated);
                       }}
-                      decimalScale={2}
-                      fixedDecimalScale
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="$ "
                       style={{ flex: 1 }}
                     />
                     <TextInput
@@ -544,8 +528,8 @@ export default function GestionEquipamientos() {
                           </Table.Td>
                           <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
                           <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
                           <Table.Td>
                             <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
                               {!v.fecha_fin ? 'Vigente' : 'Histórico'}
@@ -597,8 +581,8 @@ export default function GestionEquipamientos() {
                         {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
                       </Text>
                     </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
                   </Table.Tr>
                 );
               })}

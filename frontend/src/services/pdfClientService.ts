@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { numberFormat } from '../utils/numberFormat';
 
 interface PresupuestoData {
   cliente: string;
@@ -57,8 +58,8 @@ export const pdfClientService = {
         body: data.insumos.map(i => [
           i.producto,
           i.cantidad.toString(),
-          `$${Number(i.costo).toFixed(2)}`,
-          `$${(Number(i.costo) * i.cantidad).toFixed(2)}`
+          numberFormat.formatCurrency(i.costo),
+          numberFormat.formatCurrency(i.costo * i.cantidad)
         ]),
         theme: 'grid',
         headStyles: { fillColor: [37, 99, 235] },
@@ -80,8 +81,8 @@ export const pdfClientService = {
         body: data.prestaciones.map(p => [
           p.prestacion,
           p.cantidad.toString(),
-          `$${Number(p.valor_asignado).toFixed(2)}`,
-          `$${(Number(p.valor_asignado) * p.cantidad).toFixed(2)}`
+          numberFormat.formatCurrency(p.valor_asignado),
+          numberFormat.formatCurrency(p.valor_asignado * p.cantidad)
         ]),
         theme: 'grid',
         headStyles: { fillColor: [37, 99, 235] },
@@ -104,8 +105,8 @@ export const pdfClientService = {
           e.nombre,
           e.tipo,
           e.cantidad.toString(),
-          `$${Number(e.costo).toFixed(2)}`,
-          `$${(Number(e.costo) * e.cantidad).toFixed(2)}`
+          numberFormat.formatCurrency(e.costo),
+          numberFormat.formatCurrency(e.costo * e.cantidad)
         ]),
         theme: 'grid',
         headStyles: { fillColor: [37, 99, 235] },
@@ -122,18 +123,18 @@ export const pdfClientService = {
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Total Insumos: $${data.totales.totalInsumos.toFixed(2)}`, 20, yPos);
+    doc.text(`Total Insumos: ${numberFormat.formatCurrency(data.totales.totalInsumos)}`, 20, yPos);
     yPos += 7;
-    doc.text(`Total Prestaciones: $${data.totales.totalPrestaciones.toFixed(2)}`, 20, yPos);
+    doc.text(`Total Prestaciones: ${numberFormat.formatCurrency(data.totales.totalPrestaciones)}`, 20, yPos);
     yPos += 7;
     if (data.totales.totalEquipamientos > 0) {
-      doc.text(`Total Equipamientos: $${data.totales.totalEquipamientos.toFixed(2)}`, 20, yPos);
+      doc.text(`Total Equipamientos: ${numberFormat.formatCurrency(data.totales.totalEquipamientos)}`, 20, yPos);
       yPos += 7;
     }
-    doc.text(`Costo Total: $${data.totales.costoTotal.toFixed(2)}`, 20, yPos);
+    doc.text(`Costo Total: ${numberFormat.formatCurrency(data.totales.costoTotal)}`, 20, yPos);
     yPos += 7;
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total a Facturar: $${data.totales.totalFacturar.toFixed(2)}`, 20, yPos);
+    doc.text(`Total a Facturar: ${numberFormat.formatCurrency(data.totales.totalFacturar)}`, 20, yPos);
     yPos += 7;
     doc.text(`Rentabilidad: ${data.totales.rentabilidad.toFixed(2)}%`, 20, yPos);
 

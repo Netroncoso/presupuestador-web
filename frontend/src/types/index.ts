@@ -5,6 +5,7 @@ export interface FinanciadorInfo {
   acuerdo_nombre?: string | null;
   Financiador?: string;
   id?: string;
+  porcentaje_insumos?: number;
 }
 
 export interface Insumo {

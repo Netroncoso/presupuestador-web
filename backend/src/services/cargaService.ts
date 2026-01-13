@@ -314,6 +314,7 @@ export class CargaService {
           p.total_facturar,
           p.created_at,
           p.estado,
+          p.sucursal_id,
           s.Sucursales_mh as sucursal_nombre,
           f.Financiador as financiador_nombre,
           TIMESTAMPDIFF(HOUR, p.updated_at, NOW()) as horas_pendiente
@@ -326,14 +327,21 @@ export class CargaService {
       
       const params: any[] = [];
       
-      if (sucursalId) {
-        query += ' AND p.sucursal_id = ?';
-        params.push(sucursalId);
-      }
+      // COMENTADO: No filtrar por sucursal - operadores ven todos los casos
+      // if (sucursalId) {
+      //   query += ' AND p.sucursal_id = ?';
+      //   params.push(sucursalId);
+      // }
       
       query += ' ORDER BY p.created_at ASC';
       
       const [casos] = await pool.query<RowDataPacket[]>(query, params);
+      
+      logger.info('Casos pendientes de carga obtenidos', { 
+        cantidad: casos.length,
+        sucursalOperador: sucursalId,
+        casos: casos.map((c: any) => ({ id: c.idPresupuestos, sucursal: c.sucursal_id, estado: c.estado }))
+      });
       
       return casos;
       

@@ -36,13 +36,16 @@ export class PresupuestoRepository {
     rentabilidad: number;
     rentabilidadConPlazo: number;
   }) {
+    const resultadoAuditoria = data.estado === 'pendiente_carga' ? 'aprobado' : null;
+    
     await pool.query(
       `UPDATE presupuestos 
-       SET estado = ?, total_insumos = ?, total_prestaciones = ?, total_equipamiento = ?,
+       SET estado = ?, resultado_auditoria = ?, total_insumos = ?, total_prestaciones = ?, total_equipamiento = ?,
            costo_total = ?, total_facturar = ?, rentabilidad = ?, rentabilidad_con_plazo = ? 
        WHERE idPresupuestos = ?`,
       [
         data.estado,
+        resultadoAuditoria,
         data.totalInsumos,
         data.totalPrestaciones,
         data.totalEquipamientos || 0,
@@ -78,6 +81,18 @@ export class PresupuestoRepository {
     } catch (error) {
       console.error('Error al notificar operadores de carga:', error);
       throw new Error('Error al crear notificaciones para operadores de carga');
+    }
+  }
+
+  async notificarUsuarioAprobacionAutomatica(usuarioId: number, presupuestoId: number, version: number) {
+    try {
+      await pool.query(`
+        INSERT INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
+        VALUES (?, ?, ?, 'aprobado', 'Presupuesto aprobado automáticamente y enviado a carga')
+      `, [usuarioId, presupuestoId, version]);
+    } catch (error) {
+      console.error('Error al notificar usuario aprobación automática:', error);
+      throw new Error('Error al crear notificación de aprobación automática');
     }
   }
 

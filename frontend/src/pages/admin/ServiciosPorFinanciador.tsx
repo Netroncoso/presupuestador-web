@@ -3,6 +3,8 @@ import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, 
 import { PencilSquareIcon, MagnifyingGlassIcon,SwatchIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
+import { numberFormat } from '../../utils/numberFormat';
+import { CurrencyInput } from '../../components/CurrencyInput';
 
 
 interface Financiador {
@@ -62,14 +64,6 @@ export default function ServiciosPorFinanciador() {
 
   const formatNumber = (value: number | null | undefined): number => {
     return Number(value) || 0;
-  };
-
-  const formatPeso = (value: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(value);
   };
 
   useEffect(() => {
@@ -192,7 +186,7 @@ export default function ServiciosPorFinanciador() {
     if (count === 1) {
       return (
         <div>
-          <Text size="sm">{formatPeso(formatNumber(valor))}</Text>
+          <Text size="sm">{numberFormat.formatCurrency(formatNumber(valor))}</Text>
           <Text size="xs" c="dimmed">
             ({servicio.sucursal_id_vigente 
               ? sucursales.find(s => s.ID === servicio.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
@@ -444,7 +438,7 @@ export default function ServiciosPorFinanciador() {
                       style={{ flex: 1 }}
                       clearable
                     />
-                    <NumberInput
+                    <CurrencyInput
                       label="Valor Sugerido"
                       value={valor.valor_asignado ? Number(valor.valor_asignado) : undefined}
                       onChange={(val) => {
@@ -452,14 +446,9 @@ export default function ServiciosPorFinanciador() {
                         updated[index].valor_asignado = val?.toString() || '';
                         setNuevosValores(updated);
                       }}
-                      decimalScale={2}
-                      fixedDecimalScale
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="$ "
                       style={{ flex: 1 }}
                     />
-                    <NumberInput
+                    <CurrencyInput
                       label="Valor a Facturar"
                       value={valor.valor_facturar ? Number(valor.valor_facturar) : undefined}
                       onChange={(val) => {
@@ -467,11 +456,6 @@ export default function ServiciosPorFinanciador() {
                         updated[index].valor_facturar = val?.toString() || '';
                         setNuevosValores(updated);
                       }}
-                      decimalScale={2}
-                      fixedDecimalScale
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="$ "
                       style={{ flex: 1 }}
                     />
                     <TextInput
@@ -596,8 +580,8 @@ export default function ServiciosPorFinanciador() {
                           </Table.Td>
                           <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
                           <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
                           <Table.Td>
                             <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
                               {!v.fecha_fin ? 'Vigente' : 'Histórico'}
@@ -682,8 +666,8 @@ export default function ServiciosPorFinanciador() {
                         {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
                       </Text>
                     </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_asignado))}</Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{formatPeso(Number(v.valor_facturar))}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
                   </Table.Tr>
                 );
               })}

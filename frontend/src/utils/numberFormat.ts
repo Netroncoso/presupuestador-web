@@ -9,16 +9,16 @@ export const numberFormat = {
    * @example formatCurrency(1234.56) => "$ 1.234,56"
    */
   formatCurrency: (value: number | string | null | undefined): string => {
-    if (value === null || value === undefined || value === '') return '$ 0,00';
+    if (value === null || value === undefined || value === '') return '$ 0';
     const num = typeof value === 'string' ? parseFloat(value) : value;
-    if (isNaN(num)) return '$ 0,00';
+    if (isNaN(num)) return '$ 0';
     
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: 'ARS',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(num));
   },
 
   /**

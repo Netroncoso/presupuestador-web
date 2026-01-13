@@ -3,6 +3,7 @@ import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Tit
 import { TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../api/api';
+import { numberFormat } from '../utils/numberFormat';
 
 interface Equipamiento {
   id: number;
@@ -280,11 +281,7 @@ export default function Equipamiento({
   };
 
   const formatPeso = (value: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(value);
+    return numberFormat.formatCurrency(value);
   };
 
   if (!financiadorId) {
@@ -434,8 +431,6 @@ export default function Equipamiento({
                               value={nuevoCosto}
                               onChange={(value) => setNuevoCosto(Number(value) || 0)}
                               min={0}
-                              step={0.01}
-                              decimalScale={2}
                               w={100}
                               size="xs"
                               hideControls
@@ -451,8 +446,6 @@ export default function Equipamiento({
                               value={nuevoPrecio}
                               onChange={(value) => setNuevoPrecio(Number(value) || 0)}
                               min={0}
-                              step={0.01}
-                              decimalScale={2}
                               w={100}
                               size="xs"
                               hideControls

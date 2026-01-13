@@ -14,6 +14,7 @@ interface Financiador {
   dias_cobranza_real: number;
   id_acuerdo?: number | null;
   acuerdo_nombre?: string | null;
+  porcentaje_insumos?: number;
 }
 
 export default function GestionFinanciadores() {
@@ -99,7 +100,8 @@ export default function GestionFinanciadores() {
       ...financiador,
       tasa_mensual: financiador.tasa_mensual || 0,
       dias_cobranza_teorico: financiador.dias_cobranza_teorico || 0,
-      dias_cobranza_real: financiador.dias_cobranza_real || 0
+      dias_cobranza_real: financiador.dias_cobranza_real || 0,
+      porcentaje_insumos: financiador.porcentaje_insumos || 0
     });
     setModalOpen(true);
   };
@@ -114,7 +116,8 @@ export default function GestionFinanciadores() {
         tasa_mensual: editingFinanciador.tasa_mensual || 0,
         dias_cobranza_teorico: editingFinanciador.dias_cobranza_teorico || 0,
         dias_cobranza_real: editingFinanciador.dias_cobranza_real || 0,
-        id_acuerdo: editingFinanciador.id_acuerdo ?? null
+        id_acuerdo: editingFinanciador.id_acuerdo ?? null,
+        porcentaje_insumos: editingFinanciador.porcentaje_insumos || 0
       });
       
       notifications.show({
@@ -175,6 +178,7 @@ export default function GestionFinanciadores() {
             <Table.Th style={{ width: '120px' }}>Tasa Mensual</Table.Th>
             <Table.Th style={{ width: '140px' }}>Días Teórico</Table.Th>
             <Table.Th style={{ width: '120px' }}>Días Real</Table.Th>
+            <Table.Th style={{ width: '120px' }}>% Insumos</Table.Th>
             <Table.Th style={{ width: '240px' }}>Acuerdo</Table.Th>
             <Table.Th style={{ width: '100px' }}>Acciones</Table.Th>
           </Table.Tr>
@@ -198,6 +202,7 @@ export default function GestionFinanciadores() {
               <Table.Td>{(financiador.tasa_mensual || 0)}%</Table.Td>
               <Table.Td>{(financiador.dias_cobranza_teorico || 0)} días</Table.Td>
               <Table.Td>{(financiador.dias_cobranza_real || 0)} días</Table.Td>
+              <Table.Td>{(financiador.porcentaje_insumos || 0)}%</Table.Td>
               <Table.Td>{financiador.acuerdo_nombre || 'SIN CONVENIO'}</Table.Td>
               <Table.Td>
                 <ActionIcon variant="transparent" onClick={() => handleEdit(financiador)}>
@@ -248,6 +253,19 @@ export default function GestionFinanciadores() {
                 dias_cobranza_real: parseInt(e.target.value) || 0
               })}
               min={0}
+            />
+            <TextInput
+              label="% Adicional Insumos"
+              type="number"
+              value={editingFinanciador.porcentaje_insumos?.toString() || '0'}
+              onChange={(e) => setEditingFinanciador({
+                ...editingFinanciador,
+                porcentaje_insumos: parseFloat(e.target.value) || 0
+              })}
+              min={0}
+              max={100}
+              step={0.5}
+              description="Porcentaje adicional que se suma al % base de insumos"
             />
             <Select
               label="Acuerdo"

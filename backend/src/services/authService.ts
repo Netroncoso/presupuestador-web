@@ -5,7 +5,7 @@ import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
 
 export class AuthService {
-  
+
   private getJwtSecret(): string {
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is required');
@@ -19,7 +19,7 @@ export class AuthService {
     }
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, password, rol FROM usuarios WHERE username = ? AND activo = 1',
+      'SELECT id, username, password, rol, sucursal_id FROM usuarios WHERE username = ? AND activo = 1',
       [username]
     );
 
@@ -35,7 +35,7 @@ export class AuthService {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, rol: user.rol },
+      { id: user.id, username: user.username, rol: user.rol, sucursal_id: user.sucursal_id },
       this.getJwtSecret(),
       { expiresIn: '1h' }
     );
@@ -45,7 +45,8 @@ export class AuthService {
       user: {
         id: user.id,
         username: user.username,
-        rol: user.rol
+        rol: user.rol,
+        sucursal_id: user.sucursal_id
       }
     };
   }

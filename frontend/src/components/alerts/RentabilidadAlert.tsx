@@ -35,7 +35,7 @@ const CONFIG = {
   },
 } as const;
 
-export const RentabilidadAlert = ({ tipo, rentabilidad, usandoPlazo }: Props) => {
+export const RentabilidadAlert = ({ tipo, rentabilidad }: Props) => {
   const config = CONFIG[tipo];
   
   if (!config) {
@@ -44,7 +44,6 @@ export const RentabilidadAlert = ({ tipo, rentabilidad, usandoPlazo }: Props) =>
   }
   
   const Icon = config.icon;
-  const plazoText = usandoPlazo ? ' (Ajustada por plazo)' : '';
   const rentabilidadSegura = isNaN(rentabilidad) ? 0 : rentabilidad;
 
   return (
@@ -56,7 +55,7 @@ export const RentabilidadAlert = ({ tipo, rentabilidad, usandoPlazo }: Props) =>
       mb="xs"
     >
       <Text size="sm">
-        <strong>Rentabilidad: {rentabilidadSegura.toFixed(2)}%</strong>{plazoText} - {config.mensaje}
+        <strong>Rentabilidad: {rentabilidadSegura.toFixed(2)}%</strong> - {config.mensaje}
       </Text>
     </Alert>
   );

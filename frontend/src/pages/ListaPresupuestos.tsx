@@ -6,6 +6,8 @@ import { api } from '../api/api';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
 import { pdfClientService } from '../services/pdfClientService';
 import { notifications } from '@mantine/notifications';
+import { useAuth } from '../contexts/AuthContext';
+import { numberFormat } from '../utils/numberFormat';
 
 const ICON_SIZE = { width: 16, height: 16 };
 const ICON_SIZE_LG = { width: 20, height: 20 };
@@ -25,6 +27,7 @@ interface Presupuesto {
   rentabilidad_con_plazo: number | null;
   created_at: string;
   estado?: string;
+  resultado_auditoria?: 'aprobado' | 'aprobado_condicional' | 'rechazado' | null;
   usuario_creador?: string;
 }
 
@@ -37,6 +40,7 @@ interface ListaPresupuestosProps {
 }
 
 export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, soloConsulta = false, onVerDetalle }: ListaPresupuestosProps) {
+  const { user } = useAuth();
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroAuditor, setFiltroAuditor] = useState('todos');
@@ -156,6 +160,34 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         },
       },
       {
+        accessorKey: 'resultado_auditoria',
+        header: 'Resultado',
+        size: 150,
+        Cell: ({ cell }) => {
+          const resultado = cell.getValue<string>();
+          if (!resultado) return <Text size="sm" c="dimmed">-</Text>;
+          
+          const color = resultado === 'aprobado' ? 'green' : 
+                       resultado === 'aprobado_condicional' ? 'orange' : 'red';
+          const label = resultado === 'aprobado' ? 'Aprobado' :
+                       resultado === 'aprobado_condicional' ? 'Aprobado Condicional' : 'Rechazado';
+          
+          return (
+            <Text size="sm" fw={500} c={color}>
+              {label}
+            </Text>
+          );
+        },
+        filterVariant: 'select',
+        mantineFilterSelectProps: {
+          data: [
+            { value: 'aprobado', label: 'Aprobado' },
+            { value: 'aprobado_condicional', label: 'Aprobado Condicional' },
+            { value: 'rechazado', label: 'Rechazado' },
+          ],
+        },
+      },
+      {
         accessorKey: 'utilidad',
         header: 'Utilidad',
         size: 120,
@@ -163,7 +195,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
           const utilidad = cell.getValue<number>();
           return (
             <Text size="sm" c={utilidad >= 0 ? 'green' : 'red'} fw={500}>
-              ${Number(utilidad || 0).toFixed(2)}
+              {numberFormat.formatCurrency(utilidad)}
             </Text>
           );
         },
@@ -202,6 +234,10 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     initialState: {
       pagination: { pageSize: 20, pageIndex: 0 },
       density: 'xs',
+      columnVisibility: {
+        DNI: user?.rol !== 'user',
+        Sucursal: user?.rol !== 'user',
+      },
     },
     mantineTableProps: {
       striped: 'odd',

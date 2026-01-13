@@ -31,19 +31,28 @@ export class CalculosService {
     const reglas = [];
     const { auditoria } = BusinessRules;
 
+    // Evaluar rentabilidad mínima (SIN plazo)
     if (presupuesto.rentabilidad < auditoria.rentabilidadMinima) {
       reglas.push(`Rentabilidad menor a ${auditoria.rentabilidadMinima}%`);
+    }
+
+    // Evaluar rentabilidad máxima (SIN plazo)
+    if (presupuesto.rentabilidad > auditoria.rentabilidadMaxima) {
+      reglas.push(`Rentabilidad superior a ${auditoria.rentabilidadMaxima}%`);
     }
 
     if (presupuesto.costo_total > auditoria.costoMaximo) {
       reglas.push(`Costo total superior a $${auditoria.costoMaximo.toLocaleString()}`);
     }
 
-    if (presupuesto.rentabilidad_con_plazo > auditoria.rentabilidadConPlazoMaxima) {
-      reglas.push(`Rentabilidad con plazo superior a ${auditoria.rentabilidadConPlazoMaxima}%`);
-    }
-
     const utilidad = presupuesto.total_facturar - presupuesto.costo_total;
+    
+    // Utilidad muy baja (sospecha error)
+    if (utilidad < auditoria.utilidadMinimaBaja) {
+      reglas.push(`Utilidad muy baja (menor a $${auditoria.utilidadMinimaBaja.toLocaleString()})`);
+    }
+    
+    // Utilidad muy alta (sospecha sobreprecio)
     if (utilidad > auditoria.utilidadMinima) {
       reglas.push(`Utilidad superior a $${auditoria.utilidadMinima.toLocaleString()}`);
     }

@@ -14,6 +14,7 @@ interface PresupuestoCarga {
   Sucursal: string;
   Financiador: string;
   estado: string;
+  resultado_auditoria?: 'aprobado' | 'aprobado_condicional' | 'rechazado' | null;
   total_facturar: number;
   referencia_externa: string | null;
   created_at: string;
@@ -115,6 +116,26 @@ export default function ListaPresupuestosCarga({ onVerDetalle }: ListaPresupuest
           return (
             <Text size="sm" fw={400} c={getEstadoBadgeColor(estado)}>
               {getEstadoLabel(estado)}
+            </Text>
+          );
+        },
+      },
+      {
+        accessorKey: 'resultado_auditoria',
+        header: 'Resultado',
+        size: 140,
+        Cell: ({ cell }) => {
+          const resultado = cell.getValue<string>();
+          if (!resultado) return <Text size="sm" c="dimmed">-</Text>;
+          
+          const color = resultado === 'aprobado' ? 'green' : 
+                       resultado === 'aprobado_condicional' ? 'orange' : 'red';
+          const label = resultado === 'aprobado' ? 'Aprobado' :
+                       resultado === 'aprobado_condicional' ? 'Condicional' : 'Rechazado';
+          
+          return (
+            <Text size="sm" fw={500} c={color}>
+              {label}
             </Text>
           );
         },

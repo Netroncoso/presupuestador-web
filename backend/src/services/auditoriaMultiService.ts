@@ -420,6 +420,7 @@ export class AuditoriaMultiService {
       await connection.query(
         `UPDATE presupuestos 
          SET estado = ?,
+             resultado_auditoria = 'aprobado',
              revisor_id = NULL,
              revisor_asignado_at = NULL
          WHERE idPresupuestos = ?`,
@@ -511,9 +512,11 @@ export class AuditoriaMultiService {
       if (!presupuesto[0].version || !presupuesto[0].usuario_id) throw new AppError(400, 'Datos de presupuesto incompletos');
       if (presupuesto[0].revisor_id !== auditorId) throw new AppError(403, 'No tienes permiso para auditar este caso');
       
+      // MODIFICACIÓN: Transición automática a pendiente_carga
       await connection.query(
         `UPDATE presupuestos 
-         SET estado = 'aprobado_condicional',
+         SET estado = 'pendiente_carga',
+             resultado_auditoria = 'aprobado_condicional',
              revisor_id = NULL,
              revisor_asignado_at = NULL
          WHERE idPresupuestos = ?`,
@@ -527,7 +530,7 @@ export class AuditoriaMultiService {
         [id, presupuesto[0].version, auditorId, estadoAnterior, motivo]
       );
       
-      const mensajeCondicional = `Presupuesto APROBADO CONDICIONALMENTE por ${gerenciaNombre}: ${motivo}`;
+      const mensajeCondicional = `Presupuesto APROBADO CONDICIONALMENTE por ${gerenciaNombre} y enviado a carga: ${motivo}`;
       
       // Notificar al usuario creador
       await this.notificarUsuario(
@@ -537,6 +540,18 @@ export class AuditoriaMultiService {
         presupuesto[0].version,
         'aprobado_condicional',
         mensajeCondicional
+      );
+      
+      // Notificar a operadores de carga
+      const nombrePaciente = presupuesto[0].Nombre_Apellido || 'Sin nombre';
+      const totalFacturar = presupuesto[0].total_facturar || 0;
+      await this.notificarGerencia(
+        connection,
+        id,
+        presupuesto[0].version,
+        'operador_carga',
+        `Nuevo presupuesto para carga: ${nombrePaciente} - $${totalFacturar}`,
+        'carga'
       );
       
       // Notificar a gerencia administrativa (para seguimiento)
@@ -602,6 +617,7 @@ export class AuditoriaMultiService {
       await connection.query(
         `UPDATE presupuestos 
          SET estado = 'rechazado',
+             resultado_auditoria = 'rechazado',
              revisor_id = NULL,
              revisor_asignado_at = NULL
          WHERE idPresupuestos = ?`,

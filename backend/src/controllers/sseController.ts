@@ -10,6 +10,7 @@ interface SSEConnection {
   res: Response;
   userId: number;
   userRole: string;
+  heartbeatTimer?: NodeJS.Timeout;
 }
 
 // Store active SSE connections
@@ -26,12 +27,12 @@ export const streamUpdates = async (req: Request, res: Response) => {
 
   setupSSEHeaders(res);
   await sendInitialData(res, userId, userRole);
-  
+
   const connection = addConnection(userId, userRole, res);
   const heartbeat = startHeartbeat(connection);
-  
+
   setupCleanupHandlers(authReq, heartbeat, userId, res);
-  
+
   // Send immediate heartbeat to confirm connection
   setTimeout(() => {
     if (!sendHeartbeat(res)) {
@@ -42,27 +43,30 @@ export const streamUpdates = async (req: Request, res: Response) => {
 
 const authenticateUser = async (req: Request, res: Response): Promise<{ userId?: number; userRole?: string }> => {
   const token = req.query.token as string || req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     res.status(401).json({ error: 'No token provided' });
+    res.end();
     return {};
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
     req.user = decoded;
-    
+
     const userId = req.user?.id;
     const userRole = req.user?.rol;
-    
+
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
+      res.end();
       return {};
     }
-    
+
     return { userId, userRole };
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
+    res.end();
     return {};
   }
 };
@@ -81,39 +85,43 @@ const addConnection = (userId: number, userRole: string, res: Response): SSEConn
   if (!activeConnections.has(userId)) {
     activeConnections.set(userId, []);
   }
-  
+
   const connection = { res, userId, userRole };
   activeConnections.get(userId)!.push(connection);
-  
+
   logger.info(`SSE connection established for user ${String(userId).replace(/[\r\n]/g, '')}`);
   return connection;
 };
 
 const startHeartbeat = (connection: SSEConnection) => {
-  return setInterval(() => {
+  const timer = setInterval(() => {
     if (!sendHeartbeat(connection.res)) {
+      logger.info(`Heartbeat failed manually for user ${String(connection.userId).replace(/[\r\n]/g, '')}`, { userId: connection.userId });
       removeConnection(connection.userId, connection.res);
-      logger.info(`Heartbeat failed, removing connection for user ${String(connection.userId).replace(/[\r\n]/g, '')}`);
-      return; // Stop the interval
     }
   }, HEARTBEAT_INTERVAL);
+
+  connection.heartbeatTimer = timer;
+  return timer;
 };
 
 const setupCleanupHandlers = (req: Request, heartbeat: NodeJS.Timeout, userId: number, res: Response) => {
-  const cleanup = () => {
-    clearInterval(heartbeat);
-    removeConnection(userId, res);
-  };
+  // Nota: heartbeat argument is kept for signature compatibility but not used directly 
+  // because cleanup is now centralized in removeConnection
 
   req.on('close', () => {
-    cleanup();
-    logger.info(`SSE connection closed for user ${String(userId).replace(/[\r\n]/g, '')}`);
+    removeConnection(userId, res);
+    logger.info(`SSE client disconnected for user ${String(userId).replace(/[\r\n]/g, '')}`);
   });
 
   req.on('error', (err) => {
-    cleanup();
-    const errorMsg = err instanceof Error ? err.message.replace(/[\r\n]/g, ' ') : 'Unknown error';
-    logger.error(`SSE connection error for user ${String(userId).replace(/[\r\n]/g, '')}:`, errorMsg);
+    removeConnection(userId, res);
+    // Enhanced logging to debug
+    if (err instanceof Error) {
+      logger.error(`SSE connection error for user ${userId}. Stack: ${err.stack}`);
+    } else {
+      logger.error(`SSE connection error for user ${userId}:`, err);
+    }
   });
 };
 
@@ -143,7 +151,7 @@ const getNotificationData = async (userId: number) => {
     'SELECT COUNT(*) as count FROM notificaciones WHERE usuario_id = ? AND estado = "nuevo"',
     [userId]
   );
-  
+
   const [notificationsList] = await pool.query<Notificaciones[]>(`
     SELECT n.id, n.tipo, n.mensaje, n.estado, n.creado_en, n.presupuesto_id, 
            n.version_presupuesto, p.Nombre_Apellido as paciente, p.DNI as dni_paciente
@@ -153,7 +161,7 @@ const getNotificationData = async (userId: number) => {
     ORDER BY n.creado_en DESC
     LIMIT ?
   `, [userId, NOTIFICATION_LIMIT]);
-  
+
   return {
     count: countResult[0].count,
     list: notificationsList
@@ -178,7 +186,7 @@ const getPresupuestosData = async () => {
     ) AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
   `);
-  
+
   return { pendientes };
 };
 
@@ -189,14 +197,37 @@ const sendEvent = (res: Response, eventType: string, data: any): boolean => {
 const removeConnection = (userId: number, res: Response) => {
   const connections = activeConnections.get(userId);
   if (!connections) return;
-  
+
   const index = connections.findIndex(conn => conn.res === res);
   if (index !== -1) {
+    const conn = connections[index];
+
+    // Centralized Cleanup Strategy
+
+    // 1. Clean timer if exists
+    if (conn.heartbeatTimer) {
+      clearInterval(conn.heartbeatTimer);
+      // logger.debug(`Cleared heartbeat timer for user ${userId}`);
+    }
+
+    // 2. Ensure socket is closed
+    if (!res.writableEnded && !res.destroyed) {
+      try {
+        res.end();
+        // logger.debug(`Closed HTTP connection for user ${userId}`);
+      } catch (e) {
+        logger.error(`Error closing response for user ${userId}`, e);
+      }
+    }
+
+    // 3. Remove from map
     connections.splice(index, 1);
-    
+
     if (connections.length === 0) {
       activeConnections.delete(userId);
     }
+
+    logger.info(`Connection fully cleaned for user ${String(userId).replace(/[\r\n]/g, '')}`);
   }
 };
 

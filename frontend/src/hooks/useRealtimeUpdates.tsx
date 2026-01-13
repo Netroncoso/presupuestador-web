@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/api';
+import { notifications } from '@mantine/notifications';
 
 interface RealtimeData {
   notifications: number;
@@ -15,6 +16,7 @@ export const useRealtimeUpdates = () => {
   const maxRetries = 5;
   const fallbackIntervalRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
+  const NOTIFICATION_ID = 'sse-connection-error';
 
   // Fallback function to refresh data manually
   const refreshData = async () => {
@@ -52,6 +54,7 @@ export const useRealtimeUpdates = () => {
           setIsConnected(true);
           retryCountRef.current = 0;
           lastUpdateRef.current = Date.now();
+          notifications.hide(NOTIFICATION_ID);
         };
 
         eventSource.addEventListener('notifications', (event) => {
@@ -83,6 +86,19 @@ export const useRealtimeUpdates = () => {
             if (retryCountRef.current > maxRetries) {
               retryCountRef.current = 1;
             }
+            
+            // Show alert if we hit max retries or if we are cycling and haven't connected
+            if (retryCountRef.current === maxRetries) {
+              notifications.show({
+                id: NOTIFICATION_ID,
+                title: 'Conexión perdida',
+                message: 'No se reciben actualizaciones. El sistema intentará reconectar, pero si persiste, por favor recarga la página.',
+                color: 'red',
+                autoClose: false,
+                withCloseButton: true,
+              });
+            }
+
             const delay = Math.min(2000 * retryCountRef.current, 10000); // Faster reconnection
             console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCountRef.current})`);
             setTimeout(connectSSE, delay);

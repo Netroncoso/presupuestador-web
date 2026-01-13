@@ -4,6 +4,7 @@ import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outli
 import { notifications } from '@mantine/notifications'
 import { getFinanciadores, getPrestacionesPorFinanciador } from '../api/api'
 import { api } from '../api/api'
+import { numberFormat } from '../utils/numberFormat'
 
 interface Prestacion {
   id_servicio: string
@@ -140,12 +141,12 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
     if (vs === 0) return []
     
     return [
-      { value: String(vs * 0.8), label: `$${(vs * 0.8).toFixed(2)}` },
-      { value: String(vs * 0.9), label: `$${(vs * 0.9).toFixed(2)}` },
-      { value: String(vs), label: `$${vs.toFixed(2)} (Sugerido)` },
-      { value: String(vs * 1.1), label: `$${(vs * 1.1).toFixed(2)}` },
-      { value: String(vs * 1.2), label: `$${(vs * 1.2).toFixed(2)}` },
-      { value: String(vs * 1.5), label: `$${(vs * 1.5).toFixed(2)}` }
+      { value: String(vs * 0.8), label: `${numberFormat.formatCurrency(vs * 0.8)}` },
+      { value: String(vs * 0.9), label: `${numberFormat.formatCurrency(vs * 0.9)}` },
+      { value: String(vs), label: `${numberFormat.formatCurrency(vs)} (Sugerido)` },
+      { value: String(vs * 1.1), label: `${numberFormat.formatCurrency(vs * 1.1)}` },
+      { value: String(vs * 1.2), label: `${numberFormat.formatCurrency(vs * 1.2)}` },
+      { value: String(vs * 1.5), label: `${numberFormat.formatCurrency(vs * 1.5)}` }
     ]
   }, [prestacionSeleccionadaData])
 
@@ -397,7 +398,7 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                             </Group>
                           </Table.Td>
                           <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || '-'}</Table.Td>
-                          <Table.Td>${Number(p.valor_facturar || 0).toFixed(2)}</Table.Td>
+                          <Table.Td>{numberFormat.formatCurrency(p.valor_facturar)}</Table.Td>
                         </Table.Tr> 
                       ))}
                     </Table.Tbody>
@@ -494,20 +495,18 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
                               value={nuevoValor}
                               onChange={(value) => setNuevoValor(Number(value) || 0)}
                               min={0}
-                              step={0.01}
-                              decimalScale={2}
                               w={100}
                               size="xs"
                               hideControls
                               prefix="$"
                             />
                           ) : (
-                            `$${costoUnitario.toFixed(2)}`
+                            numberFormat.formatCurrency(costoUnitario)
                           )}
                         </Table.Td>
-                        <Table.Td>${precioFacturar.toFixed(2)}</Table.Td>
-                        <Table.Td>${subtotalCosto.toFixed(2)}</Table.Td>
-                        <Table.Td>${subtotalFacturar.toFixed(2)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(precioFacturar)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(subtotalCosto)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(subtotalFacturar)}</Table.Td>
                         <Table.Td>
                           {!soloLectura && (
                             editandoIndex === i ? (

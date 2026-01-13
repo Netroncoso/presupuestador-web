@@ -1,8 +1,9 @@
 import React from 'react';
 import { FinanciadorInfo, Prestacion } from '../types';
-import { evaluarRentabilidad, evaluarMonto, evaluarPrestacionesExcedidas, evaluarEquipamientosExcedidos, evaluarFinanciador } from '../services/alertaService';
+import { evaluarRentabilidad, evaluarMonto, evaluarUtilidad, evaluarPrestacionesExcedidas, evaluarEquipamientosExcedidos, evaluarFinanciador } from '../services/alertaService';
 import { RentabilidadAlert } from '../components/alerts/RentabilidadAlert';
 import { MontoAlert } from '../components/alerts/MontoAlert';
+import { UtilidadAlert } from '../components/alerts/UtilidadAlert';
 import { FinanciadorAlerts } from '../components/alerts/FinanciadorAlerts';
 import { PrestacionExcedidaAlert } from '../components/alerts/PrestacionExcedidaAlert';
 import { EquipamientoExcedidoAlert } from '../components/alerts/EquipamientoExcedidoAlert';
@@ -13,6 +14,7 @@ interface AlertaProps {
   totalInsumos: number;
   totalPrestaciones: number;
   totalFacturar: number;
+  costoTotal: number;
   rentabilidad: number;
   financiadorId: string | null;
   financiadorInfo?: FinanciadorInfo;
@@ -24,6 +26,7 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
   const { 
     rentabilidad,
     totalFacturar,
+    costoTotal,
     financiadorId,
     financiadorInfo,
     prestacionesSeleccionadas = [],
@@ -64,13 +67,25 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
       // Alerta de rentabilidad
       const tipoRentabilidad = await evaluarRentabilidad(rentabilidad);
       if (tipoRentabilidad) {
-        const usandoPlazo = !!financiadorInfo?.dias_cobranza_real;
         alertas.push(
           React.createElement(RentabilidadAlert, {
             key: "rentabilidad",
             tipo: tipoRentabilidad,
             rentabilidad: rentabilidad,
-            usandoPlazo: usandoPlazo
+            usandoPlazo: false
+          })
+        );
+      }
+
+      // Alerta de utilidad
+      const utilidad = totalFacturar - costoTotal;
+      const tipoUtilidad = await evaluarUtilidad(utilidad);
+      if (tipoUtilidad) {
+        alertas.push(
+          React.createElement(UtilidadAlert, {
+            key: "utilidad",
+            tipo: tipoUtilidad,
+            utilidad: utilidad
           })
         );
       }
@@ -136,7 +151,7 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
     };
 
     evaluarAlertas();
-  }, [rentabilidad, totalFacturar, financiadorId, financiadorInfo, prestacionesSeleccionadas, equipamientosSeleccionados, alertasConfig, alertasEquipamientosConfig]);
+  }, [rentabilidad, totalFacturar, costoTotal, financiadorId, financiadorInfo, prestacionesSeleccionadas, equipamientosSeleccionados, alertasConfig, alertasEquipamientosConfig]);
 
   return alertas;
 };

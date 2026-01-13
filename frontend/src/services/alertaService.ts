@@ -9,6 +9,12 @@ export type TipoAlertaRentabilidad =
 
 export type TipoAlertaMonto = 'ELEVADO' | 'CRITICO' | null;
 
+export type TipoAlertaUtilidad =
+  | 'CRITICA'
+  | 'BAJA'
+  | 'BUENA'
+  | 'EXCELENTE';
+
 // Cache de configuración de alertas
 let alertasConfigCache: any = null;
 let cacheTimestamp = 0;
@@ -22,7 +28,7 @@ const getAlertasConfig = async () => {
 
   try {
     const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:4000';
-    const response = await fetch(`${API_URL}/api/configuracion?categoria=alertas`, {
+    const response = await fetch(`${API_URL}/api/configuracion?categoria=alerta`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const data = await response.json();
@@ -45,6 +51,10 @@ const getAlertasConfig = async () => {
       'alerta.rentabilidad.excepcional': 50,
       'alerta.monto.elevado': 100000,
       'alerta.monto.critico': 150000,
+      'alerta.utilidad.critica': 1000,
+      'alerta.utilidad.baja': 10000,
+      'alerta.utilidad.buena': 30000,
+      'alerta.utilidad.excelente': 30000,
       'alerta.financiador.cobranzaLenta': 50,
       'alerta.financiador.cobranzaExtendida': 60,
       'alerta.financiador.tasaAlta': 5
@@ -139,4 +149,18 @@ export const evaluarFinanciador = async (financiadorInfo?: FinanciadorInfo) => {
     diasCobranza: financiadorInfo.dias_cobranza_real,
     tasaMensual: financiadorInfo.tasa_mensual,
   };
+};
+
+export const evaluarUtilidad = async (
+  utilidad: number
+): Promise<TipoAlertaUtilidad | null> => {
+  if (utilidad === 0) return null;
+
+  const config = await getAlertasConfig();
+
+  if (utilidad < config['alerta.utilidad.critica']) return 'CRITICA';
+  if (utilidad < config['alerta.utilidad.baja']) return 'BAJA';
+  if (utilidad < config['alerta.utilidad.buena']) return 'BUENA';
+  
+  return 'EXCELENTE';
 };

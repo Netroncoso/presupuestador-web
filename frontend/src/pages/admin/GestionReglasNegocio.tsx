@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Paper, Title, Text, Group, NumberInput, Button, Stack, Divider, Alert, Loader, Tooltip } from '@mantine/core';
 import { IconAlertCircle, IconCheck, IconDeviceFloppy, IconInfoCircle } from '@tabler/icons-react';
 import { api } from '../../api/api';
+import { CurrencyInput } from '../../components/CurrencyInput';
 
 interface Configuracion {
   id: number;
@@ -181,18 +182,27 @@ export default function GestionReglasNegocio() {
                       <Text size="xs" c="dimmed">{config.clave}</Text>
                     </div>
                   </Tooltip>
-                  <NumberInput
-                    value={config.valor}
-                    onChange={(val) => handleChange(config.clave, Number(val))}
-                    min={0}
-                    step={config.unidad === '$' ? 1000 : 1}
-                    decimalScale={config.unidad === '$' ? 0 : 2}
-                    prefix={config.unidad === '$' ? '$ ' : ''}
-                    suffix={config.unidad !== '$' ? ` ${config.unidad}` : ''}
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    w={200}
-                  />
+                  {config.unidad === '$' ? (
+                    <CurrencyInput
+                      value={config.valor}
+                      onChange={(val) => handleChange(config.clave, Number(val))}
+                      min={0}
+                      step={1000}
+                      w={200}
+                    />
+                  ) : (
+                    <NumberInput
+                      value={config.valor}
+                      onChange={(val) => handleChange(config.clave, Number(val))}
+                      min={0}
+                      step={1}
+                      decimalScale={2}
+                      suffix={` ${config.unidad}`}
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      w={200}
+                    />
+                  )}
                 </Group>
               ))}
             </Stack>

@@ -143,6 +143,124 @@ router.post('/:id/insumos', authenticateToken, validatePresupuestoId, validateIn
 
 /**
  * @swagger
+ * /api/presupuestos/{id}/insumos/bulk:
+ *   post:
+ *     tags: [Presupuestos - Items]
+ *     summary: Agregar múltiples insumos a presupuesto (bulk)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [insumos]
+ *             properties:
+ *               insumos:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [producto, costo, cantidad, insumo_id]
+ *                   properties:
+ *                     producto:
+ *                       type: string
+ *                     costo:
+ *                       type: number
+ *                     cantidad:
+ *                       type: number
+ *                     insumo_id:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Insumos agregados exitosamente
+ */
+router.post('/:id/insumos/bulk', authenticateToken, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const presupuestoId = parseInt(req.params.id);
+  const { insumos } = req.body;
+
+  if (!Array.isArray(insumos) || insumos.length === 0) {
+    return res.status(400).json({ error: 'Se requiere un array de insumos' });
+  }
+
+  logger.info('Agregando insumos en bulk', { 
+    presupuestoId, 
+    cantidad: insumos.length,
+    usuario: req.user.id 
+  });
+
+  const pool = req.app.locals.pool;
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    let agregados = 0;
+    let actualizados = 0;
+
+    for (const insumo of insumos) {
+      const { producto, costo, cantidad, insumo_id } = insumo;
+
+      if (!producto || cantidad <= 0 || costo < 0) {
+        continue;
+      }
+
+      // Verificar si ya existe
+      const [existing] = await connection.query(
+        'SELECT id FROM presupuesto_insumos WHERE presupuesto_id = ? AND producto = ?',
+        [presupuestoId, producto]
+      );
+
+      if (existing.length > 0) {
+        // Actualizar existente
+        await connection.query(
+          'UPDATE presupuesto_insumos SET costo = ?, cantidad = ?, insumo_id = ? WHERE id = ?',
+          [costo, cantidad, insumo_id, existing[0].id]
+        );
+        actualizados++;
+      } else {
+        // Insertar nuevo
+        await connection.query(
+          'INSERT INTO presupuesto_insumos (presupuesto_id, producto, costo, cantidad, insumo_id) VALUES (?, ?, ?, ?, ?)',
+          [presupuestoId, producto, costo, cantidad, insumo_id]
+        );
+        agregados++;
+      }
+    }
+
+    await connection.commit();
+
+    logger.info('Insumos bulk agregados exitosamente', { 
+      presupuestoId, 
+      agregados,
+      actualizados,
+      usuario: req.user.id 
+    });
+
+    res.json({
+      success: true,
+      agregados,
+      actualizados,
+      message: `Se procesaron ${agregados + actualizados} insumos correctamente`
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    logger.error('Error en bulk insert de insumos', { error, presupuestoId });
+    throw error;
+  } finally {
+    connection.release();
+  }
+}));
+
+/**
+ * @swagger
  * /api/presupuestos/{id}/insumos:
  *   delete:
  *     tags: [Presupuestos - Items]

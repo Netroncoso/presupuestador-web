@@ -4,6 +4,8 @@ import { PencilSquareIcon, TrashIcon, PlusIcon, XMarkIcon, MagnifyingGlassIcon }
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
+import { numberFormat } from '../../utils/numberFormat';
+import { CurrencyInput } from '../../components/CurrencyInput';
 
 interface Insumo {
   idInsumos: number;
@@ -181,7 +183,7 @@ export default function GestionInsumos() {
                   {insumo.codigo_producto || '-'}
                 </Text>
               </Table.Td>
-              <Table.Td>$ {Number(insumo.costo).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Table.Td>
+              <Table.Td>{numberFormat.formatCurrency(insumo.costo)}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <ActionIcon variant="transparent" onClick={() => handleEdit(insumo)}>
@@ -216,16 +218,11 @@ export default function GestionInsumos() {
             onChange={(e) => setFormData({ ...formData, codigo_producto: e.target.value })}
             placeholder="Opcional"
           />
-          <NumberInput
+          <CurrencyInput
             label="Costo"
             value={formData.costo}
             onChange={(value) => setFormData({ ...formData, costo: Number(value) || 0 })}
             min={0}
-            step={0.01}
-            prefix="$ "
-            thousandSeparator="."
-            decimalSeparator=","
-            decimalScale={2}
             required
             hideControls
           />

@@ -4,6 +4,8 @@ import { PencilSquareIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, XMarkIcon }
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
+import { numberFormat } from '../../utils/numberFormat';
+import { CurrencyInput } from '../../components/CurrencyInput';
 
 interface Equipamiento {
   id: number;
@@ -40,14 +42,6 @@ export default function GestionEquipamientosBase() {
 
   const formatName = (name: string) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-  };
-
-  const formatPeso = (value: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2
-    }).format(value);
   };
 
   const equipamientosFiltrados = equipamientos.filter(e =>
@@ -218,7 +212,7 @@ export default function GestionEquipamientosBase() {
             <Table.Tr key={equipo.id}>
               <Table.Td>{equipo.nombre}</Table.Td>
               <Table.Td style={{ textTransform: 'capitalize' }}>{equipo.tipo}</Table.Td>
-              <Table.Td>{formatPeso(equipo.precio_referencia)}</Table.Td>
+              <Table.Td>{numberFormat.formatCurrency(equipo.precio_referencia)}</Table.Td>
               <Table.Td>
                 <Text size="sm" c={equipo.activo === 1 ? 'green' : 'gray'}>
                   {equipo.activo === 1 ? 'Activo' : 'Inactivo'}
@@ -262,7 +256,7 @@ export default function GestionEquipamientosBase() {
             }))}
             required
           />
-          <NumberInput
+          <CurrencyInput
             label={
               <Tooltip label="Valor mensual">
                 <span style={{ cursor: 'help' }}>Precio Referencia</span>
@@ -270,11 +264,6 @@ export default function GestionEquipamientosBase() {
             }
             value={formData.precio_referencia}
             onChange={(val) => setFormData({ ...formData, precio_referencia: Number(val) || 0 })}
-            decimalScale={2}
-            fixedDecimalScale
-            thousandSeparator="."
-            decimalSeparator=","
-            prefix="$ "
             required
           />
           <Group justify="space-between">

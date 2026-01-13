@@ -15,7 +15,7 @@ import { notifications } from "@mantine/notifications";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotificationCount } from "../hooks/useNotificationCount";
 import ResponsiveContainer from "../components/ResponsiveContainer";
-import DatosPresupuesto from "./DatosPresupuesto";
+import DatosPresupuesto, { PresupuestoCreadoData } from "./DatosPresupuesto";
 import Notificaciones from "./Notificaciones";
 import { NotificationIndicator } from "../components/NotificationIndicator";
 import { ModalAuditoria } from "../components/ModalAuditoria";
@@ -50,21 +50,12 @@ import { useItemValidation } from "../hooks/useItemValidation";
 import { usePdfGenerator } from "../hooks/usePdfGenerator";
 import { api } from "../api/api";
 
-// Declaración global para callback
-declare global {
-  interface Window {
-    cargarPresupuestoCallback?: (id: number, nombre: string, sucursal: string, financiadorId: string | null) => Promise<void>;
-  }
-}
+// Declaración global eliminada ya que usamos props ahora
+
+import { numberFormat } from "../utils/numberFormat";
 
 const ICON_SIZE = { width: 20, height: 20 };
 const TAB_HOVER_STYLE = { "&:hover": { backgroundColor: "#dff1db" } };
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 2,
-  }).format(value);
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
@@ -120,16 +111,32 @@ export default function UserDashboard() {
     cargarPresupuesto,
   } = usePresupuesto();
 
-  const handlePresupuestoCreado = useCallback((id: number, nombre: string, dni: string, sucursal: string, porcentajeInsumos: number, financiadorId?: string, sucursalId?: number) => {
-    crearPresupuesto(id, nombre, sucursal, porcentajeInsumos, financiadorId);
+  const handlePresupuestoCreado = useCallback((data: PresupuestoCreadoData) => {
+    crearPresupuesto(data.id, data.nombre, data.sucursal, data.porcentajeInsumos, data.financiadorId);
     setDatosHistorial({ 
-      nombre, 
-      dni, 
-      sucursal, 
-      sucursal_id: sucursalId,
-      financiador_id: financiadorId
+      nombre: data.nombre, 
+      dni: data.dni, 
+      sucursal: data.sucursal, 
+      sucursal_id: data.sucursalId,
+      financiador_id: data.financiadorId
     });
   }, [crearPresupuesto]);
+
+  // Nuevo handler para reemplazar window.cargarPresupuestoCallback
+  const handleCargarPresupuesto = useCallback(async (id: number, nombre: string, sucursal: string, financiadorId: string | null) => {
+      await cargarPresupuesto(
+        id,
+        nombre,
+        sucursal,
+        financiadorId,
+        setInsumosSeleccionados,
+        setPrestacionesSeleccionadas,
+        setEsCargaHistorial,
+        false, // modo edición
+        setTotalesDesdeBaseDatos,
+        setEquipamientosSeleccionados
+      );
+  }, [cargarPresupuesto]);
 
   const {
     totalInsumos,
@@ -175,7 +182,8 @@ export default function UserDashboard() {
     totalInsumos,
     totalPrestaciones,
     totalFacturar,
-    rentabilidad: rentabilidadFinal,
+    costoTotal,
+    rentabilidad: rentabilidad,  // Siempre SIN plazo para alertas
     financiadorId,
     financiadorInfo,
     prestacionesSeleccionadas,
@@ -344,27 +352,7 @@ export default function UserDashboard() {
     [cargarPresupuesto, crearVersionParaEdicion]
   );
 
-  // Callback para que DatosPresupuesto pueda cargar items
-  useEffect(() => {
-    window.cargarPresupuestoCallback = async (id, nombre, sucursal, financiadorId) => {
-      await cargarPresupuesto(
-        id,
-        nombre,
-        sucursal,
-        financiadorId,
-        setInsumosSeleccionados,
-        setPrestacionesSeleccionadas,
-        setEsCargaHistorial,
-        false, // modo edición
-        setTotalesDesdeBaseDatos,
-        setEquipamientosSeleccionados
-      );
-    };
-    
-    return () => {
-      delete window.cargarPresupuestoCallback;
-    };
-  }, [cargarPresupuesto]);
+  // Removed window callback effect as it is replaced by handleCargarPresupuesto passed as prop
 
 
 
@@ -582,7 +570,7 @@ export default function UserDashboard() {
                           Insumos:
                         </Text>
                         <Text fw={500} size="sm">
-                          {formatCurrency(totalInsumos)}
+                          {numberFormat.formatCurrency(totalInsumos)}
                         </Text>
                       </Flex>
 
@@ -591,7 +579,7 @@ export default function UserDashboard() {
                           Prestaciones:
                         </Text>
                         <Text fw={500} size="sm">
-                          {formatCurrency(totalPrestaciones)}
+                          {numberFormat.formatCurrency(totalPrestaciones)}
                         </Text>
                       </Flex>
 
@@ -600,7 +588,7 @@ export default function UserDashboard() {
                           Equipamiento:
                         </Text>
                         <Text fw={500} size="sm">
-                          {formatCurrency(totalFacturarEquipamiento)}
+                          {numberFormat.formatCurrency(totalFacturarEquipamiento)}
                         </Text>
                       </Flex>
                     </Flex>
@@ -614,7 +602,7 @@ export default function UserDashboard() {
                           Costo Total:
                         </Text>
                         <Text fw={500} size="sm" c="blue">
-                          {formatCurrency(costoTotal)}
+                          {numberFormat.formatCurrency(costoTotal)}
                         </Text>
                       </Flex>
 
@@ -623,7 +611,7 @@ export default function UserDashboard() {
                           A Facturar:
                         </Text>
                         <Text fw={500} size="sm" c="orange">
-                          {formatCurrency(totalFacturar)}
+                          {numberFormat.formatCurrency(totalFacturar)}
                         </Text>
                       </Flex>
                     </Flex>
@@ -641,7 +629,7 @@ export default function UserDashboard() {
                           size="sm"
                           c={totalFacturar - costoTotal >= 0 ? "green" : "red"}
                         >
-                          {formatCurrency(totalFacturar - costoTotal)}
+                          {numberFormat.formatCurrency(totalFacturar - costoTotal)}
                         </Text>
                       </Flex>
 
@@ -807,6 +795,7 @@ export default function UserDashboard() {
           <DatosPresupuesto
             onPresupuestoCreado={handlePresupuestoCreado}
             onNuevoPresupuesto={handleNuevoPresupuesto}
+            onCargarPresupuesto={handleCargarPresupuesto} // Nueva prop agregada
             esCargaHistorial={esCargaHistorial}
             setEsCargaHistorial={setEsCargaHistorial}
             datosHistorial={datosHistorial}
@@ -821,6 +810,7 @@ export default function UserDashboard() {
             onTotalChange={setTotalInsumos}
             presupuestoId={presupuestoId}
             porcentajeInsumos={porcentajeInsumos}
+            financiador={financiadorInfo ? { porcentaje_insumos: financiadorInfo.porcentaje_insumos } : null}
             soloLectura={soloLectura}
           />
         </Tabs.Panel>

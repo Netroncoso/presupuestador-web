@@ -103,7 +103,7 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
   
   const [rows] = await pool.query<any[]>(`
     SELECT 
-      p.idPresupuestos, p.version, p.estado,
+      p.idPresupuestos, p.version, p.estado, p.resultado_auditoria,
       p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, 
       p.total_insumos, p.total_prestaciones, p.costo_total, 
       p.total_facturar, (p.total_facturar - p.costo_total) AS utilidad, p.rentabilidad, p.rentabilidad_con_plazo, 

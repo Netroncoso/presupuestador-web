@@ -92,6 +92,12 @@ export class PresupuestoService {
         presupuesto.Nombre_Apellido,
         totalFacturar
       ).catch(err => console.error('Error notificando operadores carga:', err));
+      
+      await this.repo.notificarUsuarioAprobacionAutomatica(
+        presupuesto.usuario_id,
+        id,
+        presupuesto.version
+      ).catch(err => console.error('Error notificando usuario:', err));
     }
 
     return {

@@ -7,9 +7,10 @@ import { pool } from '../db';
 const DEFAULT_RULES = {
   auditoria: {
     rentabilidadMinima: 15,
+    rentabilidadMaxima: 25,
     costoMaximo: 150000,
-    rentabilidadConPlazoMaxima: 25,
     utilidadMinima: 50000,
+    utilidadMinimaBaja: 5000,
   },
   financiero: {
     diasCobranzaDefault: 30,

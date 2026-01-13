@@ -8,6 +8,7 @@ export class FinanciadoresService {
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT f.id, f.Financiador, f.activo, f.tasa_mensual, 
               f.dias_cobranza_teorico, f.dias_cobranza_real, f.id_acuerdo, 
+              f.porcentaje_insumos,
               COALESCE(a.nombre, NULL) as acuerdo_nombre
        FROM financiador f
        LEFT JOIN financiador_acuerdo a ON f.id_acuerdo = a.id_acuerdo
@@ -22,16 +23,17 @@ export class FinanciadoresService {
     dias_cobranza_teorico?: number;
     dias_cobranza_real?: number;
     id_acuerdo?: number | null;
+    porcentaje_insumos?: number;
   }) {
     if (!id || datos.activo === undefined) {
       throw new AppError(400, 'ID y estado activo son requeridos');
     }
 
-    const { activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo } = datos;
+    const { activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo, porcentaje_insumos } = datos;
 
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE financiador SET activo = ?, tasa_mensual = ?, dias_cobranza_teorico = ?, dias_cobranza_real = ?, id_acuerdo = ? WHERE id = ?',
-      [activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo ?? null, id]
+      'UPDATE financiador SET activo = ?, tasa_mensual = ?, dias_cobranza_teorico = ?, dias_cobranza_real = ?, id_acuerdo = ?, porcentaje_insumos = ? WHERE id = ?',
+      [activo, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, id_acuerdo ?? null, porcentaje_insumos ?? 0, id]
     );
 
     if (result.affectedRows === 0) {

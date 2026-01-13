@@ -80,13 +80,30 @@ export default function OperadorCargaDashboard() {
   useEffect(() => {
     fetchCasos();
     const interval = setInterval(fetchCasos, 30000);
-    return () => clearInterval(interval);
+    
+    // Escuchar eventos SSE para actualizar notificaciones
+    const backendUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+    const eventSource = new EventSource(`${backendUrl}/api/sse/stream`, {
+      withCredentials: true
+    });
+
+    eventSource.addEventListener('notificacion-leida', () => {
+      // Actualizar contador de notificaciones
+      api.get('/notificaciones/count').then(res => {
+        setNotificacionesNoLeidas(res.data.count || 0);
+      });
+    });
+
+    return () => {
+      clearInterval(interval);
+      eventSource.close();
+    };
   }, [fetchCasos]);
 
   const tomarCaso = async (presupuestoId: number) => {
     try {
       setProcesando(true);
-      await api.post(`/carga/${presupuestoId}/tomar`);
+      await api.post(`/carga/${presupuestoId}/tomar`, {});
       
       notifications.show({
         title: 'Caso Tomado',
@@ -264,7 +281,7 @@ export default function OperadorCargaDashboard() {
 
   return (
     <>
-      <ResponsiveContainer px={{ base: 'xs', sm: 'md', lg: 'xl' }} py="md">
+      <ResponsiveContainer style={{ paddingLeft: 'var(--mantine-spacing-xs)', paddingRight: 'var(--mantine-spacing-xs)' }} py="md">
         <Group justify="space-between" mb={20}>
           <Title fw={500} order={2} c="blue">Dashboard Operador de Carga</Title>
           <Group gap="xs">
@@ -441,9 +458,9 @@ export default function OperadorCargaDashboard() {
                           <Table.Td><Text size="xs">{caso.sucursal_nombre}</Text></Table.Td>
                           <Table.Td><Text size="xs">{caso.financiador_nombre}</Text></Table.Td>
                           <Table.Td>
-                            <Badge color={getBadgeColor(caso.horas_pendiente)} size="sm">
+                            <Text size="xs" style={{ color: caso.horas_pendiente < 2 ? 'green' : caso.horas_pendiente < 6 ? 'orange' : 'red' }}>
                               {caso.horas_pendiente}h
-                            </Badge>
+                            </Text>
                           </Table.Td>
                           <Table.Td>
                             <Button
