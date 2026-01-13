@@ -4,6 +4,8 @@ import { guardarInsumoPresupuesto, eliminarInsumoPresupuesto, obtenerInsumosPres
 import { asyncHandler } from '../utils/asyncHandler';
 import { logger } from '../utils/logger';
 import { AuthenticatedRequest } from '../types/express';
+import { pool } from '../db';
+import { presupuestoCalculosService } from '../services/presupuestoCalculosService';
 
 // ============================================================================
 // VALIDATION MIDDLEWARE
@@ -195,11 +197,24 @@ router.post('/:id/insumos/bulk', authenticateToken, validatePresupuestoId, async
     usuario: req.user.id 
   });
 
-  const pool = req.app.locals.pool;
   const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
+
+    // Obtener porcentaje base del presupuesto y porcentaje adicional del financiador
+    const [presupuesto] = await connection.query<any[]>(`
+      SELECT 
+        p.porcentaje_insumos as porcentaje_base,
+        COALESCE(f.porcentaje_insumos, 0) as porcentaje_financiador
+      FROM presupuestos p
+      LEFT JOIN financiador f ON p.financiador_id = f.id
+      WHERE p.idPresupuestos = ?
+    `, [presupuestoId]);
+    
+    const porcentajeBase = presupuesto[0]?.porcentaje_base || 0;
+    const porcentajeFinanciador = presupuesto[0]?.porcentaje_financiador || 0;
+    const porcentajeTotal = porcentajeBase + porcentajeFinanciador;
 
     let agregados = 0;
     let actualizados = 0;
@@ -211,24 +226,26 @@ router.post('/:id/insumos/bulk', authenticateToken, validatePresupuestoId, async
         continue;
       }
 
+      const precio_facturar = costo * (1 + porcentajeTotal / 100);
+
       // Verificar si ya existe
-      const [existing] = await connection.query(
-        'SELECT id FROM presupuesto_insumos WHERE presupuesto_id = ? AND producto = ?',
+      const [existing] = await connection.query<any[]>(
+        'SELECT id FROM presupuesto_insumos WHERE idPresupuestos = ? AND producto = ?',
         [presupuestoId, producto]
       );
 
       if (existing.length > 0) {
         // Actualizar existente
         await connection.query(
-          'UPDATE presupuesto_insumos SET costo = ?, cantidad = ?, insumo_id = ? WHERE id = ?',
-          [costo, cantidad, insumo_id, existing[0].id]
+          'UPDATE presupuesto_insumos SET costo = ?, cantidad = ?, precio_facturar = ?, id_insumo = ? WHERE id = ?',
+          [costo, cantidad, precio_facturar, insumo_id, existing[0].id]
         );
         actualizados++;
       } else {
         // Insertar nuevo
         await connection.query(
-          'INSERT INTO presupuesto_insumos (presupuesto_id, producto, costo, cantidad, insumo_id) VALUES (?, ?, ?, ?, ?)',
-          [presupuestoId, producto, costo, cantidad, insumo_id]
+          'INSERT INTO presupuesto_insumos (idPresupuestos, producto, costo, precio_facturar, cantidad, id_insumo) VALUES (?, ?, ?, ?, ?, ?)',
+          [presupuestoId, producto, costo, precio_facturar, cantidad, insumo_id]
         );
         agregados++;
       }
@@ -240,8 +257,14 @@ router.post('/:id/insumos/bulk', authenticateToken, validatePresupuestoId, async
       presupuestoId, 
       agregados,
       actualizados,
+      porcentajeBase,
+      porcentajeFinanciador,
+      porcentajeTotal,
       usuario: req.user.id 
     });
+
+    // Recalcular totales del presupuesto
+    await presupuestoCalculosService.recalcularTotales(presupuestoId);
 
     res.json({
       success: true,
