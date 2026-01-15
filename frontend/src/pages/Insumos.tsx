@@ -9,6 +9,7 @@ interface Insumo {
   id?: number
   producto: string
   costo: number
+  precio_facturar?: number
   cantidad: number
   idInsumos?: number
 }
@@ -16,7 +17,7 @@ interface Insumo {
 interface Props {
   insumosSeleccionados: Insumo[]
   setInsumosSeleccionados: (insumos: Insumo[]) => void
-  onTotalChange: (total: number) => void
+  onTotalChange: (totalCosto: number, totalFacturar: number) => void
   presupuestoId: number | null
   porcentajeInsumos: number
   financiador: { porcentaje_insumos?: number } | null
@@ -45,9 +46,20 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   }, [])
 
   useEffect(() => {
-    const total = insumosSeleccionados.reduce((sum, insumo) => sum + (Number(insumo.costo) * insumo.cantidad), 0)
-    onTotalChange(total)
-  }, [insumosSeleccionados, onTotalChange])
+    const totalCosto = insumosSeleccionados.reduce((sum, insumo) => {
+      return sum + (Number(insumo.costo) * insumo.cantidad);
+    }, 0);
+    
+    const totalFacturar = insumosSeleccionados.reduce((sum, insumo) => {
+      // Usar precio_facturar si existe (viene de BD), sino calcularlo
+      const porcentajeFinanciador = financiador?.porcentaje_insumos || 0;
+      const porcentajeTotalInsumos = porcentajeInsumos + porcentajeFinanciador;
+      const precioFacturar = insumo.precio_facturar ?? (insumo.costo * (1 + porcentajeTotalInsumos / 100));
+      return sum + (Number(precioFacturar) * insumo.cantidad);
+    }, 0);
+    
+    onTotalChange(totalCosto, totalFacturar);
+  }, [insumosSeleccionados, onTotalChange, porcentajeInsumos, financiador])
 
   const insumosFiltrados = useMemo(() => 
     insumosDisponibles.filter(insumo =>
@@ -135,24 +147,29 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
           color: 'green',
           position: 'top-center'
         })
-      }
 
-      const nuevosInsumos = [...insumosSeleccionados]
-      
-      for (const insumo of insumosTemporales) {
-        const cantidad = cantidadesTemporales[insumo.producto] || 1
-        if (cantidad <= 0) continue
+        // Recargar insumos desde BD para obtener IDs
+        const insumosResponse = await api.get(`/presupuesto-insumos/${presupuestoId}`)
+        setInsumosSeleccionados(insumosResponse.data)
+      } else {
+        // Sin presupuestoId, actualizar estado local
+        const nuevosInsumos = [...insumosSeleccionados]
         
-        const existeIndex = nuevosInsumos.findIndex(i => i.producto === insumo.producto)
-        
-        if (existeIndex >= 0) {
-          nuevosInsumos[existeIndex] = { ...insumo, cantidad }
-        } else {
-          nuevosInsumos.push({ ...insumo, cantidad })
+        for (const insumo of insumosTemporales) {
+          const cantidad = cantidadesTemporales[insumo.producto] || 1
+          if (cantidad <= 0) continue
+          
+          const existeIndex = nuevosInsumos.findIndex(i => i.producto === insumo.producto)
+          
+          if (existeIndex >= 0) {
+            nuevosInsumos[existeIndex] = { ...insumo, cantidad }
+          } else {
+            nuevosInsumos.push({ ...insumo, cantidad })
+          }
         }
+        
+        setInsumosSeleccionados(nuevosInsumos)
       }
-      
-      setInsumosSeleccionados(nuevosInsumos)
       setInsumosTemporales([])
       setCantidadesTemporales({})
       setModalAbierto(false)
@@ -169,29 +186,43 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
     }
   }, [insumosTemporales, cantidadesTemporales, insumosSeleccionados, presupuestoId])
 
-  const eliminarInsumo = (index: number) => {
+  const eliminarInsumo = async (index: number) => {
     const insumo = insumosSeleccionados[index]
-    const nuevosInsumos = insumosSeleccionados.filter((_, i) => i !== index)
-    setInsumosSeleccionados(nuevosInsumos)
     
     if (presupuestoId && insumo.id) {
-      api.delete(`/presupuestos/${presupuestoId}/insumos`, {
-        data: { id: insumo.id }
-      }).catch((err: any) => {
+      try {
+        await api.delete(`/presupuestos/${presupuestoId}/insumos`, {
+          data: { id: insumo.id }
+        })
+        
+        // Recargar insumos desde BD
+        const insumosResponse = await api.get(`/presupuesto-insumos/${presupuestoId}`)
+        setInsumosSeleccionados(insumosResponse.data)
+        
+        notifications.show({
+          title: 'Insumo Eliminado',
+          message: 'Se eliminó el insumo seleccionado',
+          color: 'blue'
+        })
+      } catch (err: any) {
         console.error('Error deleting insumo:', err)
         notifications.show({
           title: 'Error',
           message: err.message || 'Error al eliminar insumo',
           color: 'red'
         })
+      }
+    } else {
+      // Sin presupuestoId o sin id, solo actualizar estado local
+      const nuevosInsumos = insumosSeleccionados.filter((_, i) => i !== index)
+      setInsumosSeleccionados(nuevosInsumos)
+      
+      notifications.show({
+        title: 'Insumo Eliminado',
+        message: 'Se eliminó el insumo seleccionado',
+        color: 'blue'
       })
     }
-    
-    notifications.show({
-      title: 'Insumo Eliminado',
-      message: 'Se eliminó el insumo seleccionado',
-      color: 'blue'
-    })
   }
 
   const actualizarCantidad = (index: number) => {
@@ -371,10 +402,10 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
                             insumo.cantidad
                           )}
                         </Table.Td>
-                        <Table.Td>${Math.round(costoUnitario).toFixed(0)}</Table.Td>
-                        <Table.Td>${Math.round(precioFacturar).toFixed(0)}</Table.Td>
-                        <Table.Td>${Math.round(subtotalCosto).toFixed(0)}</Table.Td>
-                        <Table.Td>${Math.round(subtotalFacturar).toFixed(0)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(costoUnitario)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(precioFacturar)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(subtotalCosto)}</Table.Td>
+                        <Table.Td>{numberFormat.formatCurrency(subtotalFacturar)}</Table.Td>
                         <Table.Td>
                           {!soloLectura && (
                             <Group gap={4} align='baseline' wrap="nowrap">

@@ -128,12 +128,27 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
     throw new AppError(400, 'Datos incompletos: nombre, dni y sucursal_id son requeridos');
   }
   
+  // Calcular porcentaje total (sucursal + financiador)
+  let porcentajeTotal = Number(porcentaje_insumos) || 0;
+  
+  if (financiador_id) {
+    const [financiador] = await pool.query<any[]>(
+      'SELECT porcentaje_insumos FROM financiador WHERE id = ?',
+      [financiador_id]
+    );
+    
+    if (financiador.length > 0) {
+      const porcentajeFinanciador = Number(financiador[0].porcentaje_insumos) || 0;
+      porcentajeTotal += porcentajeFinanciador;
+    }
+  }
+  
   try {
     const [result] = await pool.query<MutationResult>(`
       INSERT INTO presupuestos 
       (Nombre_Apellido, DNI, sucursal_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
       VALUES (?,?,?,?,?,?,?, ?, 1, ?)
-    `, [nombre.trim(), dni, sucursal_id, financiador_id || null, dificil_acceso || 'no', porcentaje_insumos || 0, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+    `, [nombre.trim(), dni, sucursal_id, financiador_id || null, dificil_acceso || 'no', porcentajeTotal, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
     
     res.status(201).json({ id: result.insertId, version: 1 });
   } catch (error) {

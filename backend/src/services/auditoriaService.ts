@@ -75,15 +75,9 @@ export class AuditoriaService {
     try {
       await connection.beginTransaction();
 
-      // Actualizar financiador
-      await connection.query(
-        'UPDATE presupuestos SET financiador_id = ? WHERE idPresupuestos = ?',
-        [financiador_id, id]
-      );
-
-      // Obtener presupuesto actualizado
+      // Obtener porcentaje base del presupuesto y porcentaje del nuevo financiador
       const [presupuesto] = await connection.query<any[]>(
-        'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
+        'SELECT porcentaje_insumos FROM presupuestos WHERE idPresupuestos = ?',
         [id]
       );
 
@@ -91,7 +85,41 @@ export class AuditoriaService {
         throw new AppError(404, 'Presupuesto no encontrado');
       }
 
-      const current = presupuesto[0];
+      // Obtener porcentaje del financiador
+      let porcentajeTotal = 0;
+      if (financiador_id) {
+        const [financiador] = await connection.query<any[]>(
+          'SELECT porcentaje_insumos FROM financiador WHERE id = ?',
+          [financiador_id]
+        );
+        
+        if (financiador.length > 0) {
+          // Asumir que el porcentaje guardado en presupuesto es solo el de la sucursal
+          // Necesitamos obtener el porcentaje base de la sucursal
+          const [sucursal] = await connection.query<any[]>(
+            'SELECT s.suc_porcentaje_insumos FROM presupuestos p JOIN sucursales_mh s ON p.sucursal_id = s.ID WHERE p.idPresupuestos = ?',
+            [id]
+          );
+          
+          const porcentajeSucursal = Number(sucursal[0]?.suc_porcentaje_insumos) || 0;
+          const porcentajeFinanciador = Number(financiador[0].porcentaje_insumos) || 0;
+          porcentajeTotal = porcentajeSucursal + porcentajeFinanciador;
+        }
+      }
+
+      // Actualizar financiador y porcentaje total
+      await connection.query(
+        'UPDATE presupuestos SET financiador_id = ?, porcentaje_insumos = ? WHERE idPresupuestos = ?',
+        [financiador_id, porcentajeTotal, id]
+      );
+
+      // Obtener presupuesto actualizado
+      const [presupuestoActualizado] = await connection.query<any[]>(
+        'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
+        [id]
+      );
+
+      const current = presupuestoActualizado[0];
 
       // Recalcular rentabilidad con plazo si hay financiador y totales
       if (financiador_id && current.costo_total > 0) {

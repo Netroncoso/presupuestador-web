@@ -17,7 +17,8 @@ export const useTotales = (
   totalCostoEquipamiento: number = 0,
   totalFacturarEquipamiento: number = 0
 ) => {
-  const [totalInsumos, setTotalInsumos] = useState(0);
+  const [totalCostoInsumos, setTotalCostoInsumos] = useState(0);
+  const [totalFacturarInsumos, setTotalFacturarInsumos] = useState(0);
   const [totalPrestaciones, setTotalPrestaciones] = useState(0);
   const [totalFacturarPrestaciones, setTotalFacturarPrestaciones] = useState(0);
   const [totalesDesdeDB, setTotalesDesdeDB] = useState<any>(null);
@@ -26,15 +27,15 @@ export const useTotales = (
     if (totalesDesdeDB) {
       return Number(totalesDesdeDB.costoTotal) || 0;
     }
-    return calcularCostoTotal(totalInsumos, totalPrestaciones) + totalCostoEquipamiento;
-  }, [totalInsumos, totalPrestaciones, totalCostoEquipamiento, totalesDesdeDB]);
+    return totalCostoInsumos + totalPrestaciones + totalCostoEquipamiento;
+  }, [totalCostoInsumos, totalPrestaciones, totalCostoEquipamiento, totalesDesdeDB]);
 
   const totalFacturar = useMemo(() => {
     if (totalesDesdeDB) {
       return Number(totalesDesdeDB.totalFacturar) || 0;
     }
-    return calcularTotalFacturar(totalInsumos, totalFacturarPrestaciones, porcentajeInsumos) + totalFacturarEquipamiento;
-  }, [totalInsumos, totalFacturarPrestaciones, porcentajeInsumos, totalFacturarEquipamiento, totalesDesdeDB]);
+    return totalFacturarInsumos + totalFacturarPrestaciones + totalFacturarEquipamiento;
+  }, [totalFacturarInsumos, totalFacturarPrestaciones, totalFacturarEquipamiento, totalesDesdeDB]);
 
   const rentabilidad = useMemo(() => {
     if (totalesDesdeDB) {
@@ -67,10 +68,11 @@ export const useTotales = (
     return calcularRentabilidadConPlazo(utilidadConPlazo, costoTotal);
   }, [utilidadConPlazo, costoTotal, totalesDesdeDB]);
 
-  const setTotalInsumosWrapper = useCallback((total: number) => {
-    setTotalInsumos(total);
+  const setTotalesInsumos = useCallback((costo: number, facturar: number) => {
+    setTotalCostoInsumos(costo);
+    setTotalFacturarInsumos(facturar);
     if (!soloLectura) {
-      setTotalesDesdeDB(null); // Limpiar cache para forzar recálculo solo en modo edición
+      setTotalesDesdeDB(null);
     }
   }, [soloLectura]);
 
@@ -83,7 +85,8 @@ export const useTotales = (
   }, [soloLectura]);
 
   const resetTotales = useCallback(() => {
-    setTotalInsumos(0);
+    setTotalCostoInsumos(0);
+    setTotalFacturarInsumos(0);
     setTotalPrestaciones(0);
     setTotalFacturarPrestaciones(0);
     setTotalesDesdeDB(null);
@@ -91,14 +94,14 @@ export const useTotales = (
 
   const setTotalesDesdeBaseDatos = useCallback((totales: any) => {
     setTotalesDesdeDB(totales);
-    // También actualizar los estados individuales para consistencia
-    setTotalInsumos(totales.totalInsumos || 0);
+    setTotalCostoInsumos(totales.totalInsumos || 0);
+    setTotalFacturarInsumos(totales.totalInsumos || 0);
     setTotalPrestaciones(totales.totalPrestaciones || 0);
   }, []);
 
   return {
-    totalInsumos,
-    totalPrestaciones,
+    totalInsumos: totalFacturarInsumos,
+    totalPrestaciones: totalFacturarPrestaciones,
     costoTotal,
     totalFacturar,
     rentabilidad,
@@ -106,7 +109,7 @@ export const useTotales = (
     utilidadConPlazo,
     margenConPlazo,
     rentabilidadConPlazo,
-    setTotalInsumos: setTotalInsumosWrapper,
+    setTotalInsumos: setTotalesInsumos,
     setTotalesPrestaciones,
     resetTotales,
     setTotalesDesdeBaseDatos,

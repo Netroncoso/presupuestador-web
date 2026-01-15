@@ -395,7 +395,6 @@ export default function DatosPresupuesto({
           disabled={presupuestoCreado || esCargaHistorial || soloLectura}
           variant={(presupuestoCreado || esCargaHistorial || soloLectura) ? "filled" : "default"}
           searchable
-          clearable
           checkIconPosition="right"
         />
         

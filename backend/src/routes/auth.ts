@@ -72,14 +72,13 @@ router.post('/login', validateLoginData, asyncHandler(async (req: Request, res: 
   
   logger.info('Intento de login', { username, ip: req.ip });
   
-  const resultado = await login(req, res, () => {});
+  // Llamar directamente al controlador sin callback
+  await login(req, res);
   
   // Solo logear éxito si no hay error
   if (res.statusCode === 200) {
     logger.info('Login exitoso', { username, ip: req.ip });
   }
-  
-  return resultado;
 }));
 
 /**
@@ -99,8 +98,8 @@ router.post('/login', validateLoginData, asyncHandler(async (req: Request, res: 
 router.get('/verify', asyncHandler(async (req: Request, res: Response) => {
   logger.info('Verificación de token', { ip: req.ip });
   
-  const resultado = await verifyToken(req, res, () => {});
-  return resultado;
+  // Llamar directamente al controlador sin callback
+  await verifyToken(req, res);
 }));
 
 export default router;

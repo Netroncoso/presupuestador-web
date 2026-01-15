@@ -40,6 +40,7 @@ financiador,tasa_mensual,4,"decimal(5,2)",decimal,NULL,YES,NULL,,,"Tasa mensual 
 financiador,dias_cobranza_teorico,5,int,int,NULL,YES,NULL,,,"Días de cobranza teóricos según política",NULL,NULL,NULL
 financiador,dias_cobranza_real,6,int,int,NULL,YES,NULL,,,"Días de cobranza reales calculados",NULL,NULL,NULL
 financiador,id_acuerdo,7,int,int,NULL,YES,NULL,MUL,,"Relación con la tabla financiador_acuerdo",fk_financiador_acuerdo,financiador_acuerdo,id_acuerdo
+financiador,porcentaje_insumos,8,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje adicional para cálculo de insumos (se suma al % base)",NULL,NULL,NULL
 financiador_acuerdo,id_acuerdo,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 financiador_acuerdo,nombre,2,varchar(150),varchar,150,NO,NULL,UNI,,"Nombre del tipo de acuerdo",NULL,NULL,NULL
 financiador_equipamiento,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
@@ -82,7 +83,7 @@ notificaciones,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 notificaciones,usuario_id,2,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_1,usuarios,id
 notificaciones,presupuesto_id,3,int,int,NULL,NO,NULL,MUL,,,notificaciones_ibfk_2,presupuestos,idPresupuestos
 notificaciones,version_presupuesto,4,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-notificaciones,tipo,5,"enum('pendiente','aprobado','aprobado_condicional','rechazado','observado','nueva_version')",enum,20,YES,pendiente,,,,NULL,NULL,NULL
+notificaciones,tipo,5,varchar(50),varchar,50,NO,NULL,,,,NULL,NULL,NULL
 notificaciones,mensaje,6,varchar(512),varchar,512,YES,NULL,,,,NULL,NULL,NULL
 notificaciones,estado,7,"enum('nuevo','leido')",enum,5,YES,nuevo,MUL,,,NULL,NULL,NULL
 notificaciones,creado_en,8,datetime,datetime,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
@@ -133,11 +134,13 @@ presupuestos,rentabilidad_con_plazo,15,"decimal(5,2)",decimal,NULL,YES,NULL,,,,N
 presupuestos,usuario_id,16,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_usuario,usuarios,id
 presupuestos,presupuesto_padre,17,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_padre,presupuestos,idPresupuestos
 presupuestos,es_ultima_version,18,tinyint,tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
-presupuestos,estado,19,"enum('borrador','pendiente_administrativa','en_revision_administrativa','pendiente_prestacional','en_revision_prestacional','pendiente_general','en_revision_general','aprobado','aprobado_condicional','rechazado')",enum,26,YES,borrador,MUL,,,NULL,NULL,NULL
-presupuestos,revisor_id,20,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_revisor,usuarios,id
-presupuestos,revisor_asignado_at,21,timestamp,timestamp,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
-presupuestos,version,22,int,int,NULL,YES,1,,,,NULL,NULL,NULL
-presupuestos,porcentaje_insumos,23,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
+presupuestos,estado,19,"enum('borrador','pendiente_administrativa','en_revision_administrativa','pendiente_prestacional','en_revision_prestacional','pendiente_general','en_revision_general','aprobado','aprobado_condicional','pendiente_carga','en_carga','cargado','rechazado')",enum,26,YES,borrador,MUL,,,NULL,NULL,NULL
+presupuestos,resultado_auditoria,20,"enum('aprobado','aprobado_condicional','rechazado')",enum,20,YES,NULL,,,"Resultado final de la auditoría (si aplica)",NULL,NULL,NULL
+presupuestos,revisor_id,21,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_revisor,usuarios,id
+presupuestos,revisor_asignado_at,22,timestamp,timestamp,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
+presupuestos,version,23,int,int,NULL,YES,1,,,,NULL,NULL,NULL
+presupuestos,porcentaje_insumos,24,"decimal(5,2)",decimal,NULL,YES,0.00,,,"Porcentaje de margen aplicado a insumos",NULL,NULL,NULL
+presupuestos,referencia_externa,25,varchar(255),varchar,255,YES,NULL,MUL,,"Referencia/ID en Softwerk para búsqueda",NULL,NULL,NULL
 servicios,id_servicio,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 servicios,nombre,2,varchar(100),varchar,100,NO,NULL,MUL,,,NULL,NULL,NULL
 servicios,tipo_unidad,3,varchar(50),varchar,50,YES,NULL,MUL,,,fk_servicios_tipo_unidad,tipos_unidad,nombre
@@ -165,7 +168,7 @@ tipos_unidad,updated_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAU
 usuarios,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 usuarios,username,2,varchar(50),varchar,50,NO,NULL,UNI,,,NULL,NULL,NULL
 usuarios,password,3,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL
-usuarios,rol,4,"enum('user','gerencia_administrativa','gerencia_prestacional','gerencia_financiera','gerencia_general','admin')",enum,23,YES,user,,,,NULL,NULL,NULL
+usuarios,rol,4,"enum('user','gerencia_administrativa','gerencia_prestacional','gerencia_financiera','gerencia_general','operador_carga','admin')",enum,23,YES,user,,,,NULL,NULL,NULL
 usuarios,activo,5,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 usuarios,created_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 usuarios,sucursal_id,7,int,int,NULL,YES,NULL,MUL,,,fk_usuarios_sucursal,sucursales_mh,ID
