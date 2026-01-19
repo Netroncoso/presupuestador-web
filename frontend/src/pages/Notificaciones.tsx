@@ -35,20 +35,20 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
   const [filtroPaciente, setFiltroPaciente] = useState<string>('');
   const [filtroPresupuesto, setFiltroPresupuesto] = useState<string>('');
   
-  const rolesGerencia = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general'];
+  const rolesGerencia = ['gerencia_prestacional', 'gerencia_comercial', 'gerencia_general'];
   const esAuditor = user?.rol ? rolesGerencia.includes(user.rol) : false;
 
   const getOrigenNotificacion = (notif: Notificacion): string => {
     if (notif.tipo === 'pendiente') {
       if (notif.mensaje.includes('derivado') || notif.mensaje.includes('devuelto por')) {
-        if (notif.mensaje.includes('G. Administrativa') || notif.mensaje.includes('Gerencia Administrativa')) return 'G. Admin';
-        if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Prest';
+        if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Admin';
+        if (notif.mensaje.includes('G. Comercial') || notif.mensaje.includes('Gerencia Comercial')) return 'G. Prest';
         if (notif.mensaje.includes('G. General') || notif.mensaje.includes('Gerencia General')) return 'G. Gral';
       }
       return 'Usuario';
     }
-    if (notif.mensaje.includes('G. Administrativa') || notif.mensaje.includes('Gerencia Administrativa')) return 'G. Admin';
-    if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Prest';
+    if (notif.mensaje.includes('G. Prestacional') || notif.mensaje.includes('Gerencia Prestacional')) return 'G. Admin';
+    if (notif.mensaje.includes('G. Comercial') || notif.mensaje.includes('Gerencia Comercial')) return 'G. Prest';
     if (notif.mensaje.includes('G. General') || notif.mensaje.includes('Gerencia General')) return 'G. Gral';
     return 'Sistema';
   };

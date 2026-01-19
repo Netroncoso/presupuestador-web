@@ -23,13 +23,16 @@ export const useItemValidation = (presupuestoId: number | null) => {
       
       // Validar insumos
       insumosSeleccionados.forEach(insumo => {
-        if (!insumos.find((i: any) => i.id_insumo === insumo.idInsumos && i.cantidad === insumo.cantidad)) {
+        if (!insumos.find((i: any) => 
+          String(i.id_insumo) === String(insumo.id_insumo) && 
+          Number(i.cantidad) === Number(insumo.cantidad)
+        )) {
           faltantes.push({ tipo: 'insumo', nombre: insumo.producto, cantidad: insumo.cantidad, datos: insumo, accion: 'guardar' });
         }
       });
       
       insumos.forEach((insumo: any) => {
-        if (!insumosSeleccionados.find(i => i.idInsumos === insumo.id_insumo)) {
+        if (!insumosSeleccionados.find(i => String(i.id_insumo) === String(insumo.id_insumo))) {
           faltantes.push({ tipo: 'insumo', nombre: insumo.producto, cantidad: insumo.cantidad, datos: insumo, accion: 'eliminar' });
         }
       });
@@ -38,7 +41,7 @@ export const useItemValidation = (presupuestoId: number | null) => {
       prestacionesSeleccionadas.forEach(prestacion => {
         if (!prestaciones.find((p: any) => 
           String(p.id_servicio) === String(prestacion.id_servicio) &&
-          p.cantidad === prestacion.cantidad &&
+          Number(p.cantidad) === Number(prestacion.cantidad) &&
           Math.abs(p.valor_asignado - prestacion.valor_asignado) < 0.01
         )) {
           faltantes.push({ tipo: 'prestacion', nombre: prestacion.prestacion, cantidad: prestacion.cantidad, datos: prestacion, accion: 'guardar' });
@@ -72,7 +75,7 @@ export const useItemValidation = (presupuestoId: number | null) => {
             producto: item.datos.producto,
             costo: item.datos.costo,
             cantidad: item.datos.cantidad,
-            id_insumo: item.datos.idInsumos
+            id_insumo: item.datos.id_insumo
           });
         } else {
           await api.post(`/presupuestos/${presupuestoId}/prestaciones`, {

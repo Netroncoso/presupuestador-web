@@ -11,7 +11,7 @@ const router = Router();
 // Middleware para verificar rol gerencias/admin
 const requireAuditor = (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthenticatedRequest;
-  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+  const rolesPermitidos = ['gerencia_comercial', 'gerencia_comercial', 'gerencia_general', 'admin'];
   if (authReq.user?.rol && rolesPermitidos.includes(authReq.user.rol)) {
     return next();
   }
@@ -39,13 +39,13 @@ const requireAuditor = (req: Request, res: Response, next: NextFunction) => {
 router.get('/historial/:id', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   const version = req.query.version ? parseInt(req.query.version as string) : null;
-  
-  logger.info('Obteniendo historial de auditoría simple', { 
-    presupuestoId: id, 
+
+  logger.info('Obteniendo historial de auditoría simple', {
+    presupuestoId: id,
     version,
-    usuario: req.user.id 
+    usuario: req.user.id
   });
-  
+
   let query = `
     SELECT 
       a.id, a.estado_anterior, a.estado_nuevo, a.comentario, 
@@ -54,18 +54,18 @@ router.get('/historial/:id', authenticateToken, asyncHandler(async (req: Authent
     FROM auditorias_presupuestos a
     LEFT JOIN usuarios u ON a.auditor_id = u.id
     WHERE a.presupuesto_id = ?`;
-  
+
   const params = [id];
-  
+
   if (version) {
     query += ` AND a.version_presupuesto = ?`;
     params.push(version);
   }
-  
+
   query += ` ORDER BY a.fecha DESC`;
-  
+
   const [rows] = await pool.query(query, params);
-  
+
   res.json(rows);
 }));
 
@@ -83,7 +83,7 @@ router.get('/historial/:id', authenticateToken, asyncHandler(async (req: Authent
  */
 router.get('/pendientes', authenticateToken, requireAuditor, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   logger.info('Obteniendo presupuestos pendientes simple', { usuario: req.user.id });
-  
+
   const [rows] = await pool.query(`
     SELECT 
       p.idPresupuestos, p.version, p.estado,
@@ -99,7 +99,7 @@ router.get('/pendientes', authenticateToken, requireAuditor, asyncHandler(async 
     AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
   `);
-  
+
   res.json(rows);
 }));
 
@@ -132,86 +132,86 @@ router.get('/pendientes', authenticateToken, requireAuditor, asyncHandler(async 
 router.put('/pedir/:id', authenticateToken, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   const { mensaje } = req.body;
-  
-  logger.info('Solicitando auditoría simple', { 
-    presupuestoId: id, 
-    mensaje, 
-    usuario: req.user.id 
+
+  logger.info('Solicitando auditoría simple', {
+    presupuestoId: id,
+    mensaje,
+    usuario: req.user.id
   });
-  
+
   const [presupuesto] = await pool.query(
     'SELECT * FROM presupuestos WHERE idPresupuestos = ? AND es_ultima_version = 1',
     [id]
   );
-  
+
   if ((presupuesto as any[]).length === 0) {
     return res.status(404).json({ error: 'Presupuesto no encontrado' });
   }
-  
+
   const p = (presupuesto as any)[0];
   const estadoAnterior = p.estado;
-  
-  if (estadoAnterior === 'pendiente_administrativa') {
+
+  if (estadoAnterior === 'pendiente_prestacional') {
     // Si ya está en auditoría, actualizar el comentario del registro existente si hay mensaje
     if (mensaje && mensaje.trim()) {
       await pool.query(`
         UPDATE auditorias_presupuestos 
         SET comentario = ?
-        WHERE presupuesto_id = ? AND version_presupuesto = ? AND estado_nuevo = 'pendiente_administrativa'
+        WHERE presupuesto_id = ? AND version_presupuesto = ? AND estado_nuevo = 'pendiente_prestacional'
         ORDER BY fecha DESC LIMIT 1
       `, [mensaje.trim(), id, p.version || 1]);
-      
+
       const mensajeActualizado = `Auditoría solicitada para presupuesto de ${p.Nombre_Apellido} - ${mensaje.trim()}`;
-      
+
       await pool.query(`
         UPDATE notificaciones 
         SET mensaje = ?
         WHERE presupuesto_id = ? AND tipo = 'pendiente' AND usuario_id IN (
-          SELECT id FROM usuarios WHERE rol = 'gerencia_administrativa' AND activo = 1
+          SELECT id FROM usuarios WHERE rol = 'gerencia_prestacional' AND activo = 1
         )
       `, [mensajeActualizado, id]);
-      
+
       broadcastPresupuestoUpdate();
     }
-    
-    return res.json({ success: true, estado: 'pendiente_administrativa', mensaje: 'Ya está en auditoría' });
+
+    return res.json({ success: true, estado: 'pendiente_prestacional', mensaje: 'Ya está en auditoría' });
   }
-  
+
   // Actualizar estado
   await pool.query(
-    'UPDATE presupuestos SET estado = "pendiente_administrativa" WHERE idPresupuestos = ?',
+    'UPDATE presupuestos SET estado = "pendiente_prestacional" WHERE idPresupuestos = ?',
     [id]
   );
-  
+
   // Insertar en auditorías
   await pool.query(`
     INSERT INTO auditorias_presupuestos 
     (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
-    VALUES (?, ?, ?, ?, 'pendiente_administrativa', ?)
+    VALUES (?, ?, ?, ?, 'pendiente_prestacional', ?)
   `, [id, p.version || 1, p.usuario_id, estadoAnterior, mensaje || 'Auditoría solicitada manualmente']);
-  
+
   // Crear notificaciones
   let mensajeNotificacion = `Auditoría solicitada para presupuesto de ${p.Nombre_Apellido}`;
   if (mensaje && mensaje.trim()) {
     mensajeNotificacion += ` - ${mensaje.trim()}`;
   }
-  
+
   await pool.query(`
     INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
     SELECT u.id, ?, ?, 'pendiente', ?
     FROM usuarios u 
-    WHERE u.rol = 'gerencia_administrativa' 
+    WHERE u.rol = 'gerencia_prestacional' 
     AND u.activo = 1
   `, [id, p.version || 1, mensajeNotificacion]);
-  
+
   broadcastPresupuestoUpdate();
-  
-  logger.info('Auditoría solicitada exitosamente simple', { 
-    presupuestoId: id, 
-    usuario: req.user.id 
+
+  logger.info('Auditoría solicitada exitosamente simple', {
+    presupuestoId: id,
+    usuario: req.user.id
   });
-  
-  res.json({ success: true, estado: 'pendiente_administrativa' });
+
+  res.json({ success: true, estado: 'pendiente_prestacional' });
 }));
 
 /**
@@ -249,64 +249,64 @@ router.put('/estado/:id', authenticateToken, requireAuditor, asyncHandler(async 
   const id = parseInt(req.params.id);
   const { estado, comentario } = req.body;
   const auditor_id = req.user.id;
-  
+
   if (!['pendiente', 'en_revision', 'aprobado', 'rechazado'].includes(estado)) {
     return res.status(400).json({ error: 'Estado inválido' });
   }
-  
-  logger.info('Cambiando estado simple', { 
-    presupuestoId: id, 
-    estado, 
-    comentario, 
-    auditor: auditor_id 
+
+  logger.info('Cambiando estado simple', {
+    presupuestoId: id,
+    estado,
+    comentario,
+    auditor: auditor_id
   });
-  
+
   const [presupuesto] = await pool.query(
     'SELECT * FROM presupuestos WHERE idPresupuestos = ? AND es_ultima_version = 1',
     [id]
   );
-  
+
   if ((presupuesto as any[]).length === 0) {
     return res.status(404).json({ error: 'Presupuesto no encontrado' });
   }
-  
+
   const estadoAnterior = (presupuesto as any)[0].estado;
-  
+
   await pool.query(
     'UPDATE presupuestos SET estado = ? WHERE idPresupuestos = ?',
     [estado, id]
   );
-  
+
   await pool.query(`
     INSERT INTO auditorias_presupuestos 
     (presupuesto_id, version_presupuesto, auditor_id, estado_anterior, estado_nuevo, comentario)
     VALUES (?, ?, ?, ?, ?, ?)
   `, [id, (presupuesto as any)[0].version || 1, auditor_id, estadoAnterior, estado, comentario || null]);
-  
+
   if (['aprobado', 'rechazado'].includes(estado)) {
     await pool.query(`
       INSERT IGNORE INTO notificaciones 
       (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
       VALUES (?, ?, ?, ?, ?)
     `, [
-      (presupuesto as any)[0].usuario_id, 
-      id, 
-      (presupuesto as any)[0].version || 1, 
-      estado, 
+      (presupuesto as any)[0].usuario_id,
+      id,
+      (presupuesto as any)[0].version || 1,
+      estado,
       `Presupuesto ${estado.toUpperCase()} por auditor`
     ]);
-    
+
     broadcastNotificationUpdate((presupuesto as any)[0].usuario_id);
   }
-  
+
   broadcastPresupuestoUpdate();
-  
-  logger.info('Estado cambiado exitosamente simple', { 
-    presupuestoId: id, 
-    estado, 
-    auditor: auditor_id 
+
+  logger.info('Estado cambiado exitosamente simple', {
+    presupuestoId: id,
+    estado,
+    auditor: auditor_id
   });
-  
+
   res.json({ success: true, estado });
 }));
 

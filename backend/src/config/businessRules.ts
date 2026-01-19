@@ -23,10 +23,10 @@ const DEFAULT_RULES = {
   estados: {
     validos: [
       'borrador',
-      'pendiente_administrativa',
-      'en_revision_administrativa',
-      'pendiente_prestacional',
-      'en_revision_prestacional',
+      'pendiente_comercial',
+      'en_revision_comercial',
+      'pendiente_comercial',
+      'en_revision_comercial',
       'pendiente_general',
       'en_revision_general',
       'aprobado',

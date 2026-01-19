@@ -14,7 +14,7 @@ export class CalculosService {
   ): number {
     if (costoTotal === 0 || isNaN(costoTotal) || isNaN(totalFacturar)) return 0;
     if (isNaN(tasaMensual) || isNaN(diasCobranza) || diasCobranza < 0) return this.calcularRentabilidad(costoTotal, totalFacturar);
-    
+
     const mesesCobranza = Math.floor(diasCobranza / 30);
     const valorPresente = totalFacturar / Math.pow(1 + tasaMensual / 100, mesesCobranza);
     const utilidadConPlazo = valorPresente - costoTotal;
@@ -46,17 +46,17 @@ export class CalculosService {
     }
 
     const utilidad = presupuesto.total_facturar - presupuesto.costo_total;
-    
+
     // Utilidad muy baja (sospecha error)
     if (utilidad < auditoria.utilidadMinimaBaja) {
       reglas.push(`Utilidad muy baja (menor a $${auditoria.utilidadMinimaBaja.toLocaleString()})`);
     }
-    
+
     // Utilidad muy alta (sospecha sobreprecio)
     if (utilidad > auditoria.utilidadMinima) {
       reglas.push(`Utilidad superior a $${auditoria.utilidadMinima.toLocaleString()}`);
     }
 
-    return reglas.length > 0 ? 'pendiente_administrativa' : 'pendiente_carga';
+    return reglas.length > 0 ? 'pendiente_prestacional' : 'pendiente_carga';
   }
 }

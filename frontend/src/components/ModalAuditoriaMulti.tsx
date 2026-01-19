@@ -54,8 +54,8 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
   };
 
   const aprobar = () => {
-    const gerenciaPath = rol === 'gerencia_administrativa' ? 'administrativa' 
-      : rol === 'gerencia_prestacional' ? 'prestacional'
+    const gerenciaPath = rol === 'gerencia_prestacional' ? 'prestacional' 
+      : rol === 'gerencia_comercial' ? 'comercial'
       : 'general';
     ejecutarAccion(`/auditoria-multi/${gerenciaPath}/aprobar/${presupuesto?.idPresupuestos}`, { comentario });
   };
@@ -69,8 +69,8 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
       });
       return;
     }
-    const gerenciaPath = rol === 'gerencia_administrativa' ? 'administrativa' 
-      : rol === 'gerencia_prestacional' ? 'prestacional'
+    const gerenciaPath = rol === 'gerencia_prestacional' ? 'prestacional' 
+      : rol === 'gerencia_comercial' ? 'comercial'
       : 'general';
     ejecutarAccion(`/auditoria-multi/${gerenciaPath}/aprobar-condicional/${presupuesto?.idPresupuestos}`, { motivo });
   };
@@ -84,14 +84,14 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
       });
       return;
     }
-    const gerenciaPath = rol === 'gerencia_administrativa' ? 'administrativa' 
-      : rol === 'gerencia_prestacional' ? 'prestacional'
+    const gerenciaPath = rol === 'gerencia_prestacional' ? 'prestacional' 
+      : rol === 'gerencia_comercial' ? 'comercial'
       : 'general';
     ejecutarAccion(`/auditoria-multi/${gerenciaPath}/rechazar/${presupuesto?.idPresupuestos}`, { comentario });
   };
 
   const derivar = () => {
-    ejecutarAccion(`/auditoria-multi/administrativa/derivar/${presupuesto?.idPresupuestos}`, { comentario });
+    ejecutarAccion(`/auditoria-multi/prestacional/derivar/${presupuesto?.idPresupuestos}`, { comentario });
   };
 
   const observar = () => {
@@ -103,7 +103,7 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
       });
       return;
     }
-    ejecutarAccion(`/auditoria-multi/prestacional/observar/${presupuesto?.idPresupuestos}`, { comentario });
+    ejecutarAccion(`/auditoria-multi/comercial/observar/${presupuesto?.idPresupuestos}`, { comentario });
   };
 
   const escalar = () => {
@@ -115,7 +115,7 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
       });
       return;
     }
-    ejecutarAccion(`/auditoria-multi/prestacional/escalar/${presupuesto?.idPresupuestos}`, { motivo });
+    ejecutarAccion(`/auditoria-multi/comercial/escalar/${presupuesto?.idPresupuestos}`, { motivo });
   };
 
   const devolver = () => {
@@ -163,8 +163,8 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
           minRows={2}
         />
 
-        {/* GERENCIA ADMINISTRATIVA */}
-        {rol === 'gerencia_administrativa' && (
+        {/* Gerencia Prestacional */}
+        {rol === 'gerencia_prestacional' && (
           <Group grow>
             <Button color="green" onClick={aprobar} loading={loading}>
               Aprobar
@@ -173,7 +173,7 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
               Aprobar Condicional
             </Button>
             <Button color="blue" onClick={derivar} loading={loading}>
-              Derivar a G. Prestacional
+              Derivar a G. Comercial
             </Button>
             <Button color="red" onClick={rechazar} loading={loading}>
               Rechazar
@@ -181,8 +181,8 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
           </Group>
         )}
 
-        {/* GERENCIA PRESTACIONAL */}
-        {rol === 'gerencia_prestacional' && (
+        {/* Gerencia Comercial */}
+        {rol === 'gerencia_comercial' && (
           <>
             <Group grow>
               <Button color="green" onClick={aprobar} loading={loading}>
@@ -224,8 +224,8 @@ export const ModalAuditoriaMulti: React.FC<ModalAuditoriaMultiProps> = ({
               label="Devolver a Gerencia"
               placeholder="Seleccionar gerencia"
               data={[
-                { value: 'administrativa', label: 'G. Administrativa' },
-                { value: 'prestacional', label: 'G. Prestacional' }
+                { value: 'prestacional', label: 'G. Prestacional' },
+                { value: 'comercial', label: 'G. Comercial' }
               ]}
               value={gerenciaDestino}
               onChange={setGerenciaDestino}

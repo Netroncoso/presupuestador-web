@@ -68,13 +68,13 @@ export class PresupuestoService {
       rentabilidadConPlazo
     });
 
-    if (estadoFinal === 'pendiente_administrativa') {
+    if (estadoFinal === 'pendiente_comercial') {
       await this.repo.crearRegistroAuditoriaInicial(
         id,
         presupuesto.version,
         presupuesto.usuario_id,
         'borrador',
-        'pendiente_administrativa',
+        'pendiente_comercial',
         'Auditoría automática por reglas de negocio'
       ).catch(err => console.error('Error creando registro auditoría:', err));
 

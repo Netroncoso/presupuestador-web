@@ -8,12 +8,12 @@ export const getEstadoBadgeColor = (estado?: string): string => {
       return 'yellow';
     case 'rechazado':
       return 'red';
-    case 'en_revision_administrativa':
     case 'en_revision_prestacional':
+    case 'en_revision_comercial':
     case 'en_revision_general':
       return 'blue';
-    case 'pendiente_administrativa':
     case 'pendiente_prestacional':
+    case 'pendiente_comercial':
     case 'pendiente_general':
       return 'orange';
     case 'borrador':
@@ -26,10 +26,10 @@ export const getEstadoBadgeColor = (estado?: string): string => {
 export const getEstadoLabel = (estado?: string): string => {
   const labels: Record<string, string> = {
     borrador: 'Borrador',
-    pendiente_administrativa: 'Pendiente G. Admin',
-    en_revision_administrativa: 'En Revisión G. Admin',
     pendiente_prestacional: 'Pendiente G. Prestacional',
     en_revision_prestacional: 'En Revisión G. Prestacional',
+    pendiente_comercial: 'Pendiente G. Comercial',
+    en_revision_comercial: 'En Revisión G. Comercial',
     pendiente_general: 'Pendiente G. General',
     en_revision_general: 'En Revisión G. General',
     aprobado: 'Aprobado',

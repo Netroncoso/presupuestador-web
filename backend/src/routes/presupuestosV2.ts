@@ -26,7 +26,7 @@ const validateDni = (req: Request, res: Response, next: NextFunction) => {
 
 const requireAuditor = (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthenticatedRequest;
-  const rolesPermitidos = ['gerencia_administrativa', 'gerencia_prestacional', 'gerencia_general', 'admin'];
+  const rolesPermitidos = ['gerencia_comercial', 'gerencia_comercial', 'gerencia_general', 'admin'];
   if (!rolesPermitidos.includes(authReq.user?.rol)) {
     throw new AppError(403, 'Acceso denegado: Solo gerencias o admins');
   }

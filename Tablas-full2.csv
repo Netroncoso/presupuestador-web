@@ -134,7 +134,7 @@ presupuestos,rentabilidad_con_plazo,15,"decimal(5,2)",decimal,NULL,YES,NULL,,,,N
 presupuestos,usuario_id,16,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_usuario,usuarios,id
 presupuestos,presupuesto_padre,17,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_padre,presupuestos,idPresupuestos
 presupuestos,es_ultima_version,18,tinyint,tinyint,NULL,YES,1,MUL,,,NULL,NULL,NULL
-presupuestos,estado,19,"enum('borrador','pendiente_administrativa','en_revision_administrativa','pendiente_prestacional','en_revision_prestacional','pendiente_general','en_revision_general','aprobado','aprobado_condicional','pendiente_carga','en_carga','cargado','rechazado')",enum,26,YES,borrador,MUL,,,NULL,NULL,NULL
+presupuestos,estado,19,"enum('borrador','pendiente_prestacional','en_revision_prestacional','pendiente_comercial','en_revision_comercial','pendiente_general','en_revision_general','aprobado','aprobado_condicional','pendiente_carga','en_carga','cargado','rechazado')",enum,24,YES,borrador,MUL,,,NULL,NULL,NULL
 presupuestos,resultado_auditoria,20,"enum('aprobado','aprobado_condicional','rechazado')",enum,20,YES,NULL,,,"Resultado final de la auditoría (si aplica)",NULL,NULL,NULL
 presupuestos,revisor_id,21,int,int,NULL,YES,NULL,MUL,,,fk_presupuestos_revisor,usuarios,id
 presupuestos,revisor_asignado_at,22,timestamp,timestamp,NULL,YES,NULL,MUL,,,NULL,NULL,NULL
@@ -168,7 +168,7 @@ tipos_unidad,updated_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,"DEFAU
 usuarios,id,1,int,int,NULL,NO,NULL,PRI,auto_increment,,NULL,NULL,NULL
 usuarios,username,2,varchar(50),varchar,50,NO,NULL,UNI,,,NULL,NULL,NULL
 usuarios,password,3,varchar(255),varchar,255,NO,NULL,,,,NULL,NULL,NULL
-usuarios,rol,4,"enum('user','gerencia_administrativa','gerencia_prestacional','gerencia_financiera','gerencia_general','operador_carga','admin')",enum,23,YES,user,,,,NULL,NULL,NULL
+usuarios,rol,4,"enum('user','gerencia_prestacional','gerencia_comercial','gerencia_financiera','gerencia_general','operador_carga','admin')",enum,21,YES,user,,,,NULL,NULL,NULL
 usuarios,activo,5,tinyint,tinyint,NULL,YES,1,,,,NULL,NULL,NULL
 usuarios,created_at,6,timestamp,timestamp,NULL,YES,CURRENT_TIMESTAMP,,DEFAULT_GENERATED,,NULL,NULL,NULL
 usuarios,sucursal_id,7,int,int,NULL,YES,NULL,MUL,,,fk_usuarios_sucursal,sucursales_mh,ID

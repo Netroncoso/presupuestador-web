@@ -63,7 +63,7 @@ export class PresupuestoRepository {
       await pool.query(`
         INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
         SELECT u.id, ?, ?, 'pendiente', ?
-        FROM usuarios u WHERE u.rol = 'gerencia_administrativa' AND u.activo = 1
+        FROM usuarios u WHERE u.rol = 'gerencia_comercial' AND u.activo = 1
       `, [presupuestoId, version, mensaje]);
     } catch (error) {
       console.error('Error al notificar auditores:', error);
@@ -133,7 +133,7 @@ export class PresupuestoRepository {
       
       await connection.query(
         'DELETE FROM auditorias_presupuestos WHERE presupuesto_id = ? AND estado_nuevo = ? AND estado_anterior = ?',
-        [id, 'pendiente_administrativa', 'borrador']
+        [id, 'pendiente_comercial', 'borrador']
       );
       
       await connection.commit();

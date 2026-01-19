@@ -27,10 +27,10 @@ export interface Prestacion {
 
 export type EstadoPresupuesto = 
   | 'borrador'
-  | 'pendiente_administrativa'
-  | 'en_revision_administrativa'
   | 'pendiente_prestacional'
   | 'en_revision_prestacional'
+  | 'pendiente_comercial'
+  | 'en_revision_comercial'
   | 'pendiente_general'
   | 'en_revision_general'
   | 'aprobado'
@@ -63,8 +63,8 @@ export interface Presupuesto {
 export type RolUsuario = 
   | 'admin'
   | 'user'
-  | 'gerencia_administrativa'
   | 'gerencia_prestacional'
+  | 'gerencia_comercial'
   | 'gerencia_financiera'
   | 'gerencia_general';
 

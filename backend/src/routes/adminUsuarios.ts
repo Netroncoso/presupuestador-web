@@ -82,7 +82,7 @@ router.get('/usuarios', authenticateToken, requireAdmin, asyncHandler(async (req
  *                 type: string
  *               rol:
  *                 type: string
- *                 enum: [usuario, gerencia_administrativa, gerencia_prestacional, gerencia_general, admin]
+ *                 enum: [usuario, gerencia_comercial, gerencia_comercial, gerencia_general, admin]
  *               sucursal_id:
  *                 type: integer
  *     responses:

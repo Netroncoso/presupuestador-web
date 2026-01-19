@@ -80,7 +80,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/health', healthRoutes);
 
 // SSE routes (protected, but handles auth internally)
-app.use('/api/stream', sseRoutes);
+app.use('/api/sse', sseRoutes);
 
 // Protected routes (JWT + CORS protection)
 app.use('/api/sucursales', sucursalesRoutes);

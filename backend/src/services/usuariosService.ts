@@ -67,7 +67,7 @@ export class UsuariosService {
         throw new AppError(400, 'Username y password son requeridos');
       }
 
-      const allowedRoles = ['user', 'gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'operador_carga', 'admin'];
+      const allowedRoles = ['user', 'gerencia_comercial', 'gerencia_comercial', 'gerencia_financiera', 'gerencia_general', 'operador_carga', 'admin'];
       if (rol && !allowedRoles.includes(rol)) {
         throw new AppError(400, 'Rol inválido');
       }
@@ -105,7 +105,7 @@ export class UsuariosService {
         throw new AppError(400, 'Username y rol son requeridos');
       }
 
-      const allowedRoles = ['user', 'gerencia_administrativa', 'gerencia_prestacional', 'gerencia_financiera', 'gerencia_general', 'operador_carga', 'admin'];
+      const allowedRoles = ['user', 'gerencia_comercial', 'gerencia_comercial', 'gerencia_financiera', 'gerencia_general', 'operador_carga', 'admin'];
       if (!allowedRoles.includes(rol)) {
         throw new AppError(400, 'Rol inválido');
       }

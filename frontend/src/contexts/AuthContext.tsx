@@ -4,7 +4,7 @@ import { api } from '../api/api';
 interface User {
   id: number;
   username: string;
-  rol: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general' | 'operador_carga';
+  rol: 'admin' | 'user' | 'gerencia_prestacional' | 'gerencia_comercial' | 'gerencia_financiera' | 'gerencia_general' | 'operador_carga';
   sucursal_id?: number;
 }
 

@@ -32,9 +32,9 @@ function AppContent() {
     switch (user.rol) {
       case 'admin':
         return <AdminDashboard />;
-      case 'gerencia_administrativa':
-        return <GerenciaAdministrativa />;
       case 'gerencia_prestacional':
+        return <GerenciaAdministrativa />;
+      case 'gerencia_comercial':
         return <GerenciaPrestacional />;
       case 'gerencia_general':
         return <GerenciaGeneral />;

@@ -47,7 +47,7 @@ export const useRealtimeUpdates = () => {
         }
 
         // Create EventSource with token in URL (since headers aren't supported)
-        const eventSource = new EventSource(`/api/stream/updates?token=${encodeURIComponent(token)}`);
+        const eventSource = new EventSource(`/api/sse/updates?token=${encodeURIComponent(token)}`);
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {

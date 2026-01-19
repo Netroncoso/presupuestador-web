@@ -83,7 +83,7 @@ export default function OperadorCargaDashboard() {
     
     // Escuchar eventos SSE para actualizar notificaciones
     const backendUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
-    const eventSource = new EventSource(`${backendUrl}/api/sse/stream`, {
+    const eventSource = new EventSource(`${backendUrl}/api/sse/updates`, {
       withCredentials: true
     });
 
@@ -227,8 +227,8 @@ export default function OperadorCargaDashboard() {
       
       const destinoTexto = {
         usuario: 'Usuario Creador',
-        administrativa: 'Gerencia Administrativa',
-        prestacional: 'Gerencia Prestacional',
+        administrativa: 'Gerencia Prestacional',
+        prestacional: 'Gerencia Comercial',
         general: 'Gerencia General'
       }[destinoDevolucion];
       
@@ -550,8 +550,8 @@ export default function OperadorCargaDashboard() {
               onChange={(value) => setDestinoDevolucion(value || '')}
               data={[
                 { value: 'usuario', label: 'Usuario Creador (borrador)' },
-                { value: 'administrativa', label: 'Gerencia Administrativa' },
-                { value: 'prestacional', label: 'Gerencia Prestacional' },
+                { value: 'administrativa', label: 'Gerencia Prestacional' },
+                { value: 'prestacional', label: 'Gerencia Comercial' },
                 { value: 'general', label: 'Gerencia General' }
               ]}
               required

@@ -246,8 +246,8 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           onChange={(value) => setFormData({ ...formData, rol: value || 'user' })}
           data={[
             { value: 'user', label: 'Usuario' },
-            { value: 'gerencia_administrativa', label: 'Gerencia Administrativa' },
             { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
+            { value: 'gerencia_comercial', label: 'Gerencia Comercial' },
             { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
             { value: 'gerencia_general', label: 'Gerencia General' },
             { value: 'operador_carga', label: 'Operador de Carga' },
@@ -291,8 +291,8 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
           onChange={(value) => setFormData({ ...formData, rol: value || 'user' })}
           data={[
             { value: 'user', label: 'Usuario' },
-            { value: 'gerencia_administrativa', label: 'Gerencia Administrativa' },
             { value: 'gerencia_prestacional', label: 'Gerencia Prestacional' },
+            { value: 'gerencia_comercial', label: 'Gerencia Comercial' },
             { value: 'gerencia_financiera', label: 'Gerencia Financiera' },
             { value: 'gerencia_general', label: 'Gerencia General' },
             { value: 'operador_carga', label: 'Operador de Carga' },

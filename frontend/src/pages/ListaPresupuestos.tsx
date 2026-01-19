@@ -147,10 +147,10 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         mantineFilterSelectProps: {
           data: [
             { value: 'borrador', label: 'Borrador' },
-            { value: 'pendiente_administrativa', label: 'Pendiente G. Admin' },
-            { value: 'en_revision_administrativa', label: 'En Revisión G. Admin' },
-            { value: 'pendiente_prestacional', label: 'Pendiente G. Prestacional' },
-            { value: 'en_revision_prestacional', label: 'En Revisión G. Prestacional' },
+            { value: 'pendiente_prestacional', label: 'Pendiente G. Admin' },
+            { value: 'en_revision_prestacional', label: 'En Revisión G. Admin' },
+            { value: 'pendiente_comercial', label: 'Pendiente G. Comercial' },
+            { value: 'en_revision_comercial', label: 'En Revisión G. Comercial' },
             { value: 'pendiente_general', label: 'Pendiente G. General' },
             { value: 'en_revision_general', label: 'En Revisión G. General' },
             { value: 'aprobado', label: 'Aprobado' },

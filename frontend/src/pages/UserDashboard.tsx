@@ -220,7 +220,7 @@ export default function UserDashboard() {
       setValidacionCompletada(false);
 
       // Si requiere auditoría, abrir modal y marcar como automática
-      if (resultado.estado === 'pendiente_administrativa') {
+      if (resultado.estado === 'pendiente_prestacional') {
         setAuditoriaAutomatica(true);
         abrirModalAuditoria();
         return; // IMPORTANTE: No limpiar ni ir al historial
@@ -397,7 +397,7 @@ export default function UserDashboard() {
         notifications.show({
           title: "Auditoría Solicitada",
           message:
-            "La Gerencia Administrativa será notificada para revisar el presupuesto",
+            "La Gerencia Prestacional será notificada para revisar el presupuesto",
           color: "blue",
           position: "top-center",
           autoClose: 5000,

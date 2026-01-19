@@ -139,7 +139,7 @@ export interface Presupuestos extends RowDataPacket {
   usuario_id?: number;
   presupuesto_padre?: number;
   es_ultima_version?: boolean;
-  estado?: 'borrador' | 'pendiente_administrativa' | 'en_revision_administrativa' | 'pendiente_prestacional' | 'en_revision_prestacional' | 'pendiente_general' | 'en_revision_general' | 'aprobado' | 'aprobado_condicional' | 'pendiente_carga' | 'en_carga' | 'cargado' | 'rechazado';
+  estado?: 'borrador' | 'pendiente_comercial' | 'en_revision_comercial' | 'pendiente_comercial' | 'en_revision_comercial' | 'pendiente_general' | 'en_revision_general' | 'aprobado' | 'aprobado_condicional' | 'pendiente_carga' | 'en_carga' | 'cargado' | 'rechazado';
   version?: number;
   porcentaje_insumos?: number;
   revisor_id?: number;
@@ -174,7 +174,7 @@ export interface Usuarios extends RowDataPacket {
   id: number;
   username: string;
   password: string;
-  rol?: 'admin' | 'user' | 'gerencia_administrativa' | 'gerencia_prestacional' | 'gerencia_financiera' | 'gerencia_general' | 'operador_carga';
+  rol?: 'admin' | 'user' | 'gerencia_comercial' | 'gerencia_comercial' | 'gerencia_financiera' | 'gerencia_general' | 'operador_carga';
   activo?: boolean;
   created_at?: Date;
   sucursal_id?: number;

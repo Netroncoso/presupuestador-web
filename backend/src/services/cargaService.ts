@@ -220,12 +220,12 @@ export class CargaService {
           nuevoEstado = 'borrador';
           break;
         case 'administrativa':
-          nuevoEstado = 'pendiente_administrativa';
-          rolDestino = 'gerencia_administrativa';
-          break;
-        case 'prestacional':
           nuevoEstado = 'pendiente_prestacional';
           rolDestino = 'gerencia_prestacional';
+          break;
+        case 'prestacional':
+          nuevoEstado = 'pendiente_comercial';
+          rolDestino = 'gerencia_comercial';
           break;
         case 'general':
           nuevoEstado = 'pendiente_general';
@@ -408,7 +408,7 @@ export class CargaService {
         LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
         LEFT JOIN financiador f ON p.financiador_id = f.id
         WHERE a.auditor_id = ?
-          AND a.estado_nuevo IN ('cargado', 'borrador', 'pendiente_administrativa', 'pendiente_prestacional', 'pendiente_general')
+          AND a.estado_nuevo IN ('cargado', 'borrador', 'pendiente_comercial', 'pendiente_comercial', 'pendiente_general')
           AND a.estado_anterior IN ('en_carga')
         ORDER BY a.fecha DESC
         LIMIT 100`,
