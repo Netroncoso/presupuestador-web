@@ -25,3 +25,10 @@ export const deleteInsumo = asyncHandler(async (req: Request, res: Response) => 
   const resultado = await adminInsumosService.eliminar(id);
   res.json(resultado);
 });
+
+export const toggleCritico = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { critico } = req.body;
+  const resultado = await adminInsumosService.toggleCritico(id, critico);
+  res.json(resultado);
+});

@@ -208,6 +208,7 @@ Catálogo de insumos médicos.
 | costo | decimal(10,2) | YES | 0.00 | | | |
 | codigo_producto | varchar(50) | YES | NULL | MUL | | Código de producto para sincronización externa (EAN, SKU) |
 | fecha_actualizacion | datetime | YES | CURRENT_TIMESTAMP | MUL | on update CURRENT_TIMESTAMP | Última actualización del precio |
+| critico | tinyint(1) | NO | 0 | MUL | | Insumo crítico que fuerza auditoría obligatoria |
 
 ---
 

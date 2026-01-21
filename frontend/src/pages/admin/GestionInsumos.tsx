@@ -12,6 +12,7 @@ interface Insumo {
   producto: string;
   costo: number;
   codigo_producto?: string;
+  critico?: number;
 }
 
 export default function GestionInsumos() {
@@ -130,6 +131,29 @@ export default function GestionInsumos() {
     }
   };
 
+  const handleToggleCritico = async (id: number, critico: boolean) => {
+    try {
+      await api.patch(`/admin/insumos/${id}/critico`, { critico });
+      
+      notifications.show({
+        title: 'Actualizado',
+        message: `Insumo ${critico ? 'marcado' : 'desmarcado'} como crítico`,
+        color: 'green',
+        position: 'top-center',
+      });
+
+      cargarInsumos();
+    } catch (error) {
+      console.error('Error al actualizar insumo crítico:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo actualizar el insumo',
+        color: 'red',
+        position: 'top-center',
+      });
+    }
+  };
+
   const openNewModal = () => {
     setEditingInsumo(null);
     setFormData({ producto: '', costo: 0, codigo_producto: '' });
@@ -165,6 +189,7 @@ export default function GestionInsumos() {
             <Table.Th>Producto</Table.Th>
             <Table.Th style={{ width: '150px' }}>Código</Table.Th>
             <Table.Th style={{ width: '120px' }}>Costo</Table.Th>
+            <Table.Th style={{ width: '80px' }}>Crítico</Table.Th>
             <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
@@ -184,6 +209,13 @@ export default function GestionInsumos() {
                 </Text>
               </Table.Td>
               <Table.Td>{numberFormat.formatCurrency(insumo.costo)}</Table.Td>
+              <Table.Td>
+                <Checkbox
+                  checked={insumo.critico === 1}
+                  onChange={(e) => handleToggleCritico(insumo.idInsumos, e.currentTarget.checked)}
+                  color="red"
+                />
+              </Table.Td>
               <Table.Td>
                 <Group gap="xs">
                   <ActionIcon variant="transparent" onClick={() => handleEdit(insumo)}>

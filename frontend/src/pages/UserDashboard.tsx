@@ -220,7 +220,26 @@ export default function UserDashboard() {
       setValidacionCompletada(false);
 
       // Si requiere auditoría, abrir modal y marcar como automática
-      if (resultado.estado === 'pendiente_prestacional') {
+      if (resultado.estado === 'pendiente_administrativa' || resultado.estado === 'pendiente_prestacional') {
+        // Mostrar notificación según motivo
+        if (resultado.tieneInsumosCriticos) {
+          notifications.show({
+            title: '⚠️ Auditoría por Insumos Críticos',
+            message: 'El presupuesto contiene insumos críticos que requieren revisión gerencial obligatoria.',
+            color: 'orange',
+            position: 'top-center',
+            autoClose: false,
+          });
+        } else {
+          notifications.show({
+            title: '📋 Auditoría por Reglas de Negocio',
+            message: 'El presupuesto requiere revisión gerencial según las reglas automáticas configuradas.',
+            color: 'blue',
+            position: 'top-center',
+            autoClose: false,
+          });
+        }
+        
         setAuditoriaAutomatica(true);
         abrirModalAuditoria();
         return; // IMPORTANTE: No limpiar ni ir al historial

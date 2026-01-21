@@ -109,6 +109,15 @@ class ApiClient {
     const responseData = await this.handleResponse(res);
     return { data: responseData };
   }
+
+  async patch(url: string, data: any) {
+    const res = await this.fetchWithRetry(`${BACKEND}/api${url}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+    const responseData = await this.handleResponse(res);
+    return { data: responseData };
+  }
 }
 
 export const api = new ApiClient();

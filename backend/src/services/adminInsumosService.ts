@@ -7,7 +7,7 @@ export class AdminInsumosService {
   
   async obtenerTodos() {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT idInsumos, producto, costo, codigo_producto FROM insumos ORDER BY producto'
+      'SELECT idInsumos, producto, costo, codigo_producto, critico FROM insumos ORDER BY producto'
     );
     return rows;
   }
@@ -82,6 +82,20 @@ export class AdminInsumosService {
 
     this.invalidateCache();
     return { message: 'Insumo eliminado correctamente' };
+  }
+
+  async toggleCritico(id: string, critico: boolean) {
+    const [result] = await pool.query<ResultSetHeader>(
+      'UPDATE insumos SET critico = ? WHERE idInsumos = ?',
+      [critico ? 1 : 0, id]
+    );
+
+    if (result.affectedRows === 0) {
+      throw new AppError(404, 'Insumo no encontrado');
+    }
+
+    this.invalidateCache();
+    return { success: true, message: `Insumo ${critico ? 'marcado' : 'desmarcado'} como crítico` };
   }
 
   private invalidateCache() {

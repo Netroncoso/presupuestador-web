@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireAdmin } from '../../middleware/auth';
-import { getAllInsumos, createInsumo, updateInsumo, deleteInsumo } from '../../controllers/admin/adminInsumosController';
+import { getAllInsumos, createInsumo, updateInsumo, deleteInsumo, toggleCritico } from '../../controllers/admin/adminInsumosController';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { logger } from '../../utils/logger';
 import { AuthenticatedRequest } from '../../types/express';
@@ -232,6 +232,19 @@ router.delete('/:id', validateInsumoId, asyncHandler(async (req: AuthenticatedRe
     usuario: req.user.id 
   });
   
+  return resultado;
+}));
+
+router.patch('/:id/critico', validateInsumoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  
+  logger.info('Toggle insumo crítico', { 
+    insumoId: id, 
+    critico: req.body.critico,
+    usuario: req.user.id 
+  });
+  
+  const resultado = await toggleCritico(req, res, () => {});
   return resultado;
 }));
 

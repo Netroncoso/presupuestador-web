@@ -18,6 +18,7 @@ export class InsumosService {
         idInsumos, 
         producto, 
         costo,
+        critico,
         COALESCE(DATEDIFF(CURDATE(), fecha_actualizacion), 999) AS dias_sin_actualizar
        FROM insumos 
        ORDER BY producto

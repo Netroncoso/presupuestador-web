@@ -81,6 +81,20 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
       setInsumosTemporales(prev => [...prev, insumo])
       setCantidadesTemporales(prev => ({ ...prev, [insumo.producto]: 1 }))
       
+      // Alerta de insumo crítico
+      if (insumo.critico === 1) {
+        notifications.show({
+          id: `insumo-critico-${insumo.idInsumos}`,
+          title: '⚠️ Insumo Crítico',
+          message: `${insumo.producto}: Este insumo requiere auditoría obligatoria`,
+          color: 'red',
+          autoClose: false,
+          withCloseButton: true,
+          position: 'top-center'
+        })
+      }
+      
+      // Alerta de valor desactualizado
       if (insumo.dias_sin_actualizar > 45) {
         notifications.show({
           id: `insumo-desactualizado-${insumo.idInsumos}`,

@@ -21,13 +21,21 @@ export class CalculosService {
     return (utilidadConPlazo / costoTotal) * 100;
   }
 
-  evaluarEstadoAutomatico(presupuesto: {
-    rentabilidad: number;
-    rentabilidad_con_plazo: number;
-    costo_total: number;
-    total_facturar: number;
-    dificil_acceso: string;
-  }): string {
+  evaluarEstadoAutomatico(
+    presupuesto: {
+      rentabilidad: number;
+      rentabilidad_con_plazo: number;
+      costo_total: number;
+      total_facturar: number;
+      dificil_acceso: string;
+    },
+    tieneInsumosCriticos: boolean = false
+  ): string {
+    // Si tiene insumos críticos, forzar auditoría
+    if (tieneInsumosCriticos) {
+      return 'pendiente_prestacional';
+    }
+
     const reglas = [];
     const { auditoria } = BusinessRules;
 

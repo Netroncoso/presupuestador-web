@@ -13,7 +13,9 @@ export class PresupuestoService {
   }
 
   async finalizar(id: number) {
+    console.log('[DEBUG] Iniciando finalización presupuesto:', id);
     const presupuesto = await this.repo.obtenerConTotales(id);
+    console.log('[DEBUG] Presupuesto obtenido:', presupuesto ? 'OK' : 'NULL');
 
     if (!presupuesto) {
       throw new AppError(404, 'Presupuesto no encontrado');
@@ -49,14 +51,22 @@ export class PresupuestoService {
       );
     }
 
+    // Verificar insumos críticos
+    console.log('[DEBUG] Verificando insumos críticos...');
+    const tieneInsumosCriticos = await this.repo.tieneInsumosCriticos(id);
+    console.log('[DEBUG] Tiene insumos críticos:', tieneInsumosCriticos);
+
+    console.log('[DEBUG] Evaluando estado automático...');
     const estadoFinal = this.calculos.evaluarEstadoAutomatico({
       rentabilidad,
       rentabilidad_con_plazo: rentabilidadConPlazo,
       costo_total: costoTotal,
       total_facturar: totalFacturar,
       dificil_acceso: presupuesto.dificil_acceso
-    });
+    }, tieneInsumosCriticos);
+    console.log('[DEBUG] Estado final:', estadoFinal);
 
+    console.log('[DEBUG] Actualizando totales...');
     await this.repo.actualizarTotales(id, {
       estado: estadoFinal,
       totalInsumos,
@@ -67,6 +77,7 @@ export class PresupuestoService {
       rentabilidad,
       rentabilidadConPlazo
     });
+    console.log('[DEBUG] Totales actualizados');
 
     if (estadoFinal === 'pendiente_comercial') {
       await this.repo.crearRegistroAuditoriaInicial(
@@ -100,8 +111,10 @@ export class PresupuestoService {
       ).catch(err => console.error('Error notificando usuario:', err));
     }
 
+    console.log('[DEBUG] Finalización completada, retornando resultado');
     return {
       estadoFinal,
+      tieneInsumosCriticos,
       totales: {
         totalInsumos,
         totalPrestaciones,

@@ -405,7 +405,7 @@ router.get('/:id/versiones', auth, validatePresupuestoId, asyncHandler(async (re
 router.post('/:id/finalizar', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const id = parseInt(req.params.id);
   logger.info('Finalizando presupuesto', { presupuestoId: id, usuario: req.user.id });
-  const resultado = presupuestosController.finalizarPresupuesto(req, res, () => {});
+  const resultado = await presupuestosController.finalizarPresupuesto(req, res, () => {});
   logger.info('Presupuesto finalizado exitosamente', { presupuestoId: id, usuario: req.user.id });
   return resultado;
 }));

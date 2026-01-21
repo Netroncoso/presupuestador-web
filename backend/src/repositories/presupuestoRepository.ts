@@ -144,4 +144,16 @@ export class PresupuestoRepository {
       connection.release();
     }
   }
+
+  async tieneInsumosCriticos(presupuestoId: number): Promise<boolean> {
+    const [rows] = await pool.query<any[]>(
+      `SELECT COUNT(*) as count
+       FROM presupuesto_insumos pi
+       INNER JOIN insumos i ON pi.id_insumo = i.idInsumos
+       WHERE pi.idPresupuestos = ? AND pi.id_insumo IS NOT NULL AND i.critico = 1`,
+      [presupuestoId]
+    );
+    
+    return rows[0]?.count > 0;
+  }
 }

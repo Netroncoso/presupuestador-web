@@ -164,6 +164,7 @@ export const finalizarPresupuesto = asyncHandler(async (req: Request & { user?: 
   res.json({
     success: true,
     estado: resultado.estadoFinal,
+    tieneInsumosCriticos: resultado.tieneInsumosCriticos,
     totales: resultado.totales,
     mensaje: resultado.estadoFinal === 'pendiente' 
       ? 'Presupuesto enviado para auditoría' 
