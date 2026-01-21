@@ -58,13 +58,13 @@ export class PresupuestoRepository {
     );
   }
 
-  async notificarAuditores(presupuestoId: number, version: number, mensaje: string) {
+  async notificarAuditores(presupuestoId: number, version: number, mensaje: string, rol: string = 'gerencia_prestacional') {
     try {
       await pool.query(`
         INSERT IGNORE INTO notificaciones (usuario_id, presupuesto_id, version_presupuesto, tipo, mensaje)
         SELECT u.id, ?, ?, 'pendiente', ?
-        FROM usuarios u WHERE u.rol = 'gerencia_comercial' AND u.activo = 1
-      `, [presupuestoId, version, mensaje]);
+        FROM usuarios u WHERE u.rol = ? AND u.activo = 1
+      `, [presupuestoId, version, mensaje, rol]);
     } catch (error) {
       console.error('Error al notificar auditores:', error);
       throw new Error('Error al crear notificaciones para auditores');

@@ -92,7 +92,8 @@ export class PresupuestoService {
       await this.repo.notificarAuditores(
         id,
         presupuesto.version,
-        `Presupuesto finalizado requiere aprobación: ${presupuesto.Nombre_Apellido}`
+        `Presupuesto finalizado requiere aprobación: ${presupuesto.Nombre_Apellido}`,
+        'gerencia_prestacional'
       ).catch(err => console.error('Error notificando:', err));
     }
 
@@ -109,7 +110,8 @@ export class PresupuestoService {
       await this.repo.notificarAuditores(
         id,
         presupuesto.version,
-        `Presupuesto finalizado requiere aprobación: ${presupuesto.Nombre_Apellido}`
+        `Presupuesto finalizado requiere aprobación: ${presupuesto.Nombre_Apellido}`,
+        'gerencia_comercial'
       ).catch(err => console.error('Error notificando:', err));
     }
 

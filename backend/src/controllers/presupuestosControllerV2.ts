@@ -15,8 +15,9 @@ const auditoriaService = new AuditoriaService();
 function calcularTotalesPresupuesto(presupuesto: any) {
   const totalInsumos = Number(presupuesto.calc_total_insumos);
   const totalPrestaciones = Number(presupuesto.calc_total_prestaciones);
-  const costoTotal = totalInsumos + totalPrestaciones;
-  const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar);
+  const totalEquipamientos = Number(presupuesto.calc_total_equipamientos || 0);
+  const costoTotal = totalInsumos + totalPrestaciones + totalEquipamientos;
+  const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar) + Number(presupuesto.calc_total_equipamientos_facturar || 0);
   const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
   
   let rentabilidadConPlazo = rentabilidad;
@@ -33,6 +34,7 @@ function calcularTotalesPresupuesto(presupuesto: any) {
     ...presupuesto,
     total_insumos: totalInsumos,
     total_prestaciones: totalPrestaciones,
+    total_equipamiento: totalEquipamientos,
     costo_total: costoTotal,
     total_facturar: totalFacturar,
     rentabilidad: rentabilidad,
@@ -275,7 +277,9 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
       COALESCE(SUM(i.costo * i.cantidad), 0) as calc_total_insumos,
       COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as calc_total_insumos_facturar,
       COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as calc_total_prestaciones,
-      COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar
+      COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar,
+      COALESCE(SUM(e.costo * e.cantidad), 0) as calc_total_equipamientos,
+      COALESCE(SUM(e.precio_facturar * e.cantidad), 0) as calc_total_equipamientos_facturar
     FROM presupuestos p 
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
     LEFT JOIN financiador f ON p.financiador_id = f.id
@@ -283,6 +287,7 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
     LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
+    LEFT JOIN presupuesto_equipamiento e ON p.idPresupuestos = e.idPresupuestos
     WHERE p.idPresupuestos = ?
     GROUP BY p.idPresupuestos
   `, [id]);
@@ -293,10 +298,8 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
 
   let presupuesto = rows[0];
   
-  // Si los totales están en 0, usar los calculados
-  if (presupuesto.costo_total === 0 && (presupuesto.calc_total_insumos > 0 || presupuesto.calc_total_prestaciones > 0)) {
-    presupuesto = calcularTotalesPresupuesto(presupuesto);
-  }
+  // Siempre usar los totales calculados desde los items
+  presupuesto = calcularTotalesPresupuesto(presupuesto);
 
   const prestaciones = await obtenerPrestacionesPresupuesto(id);
   const insumos = await obtenerInsumosPresupuesto(id);
