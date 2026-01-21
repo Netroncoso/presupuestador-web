@@ -266,40 +266,27 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
 export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   
-  // Obtener presupuesto con totales calculados
+  // Obtener presupuesto directamente sin recalcular (usa valores guardados en BD)
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.*, 
       s.Sucursales_mh as Sucursal,
       f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
       fa.nombre as acuerdo_nombre,
-      u.username as usuario_creador,
-      COALESCE(SUM(i.costo * i.cantidad), 0) as calc_total_insumos,
-      COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as calc_total_insumos_facturar,
-      COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as calc_total_prestaciones,
-      COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as calc_total_prestaciones_facturar,
-      COALESCE(SUM(e.costo * e.cantidad), 0) as calc_total_equipamientos,
-      COALESCE(SUM(e.precio_facturar * e.cantidad), 0) as calc_total_equipamientos_facturar
+      u.username as usuario_creador
     FROM presupuestos p 
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
     LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
     LEFT JOIN usuarios u ON p.usuario_id = u.id
-    LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
-    LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
-    LEFT JOIN presupuesto_equipamiento e ON p.idPresupuestos = e.idPresupuestos
     WHERE p.idPresupuestos = ?
-    GROUP BY p.idPresupuestos
   `, [id]);
 
   if (rows.length === 0) {
     throw new AppError(404, 'Presupuesto no encontrado');
   }
 
-  let presupuesto = rows[0];
-  
-  // Siempre usar los totales calculados desde los items
-  presupuesto = calcularTotalesPresupuesto(presupuesto);
+  const presupuesto = rows[0];
 
   const prestaciones = await obtenerPrestacionesPresupuesto(id);
   const insumos = await obtenerInsumosPresupuesto(id);
