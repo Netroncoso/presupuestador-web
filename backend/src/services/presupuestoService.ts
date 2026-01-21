@@ -79,6 +79,23 @@ export class PresupuestoService {
     });
     console.log('[DEBUG] Totales actualizados');
 
+    if (estadoFinal === 'pendiente_prestacional') {
+      await this.repo.crearRegistroAuditoriaInicial(
+        id,
+        presupuesto.version,
+        presupuesto.usuario_id,
+        'borrador',
+        'pendiente_prestacional',
+        'Auditoría automática por reglas de negocio'
+      ).catch(err => console.error('Error creando registro auditoría:', err));
+
+      await this.repo.notificarAuditores(
+        id,
+        presupuesto.version,
+        `Presupuesto finalizado requiere aprobación: ${presupuesto.Nombre_Apellido}`
+      ).catch(err => console.error('Error notificando:', err));
+    }
+
     if (estadoFinal === 'pendiente_comercial') {
       await this.repo.crearRegistroAuditoriaInicial(
         id,
