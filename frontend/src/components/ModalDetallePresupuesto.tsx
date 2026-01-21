@@ -88,7 +88,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
     <Modal 
       opened={opened} 
       onClose={onClose} 
-      title={`Detalle Presupuesto #${presupuesto.idPresupuestos}`}
+      title={`Detalle Presupuesto #${presupuestoActual.idPresupuestos}`}
       size="xl"
       overlayProps={{
         backgroundOpacity: 0.55,
