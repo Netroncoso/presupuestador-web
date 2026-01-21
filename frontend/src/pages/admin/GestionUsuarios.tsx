@@ -24,7 +24,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
   const fetchUsuarios = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/usuarios', {
+      const response = await fetch('/api/admin/usuarios', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -44,7 +44,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
   const fetchSucursales = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/sucursales', {
+      const response = await fetch('/api/admin/sucursales', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -70,7 +70,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     }
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/usuarios', {
+      const response = await fetch('/api/admin/usuarios', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +96,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     if (!selectedUser) return;
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:4000/api/admin/usuarios/${selectedUser.id}`, {
+      await fetch(`/api/admin/usuarios/${selectedUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
   const toggleActivo = async (id: number, activo: number) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:4000/api/admin/usuarios/${id}/toggle`, {
+      await fetch(`/api/admin/usuarios/${id}/toggle`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export default function GestionUsuarios({ opened, onClose }: GestionUsuariosProp
     if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:4000/api/admin/usuarios/${id}`, {
+      await fetch(`/api/admin/usuarios/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

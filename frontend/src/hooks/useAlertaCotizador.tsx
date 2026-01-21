@@ -40,7 +40,7 @@ export const useAlertaCotizador = (props: AlertaProps): React.ReactNode[] => {
   React.useEffect(() => {
     const cargarAlertas = async () => {
       try {
-        const apiUrl = import.meta.env?.VITE_API_URL || 'http://localhost:4000';
+        const apiUrl = import.meta.env?.VITE_API_URL || '';
         const [serviciosRes, equipamientosRes] = await Promise.all([
           fetch(`${apiUrl}/api/alertas-servicios`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }

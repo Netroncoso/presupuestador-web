@@ -82,7 +82,7 @@ export default function OperadorCargaDashboard() {
     const interval = setInterval(fetchCasos, 30000);
     
     // Escuchar eventos SSE para actualizar notificaciones
-    const backendUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+    const backendUrl = (import.meta as any).env?.VITE_API_URL || '';
     const eventSource = new EventSource(`${backendUrl}/api/sse/updates`, {
       withCredentials: true
     });
