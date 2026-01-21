@@ -16,6 +16,9 @@ backup_*.sql
 deploy/
 !deploy/README.md
 
+# Docker config (específico por servidor)
+docker-compose.yml
+
 # Logs
 logs/
 *.log
