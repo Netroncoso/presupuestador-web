@@ -67,16 +67,22 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
   presupuesto
 }) => {
   const [auditorias, setAuditorias] = useState<any[]>([]);
+  const [presupuestoActual, setPresupuestoActual] = useState<any>(presupuesto);
 
   useEffect(() => {
     if (opened && presupuesto?.idPresupuestos) {
+      // Recargar presupuesto completo con totales actualizados
+      api.get(`/presupuestos/${presupuesto.idPresupuestos}`)
+        .then(res => setPresupuestoActual(res.data))
+        .catch(err => console.error('Error recargando presupuesto:', err));
+      
       api.get(`/auditoria/historial/${presupuesto.idPresupuestos}`)
         .then(res => setAuditorias(res.data))
         .catch(err => console.error('Error cargando auditorías:', err));
     }
   }, [opened, presupuesto?.idPresupuestos]);
 
-  if (!presupuesto) return null;
+  if (!presupuestoActual) return null;
 
   return (
     <Modal 
@@ -91,11 +97,11 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
     >
       <Stack gap="md">
         <Group>
-          <Badge variant="light" color="blue">v{presupuesto.version}</Badge>
-          <Badge variant="light" color={getEstadoBadgeColor(presupuesto.estado)} size="md">
-            {getEstadoLabel(presupuesto.estado)}
+          <Badge variant="light" color="blue">v{presupuestoActual.version}</Badge>
+          <Badge variant="light" color={getEstadoBadgeColor(presupuestoActual.estado)} size="md">
+            {getEstadoLabel(presupuestoActual.estado)}
           </Badge>
-          {presupuesto.dificil_acceso === 'SI' && (
+          {presupuestoActual.dificil_acceso === 'SI' && (
             <Badge color="orange">Difícil Acceso</Badge>
           )}
         </Group>
@@ -106,19 +112,19 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td fw={500}>Paciente</Table.Td>
-                <Table.Td>{presupuesto.Nombre_Apellido}</Table.Td>
+                <Table.Td>{presupuestoActual.Nombre_Apellido}</Table.Td>
                 <Table.Td fw={500}>DNI</Table.Td>
-                <Table.Td>{presupuesto.DNI}</Table.Td>
+                <Table.Td>{presupuestoActual.DNI}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={500}>Sucursal</Table.Td>
-                <Table.Td>{presupuesto.Sucursal || presupuesto.sucursal_nombre}</Table.Td>
+                <Table.Td>{presupuestoActual.Sucursal || presupuestoActual.sucursal_nombre}</Table.Td>
                 <Table.Td fw={500}>Financiador</Table.Td>
-                <Table.Td>{presupuesto.Financiador || presupuesto.financiador || 'No asignado'}</Table.Td>
+                <Table.Td>{presupuestoActual.Financiador || presupuestoActual.financiador || 'No asignado'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={500}>Creado por</Table.Td>
-                <Table.Td colSpan={3}>{presupuesto.creador || presupuesto.usuario_creador || 'No disponible'}</Table.Td>
+                <Table.Td colSpan={3}>{presupuestoActual.creador || presupuestoActual.usuario_creador || 'No disponible'}</Table.Td>
               </Table.Tr>
             </Table.Tbody>
           </Table>
@@ -130,25 +136,25 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td fw={500}>Costo Total</Table.Td>
-                <Table.Td>${Number(presupuesto.costo_total || 0).toLocaleString()}</Table.Td>
+                <Table.Td>${Number(presupuestoActual.costo_total || 0).toLocaleString()}</Table.Td>
                 <Table.Td fw={500}>Total a Facturar</Table.Td>
-                <Table.Td c="blue">${Number(presupuesto.total_facturar || 0).toLocaleString()}</Table.Td>
+                <Table.Td c="blue">${Number(presupuestoActual.total_facturar || 0).toLocaleString()}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={500}>Utilidad</Table.Td>
-                <Table.Td c={(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)) >= 0 ? 'green' : 'red'}>
-                  ${(Number(presupuesto.total_facturar || 0) - Number(presupuesto.costo_total || 0)).toLocaleString()}
+                <Table.Td c={(Number(presupuestoActual.total_facturar || 0) - Number(presupuestoActual.costo_total || 0)) >= 0 ? 'green' : 'red'}>
+                  ${(Number(presupuestoActual.total_facturar || 0) - Number(presupuestoActual.costo_total || 0)).toLocaleString()}
                 </Table.Td>
                 <Table.Td fw={500}>Rentabilidad</Table.Td>
-                <Table.Td c={Number(presupuesto.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
-                  {Number(presupuesto.rentabilidad || 0).toFixed(2)}%
+                <Table.Td c={Number(presupuestoActual.rentabilidad || 0) >= 15 ? 'green' : 'red'}>
+                  {Number(presupuestoActual.rentabilidad || 0).toFixed(2)}%
                 </Table.Td>
               </Table.Tr>
-              {presupuesto.rentabilidad_con_plazo && (
+              {presupuestoActual.rentabilidad_con_plazo && (
                 <Table.Tr>
                   <Table.Td fw={500}>Rent. con Plazo</Table.Td>
-                  <Table.Td c={Number(presupuesto.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'} colSpan={3}>
-                    {Number(presupuesto.rentabilidad_con_plazo || 0).toFixed(2)}%
+                  <Table.Td c={Number(presupuestoActual.rentabilidad_con_plazo || 0) >= 15 ? 'green' : 'red'} colSpan={3}>
+                    {Number(presupuestoActual.rentabilidad_con_plazo || 0).toFixed(2)}%
                   </Table.Td>
                 </Table.Tr>
               )}
@@ -181,9 +187,9 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           </Accordion>
         )}
 
-        {presupuesto.prestaciones && presupuesto.prestaciones.length > 0 && (
+        {presupuestoActual.prestaciones && presupuestoActual.prestaciones.length > 0 && (
           <Paper p="md" withBorder>
-            <Title order={4} mb="sm">Prestaciones ({presupuesto.prestaciones.length})</Title>
+            <Title order={4} mb="sm">Prestaciones ({presupuestoActual.prestaciones.length})</Title>
             <Table.ScrollContainer minWidth={500}>
               <Table striped>
                 <Table.Thead>
@@ -196,7 +202,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {presupuesto.prestaciones.map((prest: any, idx: number) => (
+                  {presupuestoActual.prestaciones.map((prest: any, idx: number) => (
                     <Table.Tr key={idx}>
                       <Table.Td>{prest.prestacion || prest.nombre}</Table.Td>
                       <Table.Td>{prest.cantidad}</Table.Td>
@@ -211,9 +217,9 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           </Paper>
         )}
 
-        {presupuesto.insumos && presupuesto.insumos.length > 0 && (
+        {presupuestoActual.insumos && presupuestoActual.insumos.length > 0 && (
           <Paper p="md" withBorder>
-            <Title order={4} mb="sm">Insumos ({presupuesto.insumos.length})</Title>
+            <Title order={4} mb="sm">Insumos ({presupuestoActual.insumos.length})</Title>
             <Table.ScrollContainer minWidth={500}>
               <Table striped>
                 <Table.Thead>
@@ -226,7 +232,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {presupuesto.insumos.map((insumo: any, idx: number) => (
+                  {presupuestoActual.insumos.map((insumo: any, idx: number) => (
                     <Table.Tr key={idx}>
                       <Table.Td>{insumo.producto || insumo.nombre}</Table.Td>
                       <Table.Td>{insumo.cantidad}</Table.Td>
@@ -241,9 +247,9 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           </Paper>
         )}
 
-        {presupuesto.equipamientos && presupuesto.equipamientos.length > 0 && (
+        {presupuestoActual.equipamientos && presupuestoActual.equipamientos.length > 0 && (
           <Paper p="md" withBorder>
-            <Title order={4} mb="sm">Equipamientos ({presupuesto.equipamientos.length})</Title>
+            <Title order={4} mb="sm">Equipamientos ({presupuestoActual.equipamientos.length})</Title>
             <Table.ScrollContainer minWidth={500}>
               <Table striped>
                 <Table.Thead>
@@ -257,7 +263,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {presupuesto.equipamientos.map((eq: any, idx: number) => (
+                  {presupuestoActual.equipamientos.map((eq: any, idx: number) => (
                     <Table.Tr key={idx}>
                       <Table.Td>{eq.nombre}</Table.Td>
                       <Table.Td>{eq.tipo}</Table.Td>
