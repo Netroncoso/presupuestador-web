@@ -324,3 +324,10 @@ export const revertirABorrador = asyncHandler(async (req: Request, res: Response
   await repo.revertirABorrador(id);
   res.json({ success: true });
 });
+
+export const recalcularTotalesPresupuesto = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { presupuestoCalculosService } = await import('../services/presupuestoCalculosService');
+  await presupuestoCalculosService.recalcularTotales(id);
+  res.json({ success: true });
+});

@@ -414,6 +414,10 @@ router.post('/:id/revertir-borrador', auth, validatePresupuestoId, asyncHandler(
   return presupuestosController.revertirABorrador(req, res, () => {});
 }));
 
+router.post('/:id/recalcular', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  return presupuestosController.recalcularTotalesPresupuesto(req, res, () => {});
+}));
+
 /**
  * @swagger
  * /api/presupuestos/{id}/version/editar:

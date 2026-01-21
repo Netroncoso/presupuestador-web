@@ -95,6 +95,16 @@ export const usePresupuesto = () => {
         setEquipamientosSeleccionados(equipamientos);
       }
       
+      // Si es modo edición (no solo lectura), recalcular totales en BD
+      if (!soloLectura) {
+        try {
+          const { api } = await import('../api/api');
+          await api.post(`/presupuestos/${id}/recalcular`);
+        } catch (error) {
+          console.error('Error recalculando totales:', error);
+        }
+      }
+      
       // Cargar totales desde BD SOLO en modo solo lectura
       // En modo edición, dejar que se recalculen automáticamente desde los items
       if (soloLectura && setTotalesDesdeDB && presupuestoData.costo_total && presupuestoData.costo_total > 0) {
