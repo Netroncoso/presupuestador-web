@@ -12,6 +12,10 @@ backup_*.sql
 *.sql.gz
 *.sql.zip
 
+# Deploy folder (local only)
+deploy/
+!deploy/README.md
+
 # Logs
 logs/
 *.log
