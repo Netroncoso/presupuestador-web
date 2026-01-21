@@ -25,16 +25,19 @@ export class PresupuestoService {
       throw new AppError(400, 'Solo se pueden finalizar presupuestos en borrador');
     }
 
-    const totalInsumos = Number(presupuesto.total_insumos_costo);
-    const totalPrestaciones = Number(presupuesto.total_prestaciones_costo);
-    const totalEquipamientos = Number(presupuesto.total_equipamientos_costo || 0);
-    const costoTotal = totalInsumos + totalPrestaciones + totalEquipamientos;
+    const totalInsumosCosto = Number(presupuesto.total_insumos_costo);
+    const totalPrestacionesCosto = Number(presupuesto.total_prestaciones_costo);
+    const totalEquipamientosCosto = Number(presupuesto.total_equipamientos_costo || 0);
+    const totalInsumosFacturar = Number(presupuesto.total_insumos_facturar);
+    const totalPrestacionesFacturar = Number(presupuesto.total_prestaciones_facturar);
+    const totalEquipamientosFacturar = Number(presupuesto.total_equipamientos_facturar || 0);
+    const costoTotal = totalInsumosCosto + totalPrestacionesCosto + totalEquipamientosCosto;
 
     if (costoTotal === 0) {
       throw new AppError(400, 'No se puede finalizar un presupuesto sin insumos, prestaciones o equipamientos');
     }
 
-    const totalFacturar = Number(presupuesto.total_insumos_facturar) + Number(presupuesto.total_prestaciones_facturar) + Number(presupuesto.total_equipamientos_facturar || 0);
+    const totalFacturar = totalInsumosFacturar + totalPrestacionesFacturar + totalEquipamientosFacturar;
     const rentabilidad = this.calculos.calcularRentabilidad(costoTotal, totalFacturar);
 
     let rentabilidadConPlazo = rentabilidad;
@@ -69,9 +72,9 @@ export class PresupuestoService {
     console.log('[DEBUG] Actualizando totales...');
     await this.repo.actualizarTotales(id, {
       estado: estadoFinal,
-      totalInsumos,
-      totalPrestaciones,
-      totalEquipamientos,
+      totalInsumos: totalInsumosFacturar,
+      totalPrestaciones: totalPrestacionesFacturar,
+      totalEquipamientos: totalEquipamientosFacturar,
       costoTotal,
       totalFacturar,
       rentabilidad,
@@ -135,9 +138,9 @@ export class PresupuestoService {
       estadoFinal,
       tieneInsumosCriticos,
       totales: {
-        totalInsumos,
-        totalPrestaciones,
-        totalEquipamientos,
+        totalInsumos: totalInsumosFacturar,
+        totalPrestaciones: totalPrestacionesFacturar,
+        totalEquipamientos: totalEquipamientosFacturar,
         costoTotal,
         totalFacturar,
         rentabilidad: Number(rentabilidad.toFixed(2)),
