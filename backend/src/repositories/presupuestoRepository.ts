@@ -2,28 +2,46 @@ import { pool } from '../db';
 
 export class PresupuestoRepository {
   async obtenerConTotales(id: number) {
+    // Query principal sin JOINs que multiplican
     const [rows] = await pool.query<any[]>(`
-      SELECT 
-        p.*,
-        COALESCE(SUM(i.costo * i.cantidad), 0) as total_insumos_costo,
-        COALESCE(SUM(i.precio_facturar * i.cantidad), 0) as total_insumos_facturar,
-        COALESCE(SUM(pr.valor_asignado * pr.cantidad), 0) as total_prestaciones_costo,
-        COALESCE(SUM(pr.valor_facturar * pr.cantidad), 0) as total_prestaciones_facturar,
-        COALESCE(SUM(e.costo * e.cantidad), 0) as total_equipamientos_costo,
-        COALESCE(SUM(e.precio_facturar * e.cantidad), 0) as total_equipamientos_facturar,
-        f.tasa_mensual,
-        f.dias_cobranza_real,
-        f.dias_cobranza_teorico
+      SELECT p.*, f.tasa_mensual, f.dias_cobranza_real, f.dias_cobranza_teorico
       FROM presupuestos p
-      LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
-      LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
-      LEFT JOIN presupuesto_equipamiento e ON p.idPresupuestos = e.idPresupuestos
       LEFT JOIN financiador f ON p.financiador_id = f.id
       WHERE p.idPresupuestos = ? AND p.es_ultima_version = 1
-      GROUP BY p.idPresupuestos
     `, [id]);
 
-    return rows[0] || null;
+    if (rows.length === 0) return null;
+
+    const presupuesto = rows[0];
+
+    // Queries separados para evitar multiplicación
+    const [insumos] = await pool.query<any[]>(`
+      SELECT COALESCE(SUM(costo * cantidad), 0) as total_costo,
+             COALESCE(SUM(precio_facturar * cantidad), 0) as total_facturar
+      FROM presupuesto_insumos WHERE idPresupuestos = ?
+    `, [id]);
+
+    const [prestaciones] = await pool.query<any[]>(`
+      SELECT COALESCE(SUM(valor_asignado * cantidad), 0) as total_costo,
+             COALESCE(SUM(valor_facturar * cantidad), 0) as total_facturar
+      FROM presupuesto_prestaciones WHERE idPresupuestos = ?
+    `, [id]);
+
+    const [equipamientos] = await pool.query<any[]>(`
+      SELECT COALESCE(SUM(costo * cantidad), 0) as total_costo,
+             COALESCE(SUM(precio_facturar * cantidad), 0) as total_facturar
+      FROM presupuesto_equipamiento WHERE idPresupuestos = ?
+    `, [id]);
+
+    return {
+      ...presupuesto,
+      total_insumos_costo: insumos[0].total_costo,
+      total_insumos_facturar: insumos[0].total_facturar,
+      total_prestaciones_costo: prestaciones[0].total_costo,
+      total_prestaciones_facturar: prestaciones[0].total_facturar,
+      total_equipamientos_costo: equipamientos[0].total_costo,
+      total_equipamientos_facturar: equipamientos[0].total_facturar
+    };
   }
 
   async actualizarTotales(id: number, data: {
