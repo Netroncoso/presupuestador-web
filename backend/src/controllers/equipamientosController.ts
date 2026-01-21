@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
+import { presupuestoCalculosService } from '../services/presupuestoCalculosService';
 import { equipamientosService } from '../services/equipamientosService';
 
 // GET /api/equipamientos - Obtener todos los equipamientos (admin)
@@ -106,6 +107,10 @@ export const actualizarAcuerdoEquipamiento = asyncHandler(async (req: Request, r
 export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const resultado = await equipamientosService.agregarAPresupuesto(id, req.body);
+  
+  // Recalcular totales del presupuesto
+  await presupuestoCalculosService.recalcularTotales(parseInt(id));
+  
   res.json(resultado);
 });
 
@@ -113,6 +118,10 @@ export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, 
 export const eliminarEquipamientoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const { id, equipamientoId } = req.params;
   const resultado = await equipamientosService.eliminarDePresupuesto(id, equipamientoId);
+  
+  // Recalcular totales del presupuesto
+  await presupuestoCalculosService.recalcularTotales(parseInt(id));
+  
   res.json(resultado);
 });
 
