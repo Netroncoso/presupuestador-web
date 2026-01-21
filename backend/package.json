@@ -36,7 +36,6 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
-    "@types/express-basic-auth": "^1.2.4",
     "@types/helmet": "^4.0.0",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.10",
