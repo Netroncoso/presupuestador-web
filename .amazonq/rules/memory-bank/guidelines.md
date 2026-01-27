@@ -329,6 +329,36 @@ presupuestos.forEach(p => {
 });
 ```
 
+#### 4. Avoid Multiple JOINs with Aggregations (CRITICAL)
+```typescript
+// ❌ WRONG - Multiple LEFT JOINs with SUM() multiply values
+await pool.query(`
+  SELECT p.*, 
+    SUM(i.costo * i.cantidad) as total_insumos,
+    SUM(pr.valor_facturar * pr.cantidad) as total_prestaciones
+  FROM presupuestos p
+  LEFT JOIN presupuesto_insumos i ON p.idPresupuestos = i.idPresupuestos
+  LEFT JOIN presupuesto_prestaciones pr ON p.idPresupuestos = pr.idPresupuestos
+  WHERE p.idPresupuestos = ?
+`, [id]);
+
+// ✅ CORRECT - Separate queries or read from pre-calculated columns
+const [presupuesto] = await pool.query(
+  'SELECT * FROM presupuestos WHERE idPresupuestos = ?',
+  [id]
+);
+const [insumos] = await pool.query(
+  'SELECT * FROM presupuesto_insumos WHERE idPresupuestos = ?',
+  [id]
+);
+const [prestaciones] = await pool.query(
+  'SELECT * FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+  [id]
+);
+```
+
+**Use Case**: Prevents value multiplication bug when querying related tables
+
 ### Mantine UI Component Usage
 
 #### 1. Form Components
@@ -624,6 +654,13 @@ function generic<T>(items: T[]): T | undefined {
 - Handle errors at appropriate levels
 - Always rollback transactions on error
 - Show notifications to users
+
+### Database Query Best Practices
+- **NEVER use multiple LEFT JOINs with SUM()** - causes value multiplication
+- Use separate queries for each related table (insumos, prestaciones, equipamientos)
+- Read pre-calculated totals from presupuestos table columns directly
+- Only recalculate totals when items are added/removed/updated
+- Store "a facturar" values in total_* columns, not cost values
 
 ### Code Organization
 - Group related functionality
