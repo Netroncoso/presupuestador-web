@@ -221,7 +221,7 @@ export default function UserDashboard() {
       setValidacionCompletada(false);
 
       // Si requiere auditoría, abrir modal y marcar como automática
-      if (resultado.estado === 'pendiente_administrativa' || resultado.estado === 'pendiente_prestacional') {
+      if (resultado.estadoFinal === 'pendiente_prestacional') {
         // Mostrar notificación según motivo
         if (resultado.tieneInsumosCriticos) {
           notifications.show({
@@ -232,9 +232,13 @@ export default function UserDashboard() {
             autoClose: false,
           });
         } else {
+          const mensaje = resultado.razones && resultado.razones.length > 0
+            ? `Razones: ${resultado.razones.join(', ')}`
+            : 'El presupuesto requiere revisión gerencial según las reglas automáticas configuradas.';
+          
           notifications.show({
             title: '📋 Auditoría por Reglas de Negocio',
-            message: 'El presupuesto requiere revisión gerencial según las reglas automáticas configuradas.',
+            message: mensaje,
             color: 'blue',
             position: 'top-center',
             autoClose: false,
@@ -247,7 +251,7 @@ export default function UserDashboard() {
       }
 
       // Si fue aprobado automáticamente
-      if (resultado.estado === 'aprobado') {
+      if (resultado.estadoFinal === 'pendiente_carga' || resultado.estadoFinal === 'aprobado') {
         notifications.show({
           title: '✅ Presupuesto Aprobado',
           message: 'El presupuesto cumple con las reglas de negocio y fue aprobado automáticamente',
@@ -279,6 +283,17 @@ export default function UserDashboard() {
   ]);
 
   const handleFinalizarPresupuesto = useCallback(async () => {
+    if (costoTotal === 0) {
+      notifications.show({
+        title: '⚠️ Presupuesto Vacío',
+        message: 'Debe agregar al menos un insumo, prestación o equipamiento antes de finalizar',
+        color: 'orange',
+        position: 'top-center',
+        autoClose: 5000,
+      });
+      return;
+    }
+
     if (validacionCompletada) {
       await ejecutarFinalizacion();
       return;
@@ -296,6 +311,7 @@ export default function UserDashboard() {
       await ejecutarFinalizacion();
     }
   }, [
+    costoTotal,
     validacionCompletada,
     validarItems,
     insumosSeleccionados,
