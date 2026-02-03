@@ -456,7 +456,6 @@ export default function DatosPresupuesto({
           placeholder={!sucursalId ? "Seleccione primero una sucursal" : loadingZonas ? "Cargando zonas..." : "Seleccione una zona"}
           disabled={!sucursalId || presupuestoCreado || soloLectura || loadingZonas}
           variant={(presupuestoCreado || soloLectura) ? "filled" : "default"}
-          description="Zona geográfica para servicios del tarifario"
         />
         
         <Select
