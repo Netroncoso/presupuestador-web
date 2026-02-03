@@ -71,7 +71,7 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<
-    { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string } | undefined
+    { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string; zonaId?: number } | undefined
   >();
   const [recargarHistorial, setRecargarHistorial] = useState(0);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
@@ -118,7 +118,8 @@ export default function UserDashboard() {
       dni: data.dni, 
       sucursal: data.sucursal, 
       sucursal_id: data.sucursalId,
-      financiador_id: data.financiadorId
+      financiador_id: data.financiadorId,
+      zonaId: data.zonaId
     });
   }, [crearPresupuesto]);
 
@@ -306,6 +307,15 @@ export default function UserDashboard() {
   const handleEditarPresupuesto = useCallback(
     async (presupuesto: any, soloLecturaParam: boolean = true) => {
       if (soloLecturaParam) {
+        // Setear datosHistorial ANTES de cargar para que zonaId esté disponible
+        setDatosHistorial({
+          nombre: presupuesto.Nombre_Apellido,
+          dni: presupuesto.DNI,
+          sucursal: presupuesto.Sucursal,
+          sucursal_id: presupuesto.sucursal_id,
+          financiador_id: presupuesto.financiador_id?.toString(),
+          zonaId: presupuesto.zona_id
+        });
         setSoloLectura(true);
         await cargarPresupuesto(
           presupuesto.idPresupuestos,
@@ -319,14 +329,6 @@ export default function UserDashboard() {
           setTotalesDesdeBaseDatos,
           setEquipamientosSeleccionados
         );
-        // Setear datosHistorial DESPUÉS de cargar
-        setDatosHistorial({
-          nombre: presupuesto.Nombre_Apellido,
-          dni: presupuesto.DNI,
-          sucursal: presupuesto.Sucursal,
-          sucursal_id: presupuesto.sucursal_id,
-          financiador_id: presupuesto.financiador_id?.toString()
-        });
       } else {
         try {
           const response = await crearVersionParaEdicion(
@@ -341,6 +343,15 @@ export default function UserDashboard() {
             return;
           }
 
+          // Setear datosHistorial ANTES de cargar para que zonaId esté disponible
+          setDatosHistorial({
+            nombre: presupuesto.Nombre_Apellido,
+            dni: presupuesto.DNI,
+            sucursal: presupuesto.Sucursal,
+            sucursal_id: presupuesto.sucursal_id,
+            financiador_id: presupuesto.financiador_id?.toString(),
+            zonaId: presupuesto.zona_id
+          });
           setSoloLectura(false);
           await cargarPresupuesto(
             response.id,
@@ -354,14 +365,6 @@ export default function UserDashboard() {
             setTotalesDesdeBaseDatos,
             setEquipamientosSeleccionados
           );
-          // Setear datosHistorial DESPUÉS de cargar
-          setDatosHistorial({
-            nombre: presupuesto.Nombre_Apellido,
-            dni: presupuesto.DNI,
-            sucursal: presupuesto.Sucursal,
-            sucursal_id: presupuesto.sucursal_id,
-            financiador_id: presupuesto.financiador_id?.toString()
-          });
         } catch (error) {
           console.error("Error al preparar edición:", error);
         }
@@ -466,14 +469,16 @@ export default function UserDashboard() {
         true
       );
 
-      setSoloLectura(false);
+      // Setear datosHistorial ANTES de cargar para que zonaId esté disponible
       setDatosHistorial({
         nombre: presupuestoParaEditar.Nombre_Apellido,
         dni: presupuestoParaEditar.DNI,
         sucursal: presupuestoParaEditar.Sucursal,
         sucursal_id: presupuestoParaEditar.sucursal_id,
-        financiador_id: presupuestoParaEditar.financiador_id?.toString()
+        financiador_id: presupuestoParaEditar.financiador_id?.toString(),
+        zonaId: presupuestoParaEditar.zona_id
       });
+      setSoloLectura(false);
 
       await cargarPresupuesto(
         response.id,
@@ -844,6 +849,7 @@ export default function UserDashboard() {
             financiadorId={financiadorId}
             soloLectura={soloLectura}
             sucursalId={datosHistorial?.sucursal_id || null}
+            zonaId={datosHistorial?.zonaId || null}
           />
         </Tabs.Panel>
 

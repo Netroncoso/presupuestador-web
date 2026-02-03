@@ -33,6 +33,7 @@ import healthRoutes from './routes/health';
 import cacheStatsRoutes from './routes/cacheStats';
 import cargaRoutes from './routes/carga';
 import equipamientosRoutes from './routes/equipamientos';
+import tarifarioRoutes from './routes/tarifario';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { iniciarCronJobs } from './services/cronJobs';
@@ -110,6 +111,7 @@ app.use('/api/reportes/financiero', reportesFinancierosRoutes);
 app.use('/api/cache', cacheStatsRoutes);
 app.use('/api/equipamientos', equipamientosRoutes);
 app.use('/api/carga', cargaRoutes);
+app.use('/api', tarifarioRoutes); // Tarifario routes
 
 // Global error handler
 app.use(errorHandler);

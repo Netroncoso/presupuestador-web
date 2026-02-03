@@ -296,6 +296,31 @@ Prestaciones (servicios) incluidas en un presupuesto.
 
 ---
 
+### presupuesto_prestaciones_tarifario
+Servicios del tarifario interno incluidos en un presupuesto (separado de convenios).
+
+| Column | Type | Nullable | Default | Key | Extra | Comment |
+|--------|------|----------|---------|-----|-------|---------|
+| id | int | NO | NULL | PRI | auto_increment | |
+| idPresupuestos | int | NO | NULL | MUL | | FK → presupuestos.idPresupuestos |
+| tarifario_servicio_id | int | NO | NULL | MUL | | FK → tarifario_servicio.id |
+| prestacion | varchar(255) | NO | NULL | | | Nombre del servicio |
+| cantidad | int | NO | NULL | | | Cantidad de unidades |
+| zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
+| orden_costo | tinyint | NO | NULL | MUL | | Orden del costo usado (1-5) |
+| valor_asignado | decimal(10,2) | NO | NULL | | | Costo prestacional |
+| valor_facturar | decimal(10,2) | NO | NULL | | | Valor con markup aplicado |
+| fuera_tarifario | tinyint(1) | YES | 0 | MUL | | Usuario editó costo manualmente |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
+
+**Foreign Keys:**
+- `idPresupuestos` → `presupuestos.idPresupuestos`
+- `tarifario_servicio_id` → `tarifario_servicio.id`
+- `zona_id` → `tarifario_zonas.id`
+
+---
+
 ### presupuestos
 Tabla principal de presupuestos con sistema de versionado.
 
@@ -305,6 +330,7 @@ Tabla principal de presupuestos con sistema de versionado.
 | Nombre_Apellido | varchar(45) | YES | NULL | | | |
 | DNI | varchar(20) | NO | NULL | MUL | | |
 | sucursal_id | int | YES | NULL | MUL | | |
+| zona_id | int | YES | NULL | MUL | | FK → tarifario_zonas.id |
 | total_insumos | decimal(10,2) | YES | 0.00 | | | |
 | dificil_acceso | varchar(2) | NO | NULL | | | |
 | total_prestaciones | decimal(10,2) | YES | 0.00 | | | |
@@ -347,6 +373,7 @@ Tabla principal de presupuestos con sistema de versionado.
 - `usuario_id` → `usuarios.id`
 - `presupuesto_padre` → `presupuestos.idPresupuestos`
 - `revisor_id` → `usuarios.id`
+- `zona_id` → `tarifario_zonas.id`
 
 ---
 
@@ -374,6 +401,78 @@ Catálogo de sucursales.
 | Sucursales_mh | varchar(45) | NO | NULL | UNI | | |
 | suc_porcentaje_dificil_acceso | int | YES | NULL | | | |
 | suc_porcentaje_insumos | int | YES | NULL | | | |
+
+---
+
+### sucursales_tarifario_zonas
+Relación entre sucursales y zonas del tarifario (N:M).
+
+| Column | Type | Nullable | Default | Key | Extra | Comment |
+|--------|------|----------|---------|-----|-------|---------|
+| id | int | NO | NULL | PRI | auto_increment | |
+| sucursal_id | int | NO | NULL | MUL | | FK → sucursales_mh.ID |
+| zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
+| es_zona_principal | tinyint(1) | YES | 0 | MUL | | Zona por defecto de la sucursal |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+
+**Foreign Keys:**
+- `sucursal_id` → `sucursales_mh.ID`
+- `zona_id` → `tarifario_zonas.id`
+
+---
+
+### tarifario_servicio
+Catálogo de servicios del tarifario interno.
+
+| Column | Type | Nullable | Default | Key | Extra | Comment |
+|--------|------|----------|---------|-----|-------|---------|
+| id | int | NO | NULL | PRI | auto_increment | |
+| nombre | varchar(255) | NO | NULL | UNI | | Ej: HORA CUIDADOR, HORA ENFERMERIA ADULTO |
+| descripcion | text | YES | NULL | | | |
+| tipo_unidad | varchar(50) | YES | NULL | MUL | | FK → tipos_unidad.nombre |
+| activo | tinyint(1) | YES | 1 | MUL | | |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
+
+**Foreign Keys:**
+- `tipo_unidad` → `tipos_unidad.nombre`
+
+---
+
+### tarifario_servicio_valores
+Valores históricos de servicios del tarifario por zona (5 costos por zona).
+
+| Column | Type | Nullable | Default | Key | Extra | Comment |
+|--------|------|----------|---------|-----|-------|---------|
+| id | int | NO | NULL | PRI | auto_increment | |
+| tarifario_servicio_id | int | NO | NULL | MUL | | FK → tarifario_servicio.id |
+| zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
+| costo_1 | decimal(10,2) | NO | NULL | | | Costo orden 1 (más bajo) |
+| costo_2 | decimal(10,2) | NO | NULL | | | Costo orden 2 |
+| costo_3 | decimal(10,2) | NO | NULL | | | Costo orden 3 |
+| costo_4 | decimal(10,2) | NO | NULL | | | Costo orden 4 |
+| costo_5 | decimal(10,2) | NO | NULL | | | Costo orden 5 (más alto) |
+| fecha_inicio | date | NO | NULL | MUL | | Inicio de vigencia |
+| fecha_fin | date | YES | NULL | | | Fin de vigencia (NULL = vigente) |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+
+**Foreign Keys:**
+- `tarifario_servicio_id` → `tarifario_servicio.id`
+- `zona_id` → `tarifario_zonas.id`
+
+---
+
+### tarifario_zonas
+Catálogo de zonas geográficas para tarifario.
+
+| Column | Type | Nullable | Default | Key | Extra | Comment |
+|--------|------|----------|---------|-----|-------|---------|
+| id | int | NO | NULL | PRI | auto_increment | |
+| nombre | varchar(100) | NO | NULL | UNI | | Ej: CABA, AMBA, Centro, Reg AC |
+| descripcion | text | YES | NULL | | | |
+| activo | tinyint(1) | YES | 1 | MUL | | |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
 
 ---
 
@@ -442,7 +541,8 @@ Usuarios del sistema con roles.
 ```
 presupuestos
 ├── presupuesto_insumos (1:N)
-├── presupuesto_prestaciones (1:N)
+├── presupuesto_prestaciones (1:N) - Servicios con convenio
+├── presupuesto_prestaciones_tarifario (1:N) - Servicios del tarifario
 ├── presupuesto_equipamiento (1:N)
 ├── auditorias_presupuestos (1:N)
 ├── notificaciones (1:N)
@@ -462,12 +562,30 @@ financiador
     └── financiador_equipamiento_valores (1:N)
 ```
 
+### Tarifario System
+```
+tarifario_servicio
+└── tarifario_servicio_valores (1:N)
+    └── tarifario_zonas (N:1)
+
+sucursales_mh
+└── sucursales_tarifario_zonas (1:N)
+    └── tarifario_zonas (N:1)
+
+presupuestos
+└── presupuesto_prestaciones_tarifario (1:N)
+    ├── tarifario_servicio (N:1)
+    └── tarifario_zonas (N:1)
+```
+
 ### Catalog Tables
 ```
 servicios → tipos_unidad
 equipamientos → tipos_equipamiento
 insumos (standalone)
 sucursales_mh (standalone)
+tarifario_servicio → tipos_unidad
+tarifario_zonas (standalone)
 ```
 
 ## Important Constraints
@@ -491,7 +609,15 @@ sucursales_mh (standalone)
 - `es_ultima_version` flag indicates current version
 - `presupuesto_padre` links to parent version
 
+### Tarifario System
+- `tarifario_servicio_valores` stores 5 costs per service/zone (costo_1 to costo_5)
+- `orden_costo` in `presupuesto_prestaciones_tarifario` indicates which cost was used (1-5)
+- `fuera_tarifario = 1` marks manually edited costs
+- `markup_tarifario` in `configuracion_sistema` defines global markup percentage (default: 50%)
+- Formula: `valor_facturar = valor_asignado * (1 + markup/100)`
+- `total_prestaciones` = SUM(presupuesto_prestaciones) + SUM(presupuesto_prestaciones_tarifario)
+
 ---
 
 **Last Updated:** January 2025  
-**Source:** Tablas-full2.csv
+**Source:** Tablas-full2.csv + Tarifario migrations (001-005)

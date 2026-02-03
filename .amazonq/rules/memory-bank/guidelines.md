@@ -26,6 +26,7 @@
 - **Files**: camelCase for utilities, PascalCase for components (e.g., `UserDashboard.tsx`, `asyncHandler.ts`)
 - **Database Tables**: snake_case (e.g., `presupuesto_insumos`, `auditorias_presupuestos`)
 - **Database Columns**: snake_case (e.g., `valor_asignado`, `fecha_inicio`)
+- **Table Text Display**: Always capitalize first letter only (e.g., "Hora cuidador", not "HORA CUIDADOR")
 
 ### Documentation
 - **JSDoc Comments**: Used for API routes with Swagger annotations

@@ -32,7 +32,10 @@ export const useRealtimeUpdates = () => {
       
       lastUpdateRef.current = Date.now();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      // Silenciar error de sesión expirada (ya manejado por useSessionExpiredNotification)
+      if (error instanceof Error && error.message !== 'Sesión expirada') {
+        console.error('Error refreshing data:', error);
+      }
     }
   };
 

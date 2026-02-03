@@ -3,6 +3,7 @@ import { Paper, TextInput, Select, Checkbox, Button, Group, Stack, Title, Modal,
 import { notifications } from '@mantine/notifications'
 import { api } from '../api/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useZonas } from '../hooks/useZonas'
 
 // Interface for the data passed when a budget is created/loaded
 export interface PresupuestoCreadoData {
@@ -13,6 +14,7 @@ export interface PresupuestoCreadoData {
   porcentajeInsumos: number
   financiadorId?: string
   sucursalId?: number
+  zonaId?: number
 }
 
 interface Props {
@@ -39,6 +41,7 @@ export default function DatosPresupuesto({
   const [dni, setDni] = useState('')
   const [sucursal, setSucursal] = useState('')
   const [sucursalId, setSucursalId] = useState<number | null>(null)
+  const [zonaId, setZonaId] = useState<number | null>(null)
   const [financiadorId, setFinanciadorId] = useState<string | null>(null)
   const [dificilAcceso, setDificilAcceso] = useState(false)
   const [sucursales, setSucursales] = useState<{ID: number, Sucursales_mh: string, suc_porcentaje_insumos: number}[]>([])
@@ -46,6 +49,9 @@ export default function DatosPresupuesto({
   const [presupuestoCreado, setPresupuestoCreado] = useState(false)
   const [modalDNI, setModalDNI] = useState(false)
   const [presupuestoExistente, setPresupuestoExistente] = useState<any>(null)
+  
+  // Hook de zonas
+  const { zonas, loading: loadingZonas, zonaPrincipal } = useZonas(sucursalId)
   
   // Internal state for when props are not provided (controlled vs uncontrolled handling could be better but keeping simple for now)
   const [esCargaHistorialLocal, setEsCargaHistorialLocal] = useState(false)
@@ -55,12 +61,31 @@ export default function DatosPresupuesto({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sucursalesRes, financiadoresRes] = await Promise.all([
+        const userSucursalId = user?.sucursal_id
+        
+        const requests = [
           api.get('/sucursales'),
           api.get('/prestaciones/financiadores')
-        ])
-        setSucursales(sucursalesRes.data)
-        setFinanciadores(financiadoresRes.data)
+        ]
+        
+        // Si hay sucursal del usuario, cargar sus zonas en paralelo
+        if (userSucursalId) {
+          requests.push(api.get(`/sucursales/${userSucursalId}/zonas`))
+        }
+        
+        const responses = await Promise.all(requests)
+        
+        setSucursales(responses[0].data)
+        setFinanciadores(responses[1].data)
+        
+        // Si se cargaron zonas, actualizar el hook
+        if (userSucursalId && responses[2]) {
+          const sucursalData = responses[0].data.find((s: any) => Number(s.ID) === Number(userSucursalId))
+          if (sucursalData) {
+            setSucursalId(sucursalData.ID)
+            setSucursal(sucursalData.Sucursales_mh)
+          }
+        }
       } catch (error) {
         console.error('❌ Error fetching data:', error)
         notifications.show({
@@ -73,7 +98,7 @@ export default function DatosPresupuesto({
     fetchData()
   }, [])
 
-  // Pre-seleccionar sucursal del usuario
+  // Pre-seleccionar sucursal del usuario (solo si no se hizo en fetchData inicial)
   useEffect(() => {
     if (sucursales.length > 0 && !presupuestoCreado && !datosHistorial && sucursalId === null) {
       const userSucursalId = user?.sucursal_id
@@ -88,6 +113,19 @@ export default function DatosPresupuesto({
       }
     }
   }, [sucursales, user, presupuestoCreado, datosHistorial, sucursalId])
+
+  // Preseleccionar zona principal
+  useEffect(() => {
+    if (sucursalId && !presupuestoCreado) {
+      if (zonas.length === 0) {
+        setZonaId(null)
+      } else if (zonas.length === 1) {
+        setZonaId(zonas[0].id)
+      } else if (zonaPrincipal) {
+        setZonaId(zonaPrincipal.id)
+      }
+    }
+  }, [zonas, zonaPrincipal, sucursalId, presupuestoCreado])
 
   useEffect(() => {
     if (datosHistorial) {
@@ -152,6 +190,7 @@ export default function DatosPresupuesto({
         nombre,
         dni,
         sucursal_id: sucursalId,
+        zona_id: zonaId,
         financiador_id: financiadorId,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
@@ -165,7 +204,8 @@ export default function DatosPresupuesto({
         sucursal, 
         porcentajeInsumos, 
         financiadorId: financiadorId || undefined, 
-        sucursalId: sucursalId || undefined
+        sucursalId: sucursalId || undefined,
+        zonaId: zonaId || undefined
       })
       notifications.show({
         title: 'Guardado',
@@ -191,6 +231,7 @@ export default function DatosPresupuesto({
         nombre: nombreParam,
         dni,
         sucursal_id: sucursalData?.ID,
+        zona_id: zonaId,
         financiador_id: financiadorId,
         dificil_acceso: dificilAcceso ? 'si' : 'no',
         porcentaje_insumos: porcentajeInsumos
@@ -254,15 +295,18 @@ export default function DatosPresupuesto({
         }
         
         // Actualizar formulario
+        const sucursalData = sucursales.find(s => s.Sucursales_mh === presupuestoCompleto.Sucursal)
+        
         setNombre(presupuestoCompleto.Nombre_Apellido)
         setDni(presupuestoCompleto.DNI)
         setSucursal(presupuestoCompleto.Sucursal)
+        setSucursalId(sucursalData?.ID || null)
+        setZonaId(presupuestoCompleto.zona_id || null)
         setDificilAcceso(presupuestoCompleto.dificil_acceso === 'si')
         if (presupuestoCompleto.financiador_id) {
           setFinanciadorId(presupuestoCompleto.financiador_id.toString())
         }
         
-        const sucursalData = sucursales.find(s => s.Sucursales_mh === presupuestoCompleto.Sucursal)
         const porcentajeInsumos = sucursalData?.suc_porcentaje_insumos || 0
         
         setPresupuestoCreado(true)
@@ -276,7 +320,8 @@ export default function DatosPresupuesto({
             sucursal: presupuestoCompleto.Sucursal,
             porcentajeInsumos,
             financiadorId: presupuestoCompleto.financiador_id?.toString(),
-            sucursalId: sucursalData?.ID
+            sucursalId: sucursalData?.ID,
+            zonaId: presupuestoCompleto.zona_id
         })
         
         // 2. Cargar datos adicionales (items) usando prop en lugar de window callback
@@ -389,6 +434,7 @@ export default function DatosPresupuesto({
             setSucursalId(id)
             const sucursalData = sucursales.find(s => s.ID === id)
             setSucursal(sucursalData?.Sucursales_mh || '')
+            setZonaId(null) // Resetear zona al cambiar sucursal
           }}
           placeholder="Seleccione una sucursal"
           required
@@ -396,6 +442,21 @@ export default function DatosPresupuesto({
           variant={(presupuestoCreado || esCargaHistorial || soloLectura) ? "filled" : "default"}
           searchable
           checkIconPosition="right"
+        />
+        
+        {/* Selector de Zona */}
+        <Select
+          label="Zona"
+          data={zonas.map(z => ({
+            value: z.id.toString(),
+            label: z.nombre + (z.es_zona_principal === 1 ? ' (Principal)' : '')
+          }))}
+          value={zonaId !== null ? zonaId.toString() : null}
+          onChange={(value) => setZonaId(value ? parseInt(value) : null)}
+          placeholder={!sucursalId ? "Seleccione primero una sucursal" : loadingZonas ? "Cargando zonas..." : "Seleccione una zona"}
+          disabled={!sucursalId || presupuestoCreado || soloLectura || loadingZonas}
+          variant={(presupuestoCreado || soloLectura) ? "filled" : "default"}
+          description="Zona geográfica para servicios del tarifario"
         />
         
         <Select

@@ -144,14 +144,16 @@ export class PresupuestoRepository {
         ['borrador', id]
       );
       
+      // Eliminar notificaciones pendientes
       await connection.query(
         'DELETE FROM notificaciones WHERE presupuesto_id = ? AND tipo = ?',
         [id, 'pendiente']
       );
       
+      // Eliminar TODAS las auditorías automáticas de este presupuesto
       await connection.query(
-        'DELETE FROM auditorias_presupuestos WHERE presupuesto_id = ? AND estado_nuevo = ? AND estado_anterior = ?',
-        [id, 'pendiente_comercial', 'borrador']
+        'DELETE FROM auditorias_presupuestos WHERE presupuesto_id = ? AND comentario = ?',
+        [id, 'Auditoría automática por reglas de negocio']
       );
       
       await connection.commit();

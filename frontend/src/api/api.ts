@@ -121,6 +121,7 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+export default api;
 
 // Convenience helpers used across the frontend
 export async function getSucursales() {

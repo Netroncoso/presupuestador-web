@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip, Modal } from '@mantine/core'
-import { TrashIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip, Modal, Tabs } from '@mantine/core'
+import { TrashIcon, PlusIcon, PencilSquareIcon, DocumentCheckIcon, DocumentCurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
 import { getFinanciadores, getPrestacionesPorFinanciador } from '../api/api'
 import { api } from '../api/api'
 import { numberFormat } from '../utils/numberFormat'
+import PrestacionesTarifario from '../components/PrestacionesTarifario'
 
 interface Prestacion {
   id_servicio: string
@@ -40,9 +41,10 @@ interface Props {
   financiadorId?: string | null
   soloLectura?: boolean
   sucursalId?: number | null
+  zonaId?: number | null
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, soloLectura = false, sucursalId }: Props) {
+export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, soloLectura = false, sucursalId, zonaId }: Props) {
   const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
   const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
   const [alertasConfig, setAlertasConfig] = useState<any[]>([])
@@ -53,16 +55,20 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
   const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
   const [nuevaCantidad, setNuevaCantidad] = useState(1)
   const [nuevoValor, setNuevoValor] = useState(0)
+  const [totalesTarifario, setTotalesTarifario] = useState({ costo: 0, facturar: 0 })
 
-  const totalCosto = useMemo(() => 
+  const totalCostoConvenio = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
     [prestacionesSeleccionadas]
   )
 
-  const totalFacturar = useMemo(() => 
+  const totalFacturarConvenio = useMemo(() => 
     prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_facturar)), 0),
     [prestacionesSeleccionadas]
   )
+
+  const totalCosto = useMemo(() => totalCostoConvenio + totalesTarifario.costo, [totalCostoConvenio, totalesTarifario.costo])
+  const totalFacturar = useMemo(() => totalFacturarConvenio + totalesTarifario.facturar, [totalFacturarConvenio, totalesTarifario.facturar])
 
   const prestacionSeleccionadaData = useMemo(() => 
     prestacionSeleccionada ? prestacionesDisponibles.find(p => p.id_servicio === prestacionSeleccionada) : null,
@@ -353,7 +359,18 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         </Paper>
       )}
 
-      <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
+      <Tabs defaultValue="convenio">
+        <Tabs.List grow>
+          <Tabs.Tab value="convenio" leftSection={<DocumentCheckIcon style={{ width: 18, height: 18 }} />}>
+            Con Convenio
+          </Tabs.Tab>
+          <Tabs.Tab value="tarifario" leftSection={<DocumentCurrencyDollarIcon style={{ width: 18, height: 18 }} />}>
+            Por Presupuesto (Tarifario)
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="convenio" pt="md">
+          <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
         <Stack gap="xl">
 
           {financiadorId && prestacionesDisponibles.length > 0 && (
@@ -563,6 +580,25 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
           )}
         </Stack>
       </Paper>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="tarifario" pt="md">
+          {presupuestoId && zonaId ? (
+            <PrestacionesTarifario
+              presupuestoId={presupuestoId}
+              zonaId={zonaId}
+              soloLectura={soloLectura}
+              onTotalChange={(costo, facturar) => setTotalesTarifario({ costo, facturar })}
+            />
+          ) : (
+            <Paper p="md" withBorder>
+              <Text size="sm" c="dimmed" ta="center">
+                {!presupuestoId ? 'Debe crear un presupuesto primero' : 'Debe seleccionar una zona en Datos del Paciente'}
+              </Text>
+            </Paper>
+          )}
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   )
 }

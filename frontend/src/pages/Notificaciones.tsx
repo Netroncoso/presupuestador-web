@@ -71,7 +71,10 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
       const response = await api.get(`/notificaciones?${params.toString()}`);
       setNotifications(response.data);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      // Silenciar error de sesión expirada (ya manejado por useSessionExpiredNotification)
+      if (error instanceof Error && error.message !== 'Sesión expirada') {
+        console.error('Error fetching notifications:', error);
+      }
       setNotifications([]);
     } finally {
       setLoading(false);

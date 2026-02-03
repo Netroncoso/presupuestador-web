@@ -68,6 +68,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
 }) => {
   const [auditorias, setAuditorias] = useState<any[]>([]);
   const [presupuestoActual, setPresupuestoActual] = useState<any>(presupuesto);
+  const [prestacionesTarifario, setPrestacionesTarifario] = useState<any[]>([]);
 
   useEffect(() => {
     if (opened && presupuesto?.idPresupuestos) {
@@ -79,6 +80,11 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
       api.get(`/auditoria/historial/${presupuesto.idPresupuestos}`)
         .then(res => setAuditorias(res.data))
         .catch(err => console.error('Error cargando auditorías:', err));
+      
+      // Cargar prestaciones del tarifario
+      api.get(`/presupuestos/${presupuesto.idPresupuestos}/prestaciones-tarifario`)
+        .then(res => setPrestacionesTarifario(res.data))
+        .catch(err => console.error('Error cargando prestaciones tarifario:', err));
     }
   }, [opened, presupuesto?.idPresupuestos]);
 
@@ -119,8 +125,12 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
               <Table.Tr>
                 <Table.Td fw={500}>Sucursal</Table.Td>
                 <Table.Td>{presupuestoActual.Sucursal || presupuestoActual.sucursal_nombre}</Table.Td>
+                <Table.Td fw={500}>Zona</Table.Td>
+                <Table.Td>{presupuestoActual.zona_nombre || 'No asignada'}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
                 <Table.Td fw={500}>Financiador</Table.Td>
-                <Table.Td>{presupuestoActual.Financiador || presupuestoActual.financiador || 'No asignado'}</Table.Td>
+                <Table.Td colSpan={3}>{presupuestoActual.Financiador || presupuestoActual.financiador || 'No asignado'}</Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={500}>Creado por</Table.Td>
@@ -189,7 +199,7 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
 
         {presupuestoActual.prestaciones && presupuestoActual.prestaciones.length > 0 && (
           <Paper p="md" withBorder>
-            <Title order={4} mb="sm">Prestaciones ({presupuestoActual.prestaciones.length})</Title>
+            <Title order={4} mb="sm">Prestaciones con Convenio ({presupuestoActual.prestaciones.length})</Title>
             <Table.ScrollContainer minWidth={500}>
               <Table striped>
                 <Table.Thead>
@@ -209,6 +219,42 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
                       <Table.Td>${Number(prest.valor_asignado || prest.precio_unitario || 0).toFixed(2)}</Table.Td>
                       <Table.Td>${Number(prest.valor_facturar || prest.precio_unitario || 0).toFixed(2)}</Table.Td>
                       <Table.Td>${(Number(prest.cantidad) * Number(prest.valor_facturar || prest.precio_unitario || 0)).toFixed(2)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+          </Paper>
+        )}
+
+        {prestacionesTarifario.length > 0 && (
+          <Paper p="md" withBorder>
+            <Title order={4} mb="sm">Prestaciones por Presupuesto (Tarifario) ({prestacionesTarifario.length})</Title>
+            <Table.ScrollContainer minWidth={500}>
+              <Table striped>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Prestación</Table.Th>
+                    <Table.Th>Cantidad</Table.Th>
+                    <Table.Th>Valor Asignado</Table.Th>
+                    <Table.Th>Valor Facturar</Table.Th>
+                    <Table.Th>Estado</Table.Th>
+                    <Table.Th>Subtotal</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {prestacionesTarifario.map((prest: any, idx: number) => (
+                    <Table.Tr key={idx}>
+                      <Table.Td>{prest.prestacion}</Table.Td>
+                      <Table.Td>{prest.cantidad}</Table.Td>
+                      <Table.Td>${Number(prest.valor_asignado).toFixed(2)}</Table.Td>
+                      <Table.Td>${Number(prest.valor_facturar).toFixed(2)}</Table.Td>
+                      <Table.Td>
+                        {prest.orden_costo === 5 && <Text size="xs" c="orange">Valor Más Alto</Text>}
+                        {prest.fuera_tarifario === 1 && <Text size="xs" c="blue">Fuera de Tarifario</Text>}
+                        {prest.orden_costo !== 5 && prest.fuera_tarifario !== 1 && <Text size="xs" c="dimmed">-</Text>}
+                      </Table.Td>
+                      <Table.Td>${(Number(prest.cantidad) * Number(prest.valor_facturar)).toFixed(2)}</Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>

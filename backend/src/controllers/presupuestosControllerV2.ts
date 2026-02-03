@@ -106,7 +106,7 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado, p.resultado_auditoria,
-      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, 
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, p.zona_id,
       p.total_insumos, p.total_prestaciones, p.costo_total, 
       p.total_facturar, (p.total_facturar - p.costo_total) AS utilidad, p.rentabilidad, p.rentabilidad_con_plazo, 
       p.created_at, u.username as usuario_creador
@@ -123,7 +123,7 @@ export const listarPresupuestos = asyncHandler(async (req: Request & { user?: an
 
 // Crear presupuesto (versión 1)
 export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
-  const { nombre, dni, sucursal_id, dificil_acceso, porcentaje_insumos, financiador_id } = req.body;
+  const { nombre, dni, sucursal_id, zona_id, dificil_acceso, porcentaje_insumos, financiador_id } = req.body;
   const usuario_id = req.user?.id;
   
   if (!nombre || !dni || !sucursal_id) {
@@ -148,9 +148,9 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
   try {
     const [result] = await pool.query<MutationResult>(`
       INSERT INTO presupuestos 
-      (Nombre_Apellido, DNI, sucursal_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
-      VALUES (?,?,?,?,?,?,?, ?, 1, ?)
-    `, [nombre.trim(), dni, sucursal_id, financiador_id || null, dificil_acceso || 'no', porcentajeTotal, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+      (Nombre_Apellido, DNI, sucursal_id, zona_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+      VALUES (?,?,?,?,?,?,?,?,?, 1, ?)
+    `, [nombre.trim(), dni, sucursal_id, zona_id || null, financiador_id || null, dificil_acceso || 'no', porcentajeTotal, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
     
     res.status(201).json({ id: result.insertId, version: 1 });
   } catch (error) {
@@ -271,11 +271,13 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
     SELECT 
       p.*, 
       s.Sucursales_mh as Sucursal,
+      z.nombre as zona_nombre,
       f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
       fa.nombre as acuerdo_nombre,
       u.username as usuario_creador
     FROM presupuestos p 
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
+    LEFT JOIN tarifario_zonas z ON p.zona_id = z.id
     LEFT JOIN financiador f ON p.financiador_id = f.id
     LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
     LEFT JOIN usuarios u ON p.usuario_id = u.id

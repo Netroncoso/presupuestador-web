@@ -62,6 +62,13 @@ mysql -u root -p mh_1 < backend/migrations/007_move_alertas_to_tipos.sql
 
 # Estandarización nombres de alertas
 mysql -u root -p mh_1 < backend/migrations/008_estandarizar_nombres_alertas.sql
+
+# Migraciones del tarifario interno
+mysql -u root -p mh_1 < backend/migrations/001_crear_tarifario_zonas.sql
+mysql -u root -p mh_1 < backend/migrations/002_crear_tarifario_servicio.sql
+mysql -u root -p mh_1 < backend/migrations/003_importar_valores_manual.sql
+mysql -u root -p mh_1 < backend/migrations/004_crear_presupuesto_prestaciones_tarifario.sql
+mysql -u root -p mh_1 < backend/migrations/005_agregar_markup_tarifario.sql
 ```
 
 ## 🔑 Variables de Entorno
@@ -95,6 +102,7 @@ VITE_API_URL=http://localhost:4000
 - [Valores Históricos](./IMPLEMENTACION_VALORES_HISTORICOS.md) - Sistema de precios por períodos y sucursales
 - [Sistema Multi-Gerencial](./SISTEMA_MULTI_GERENCIAL_V3.md) - Auditoría con 4 gerencias y FCFS
 - [Módulo Equipamiento](./MODULO_EQUIPAMIENTO_ESPECIFICACION.md) - Especificación de equipamientos
+- [Módulo Tarifario](./MODULO_SERVICIOS_PRESUPUESTO.md) - Servicios por presupuesto con tarifario interno
 
 ## 🏗️ Arquitectura
 
@@ -276,7 +284,40 @@ Los presupuestos van a auditoría si cumplen **al menos una** de estas condicion
 - Parámetros: cantidad_maxima, mensaje_alerta, color_alerta, activo_alerta
 - Gestión centralizada desde Panel Admin > Alertas/ Tipo
 
-## 📦 Gestión de Insumos
+## 📊 Módulo de Tarifario Interno
+
+### Características
+- **Servicios Independientes**: Prestaciones sin convenio con financiadores
+- **Sistema de Zonas**: 10 zonas geográficas (CABA, AMBA, Centro, etc.)
+- **5 Niveles de Costo**: Cada servicio tiene 5 costos por zona (orden 1-5)
+- **Markup Configurable**: 50% por defecto aplicado a todos los costos
+- **Valores Históricos**: Sistema timelapse con fecha_inicio/fecha_fin
+- **Alertas Inteligentes**: Valores desactualizados (>45 días) y valor más alto (orden 5)
+
+### Flujo de Uso
+1. **Seleccionar Zona**: En "Datos del Presupuesto", elegir zona geográfica
+2. **Agregar Servicios**: Tab "Por Presupuesto (Tarifario)" en Prestaciones
+3. **Elegir Costo**: Seleccionar uno de los 5 costos disponibles
+4. **Cálculo Automático**: Sistema aplica markup y suma a total_prestaciones
+
+### Reglas de Auditoría
+- **Orden 5 (Más Alto)**: Alerta persistente + Requiere autorización G. Prestacional
+- **Fuera de Tarifario**: Usuario editó costo manualmente, se registra para auditoría
+
+### Tablas de Base de Datos
+- `tarifario_zonas`: Catálogo de zonas geográficas
+- `tarifario_servicio`: Catálogo de servicios del tarifario
+- `tarifario_servicio_valores`: Valores históricos (5 costos por zona)
+- `presupuesto_prestaciones_tarifario`: Servicios agregados a presupuestos
+- `sucursales_tarifario_zonas`: Relación N:M sucursales-zonas
+
+### Fórmula de Cálculo
+```
+valor_facturar = costo_seleccionado * (1 + markup/100)
+total_prestaciones = SUM(presupuesto_prestaciones) + SUM(presupuesto_prestaciones_tarifario)
+```
+
+
 
 ### Características
 - CRUD completo de insumos desde Panel Admin
@@ -455,11 +496,28 @@ Para soporte técnico, contactar al equipo de desarrollo.
 
 ---
 
-**Versión:** 3.2  
+**Versión:** 3.3  
 **Última actualización:** Enero 2025  
 **Estado:** ✅ Producción
 
 ## 📝 Historial de Versiones
+
+### v3.3 (Enero 2025)
+- ⭐ **Módulo de Tarifario Interno**
+- Sistema completo de servicios por presupuesto independiente de convenios
+- 10 zonas geográficas con mapeo a 17 sucursales
+- 5 niveles de costo por servicio/zona (orden 1-5)
+- Markup configurable (50% por defecto)
+- Valores históricos con sistema timelapse
+- Alertas de valores desactualizados (>45 días)
+- Alerta especial para valor más alto (orden 5)
+- Tabla separada presupuesto_prestaciones_tarifario
+- Cálculo de totales actualizado (convenio + tarifario)
+- Selector de zona en DatosPresupuesto con preseleccion automática
+- Tabs en Prestaciones: "Con Convenio" y "Por Presupuesto (Tarifario)"
+- Hooks useTarifario y useZonas
+- Componente PrestacionesTarifario completo
+- 5 migraciones SQL ejecutadas exitosamente
 
 ### v3.2 (Enero 2025)
 - ⭐ **Generación de PDF Mejorada**
