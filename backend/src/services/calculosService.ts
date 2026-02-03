@@ -30,41 +30,39 @@ export class CalculosService {
       dificil_acceso: string;
     },
     tieneInsumosCriticos: boolean = false
-  ): string {
-    // Si tiene insumos críticos, forzar auditoría
+  ): { estado: string; razones: string[] } {
     if (tieneInsumosCriticos) {
-      return 'pendiente_prestacional';
+      return { estado: 'pendiente_prestacional', razones: ['Contiene insumos críticos'] };
     }
 
-    const reglas = [];
+    const razones: string[] = [];
     const { auditoria } = BusinessRules;
 
-    // Evaluar rentabilidad mínima (SIN plazo)
     if (presupuesto.rentabilidad < auditoria.rentabilidadMinima) {
-      reglas.push(`Rentabilidad menor a ${auditoria.rentabilidadMinima}%`);
+      razones.push(`Rentabilidad ${presupuesto.rentabilidad.toFixed(1)}% < ${auditoria.rentabilidadMinima}%`);
     }
 
-    // Evaluar rentabilidad máxima (SIN plazo)
     if (presupuesto.rentabilidad > auditoria.rentabilidadMaxima) {
-      reglas.push(`Rentabilidad superior a ${auditoria.rentabilidadMaxima}%`);
+      razones.push(`Rentabilidad ${presupuesto.rentabilidad.toFixed(1)}% > ${auditoria.rentabilidadMaxima}%`);
     }
 
     if (presupuesto.costo_total > auditoria.costoMaximo) {
-      reglas.push(`Costo total superior a $${auditoria.costoMaximo.toLocaleString()}`);
+      razones.push(`Costo $${presupuesto.costo_total.toLocaleString()} > $${auditoria.costoMaximo.toLocaleString()}`);
     }
 
     const utilidad = presupuesto.total_facturar - presupuesto.costo_total;
 
-    // Utilidad muy baja (sospecha error)
     if (utilidad < auditoria.utilidadMinimaBaja) {
-      reglas.push(`Utilidad muy baja (menor a $${auditoria.utilidadMinimaBaja.toLocaleString()})`);
+      razones.push(`Utilidad $${utilidad.toLocaleString()} < $${auditoria.utilidadMinimaBaja.toLocaleString()}`);
     }
 
-    // Utilidad muy alta (sospecha sobreprecio)
     if (utilidad > auditoria.utilidadMinima) {
-      reglas.push(`Utilidad superior a $${auditoria.utilidadMinima.toLocaleString()}`);
+      razones.push(`Utilidad $${utilidad.toLocaleString()} > $${auditoria.utilidadMinima.toLocaleString()}`);
     }
 
-    return reglas.length > 0 ? 'pendiente_prestacional' : 'pendiente_carga';
+    return {
+      estado: razones.length > 0 ? 'pendiente_prestacional' : 'pendiente_carga',
+      razones
+    };
   }
 }

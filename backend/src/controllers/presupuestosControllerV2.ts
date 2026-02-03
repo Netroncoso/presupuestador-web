@@ -163,15 +163,7 @@ export const finalizarPresupuesto = asyncHandler(async (req: Request & { user?: 
   const id = parseInt(req.params.id);
   const resultado = await presupuestoService.finalizar(id);
   
-  res.json({
-    success: true,
-    estado: resultado.estadoFinal,
-    tieneInsumosCriticos: resultado.tieneInsumosCriticos,
-    totales: resultado.totales,
-    mensaje: resultado.estadoFinal === 'pendiente' 
-      ? 'Presupuesto enviado para auditoría' 
-      : 'Presupuesto finalizado'
-  });
+  res.json(resultado);
 });
 
 // Crear nueva versión para edición
