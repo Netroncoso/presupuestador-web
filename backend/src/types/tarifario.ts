@@ -73,6 +73,7 @@ export interface CrearPrestacionTarifarioDTO {
   zona_id: number;
   orden_costo: number;
   valor_asignado?: number; // Opcional si edita manualmente
+  fuera_tarifario?: number; // 1 si editó manualmente
 }
 
 export interface ActualizarPrestacionTarifarioDTO {
