@@ -174,7 +174,7 @@ export default function GestionFinanciadores() {
         <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
           <Table.Tr>
             <Table.Th>Financiador</Table.Th>
-            <Table.Th style={{ width: '180px'}}>Estado</Table.Th>
+            <Table.Th style={{ width: '100px'}}>Activo</Table.Th>
             <Table.Th style={{ width: '120px' }}>Tasa Mensual</Table.Th>
             <Table.Th style={{ width: '140px' }}>Días Teórico</Table.Th>
             <Table.Th style={{ width: '120px' }}>Días Real</Table.Th>
@@ -188,16 +188,12 @@ export default function GestionFinanciadores() {
             <Table.Tr key={financiador.id}>
               <Table.Td>{formatFinanciadorName(financiador.Financiador)}</Table.Td>
               <Table.Td>
-                <Group gap="sm" align="center">
-                  <Switch
-                    checked={financiador.activo === 1}
-                    onChange={() => toggleActivo(financiador)}
-                    size="sm"
-                  />
-                  <Text size="sm" c={financiador.activo === 1 ? 'green' : 'gray'}>
-                    {financiador.activo === 1 ? 'Activo' : 'Inactivo'}
-                  </Text>
-                </Group>
+                <Switch
+                  checked={financiador.activo === 1}
+                  onChange={() => toggleActivo(financiador)}
+                  color="green"
+                  size="sm"
+                />
               </Table.Td>
               <Table.Td>{(financiador.tasa_mensual || 0)}%</Table.Td>
               <Table.Td>{(financiador.dias_cobranza_teorico || 0)} días</Table.Td>
