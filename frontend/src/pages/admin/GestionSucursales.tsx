@@ -31,7 +31,8 @@ export default function GestionSucursales() {
   const [activeTab, setActiveTab] = useState<string | null>('sucursales');
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
-  const [filtro, setFiltro] = useState('');
+  const [filtroSucursales, setFiltroSucursales] = useState('');
+  const [filtroZonas, setFiltroZonas] = useState('');
   const [filtroZonasModal, setFiltroZonasModal] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalZonaOpen, setModalZonaOpen] = useState(false);
@@ -52,11 +53,11 @@ export default function GestionSucursales() {
   };
 
   const sucursalesFiltradas = sucursales.filter(sucursal =>
-    sucursal.Sucursales_mh.toLowerCase().includes(filtro.toLowerCase())
+    sucursal.Sucursales_mh.toLowerCase().includes(filtroSucursales.toLowerCase())
   );
 
   const zonasFiltradas = zonas.filter(zona =>
-    zona.nombre.toLowerCase().includes(filtro.toLowerCase())
+    zona.nombre.toLowerCase().includes(filtroZonas.toLowerCase())
   );
 
   useEffect(() => {
@@ -249,11 +250,11 @@ export default function GestionSucursales() {
             <TextInput
               placeholder="Buscar sucursales..."
               leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
+              value={filtroSucursales}
+              onChange={(e) => setFiltroSucursales(e.target.value)}
               rightSection={
-                filtro ? (
-                  <ActionIcon variant="subtle" onClick={() => setFiltro('')}>
+                filtroSucursales ? (
+                  <ActionIcon variant="subtle" onClick={() => setFiltroSucursales('')}>
                     <XMarkIcon style={{ width: 16, height: 16 }} />
                   </ActionIcon>
                 ) : null
@@ -302,11 +303,11 @@ export default function GestionSucursales() {
               <TextInput
                 placeholder="Buscar zonas..."
                 leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
-                value={filtro}
-                onChange={(e) => setFiltro(e.target.value)}
+                value={filtroZonas}
+                onChange={(e) => setFiltroZonas(e.target.value)}
                 rightSection={
-                  filtro ? (
-                    <ActionIcon variant="subtle" onClick={() => setFiltro('')}>
+                  filtroZonas ? (
+                    <ActionIcon variant="subtle" onClick={() => setFiltroZonas('')}>
                       <XMarkIcon style={{ width: 16, height: 16 }} />
                     </ActionIcon>
                   ) : null
