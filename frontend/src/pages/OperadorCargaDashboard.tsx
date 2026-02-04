@@ -3,7 +3,7 @@ import { Title, Text, Table, Button, Badge, Group, Paper, Loader, Center, Tabs, 
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/api';
-import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BellIcon, ClockIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, CheckIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BellIcon, ClockIcon, EyeIcon, MagnifyingGlassIcon, XMarkIcon, CheckIcon, ArrowUturnLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import Notificaciones from './Notificaciones';
@@ -113,6 +113,12 @@ export default function OperadorCargaDashboard() {
       });
       
       await fetchCasos();
+      
+      // Buscar el caso en los casos en proceso después de recargar
+      const casoTomado = casosEnProceso.find(c => c.idPresupuestos === presupuestoId);
+      if (casoTomado) {
+        await verDetallePresupuesto(casoTomado);
+      }
     } catch (error: any) {
       notifications.show({
         title: 'Error',
@@ -326,86 +332,11 @@ export default function OperadorCargaDashboard() {
           </Tabs.Panel>
 
           <Tabs.Panel value="carga" pt="md">
-            {/* Casos en Proceso */}
-            {casosEnProceso.length > 0 && (
-              <>
-                <Paper p="md" radius="md" withBorder shadow="xs" mb="lg">
-                  <Text size="lg" fw={500} c="blue">
-                    Casos en Proceso ({casosEnProceso.length})
-                  </Text>
-                </Paper>
-                <Paper withBorder radius="md" shadow="sm" mb="xl">
-                  <Table.ScrollContainer minWidth={800}>
-                    <Table striped highlightOnHover>
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>ID</Table.Th>
-                          <Table.Th>Paciente</Table.Th>
-                          <Table.Th>DNI</Table.Th>
-                          <Table.Th>Monto</Table.Th>
-                          <Table.Th>Sucursal</Table.Th>
-                          <Table.Th>Tiempo</Table.Th>
-                          <Table.Th>Acciones</Table.Th>
-                        </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {casosEnProceso.map((caso) => (
-                          <Table.Tr key={caso.idPresupuestos}>
-                            <Table.Td>
-                              <Text fw={500} size="xs">{caso.idPresupuestos}</Text>
-                            </Table.Td>
-                            <Table.Td><Text size="xs">{caso.Nombre_Apellido}</Text></Table.Td>
-                            <Table.Td><Text size="xs">{caso.DNI}</Text></Table.Td>
-                            <Table.Td><Text size="xs">{formatCurrency(caso.total_facturar)}</Text></Table.Td>
-                            <Table.Td><Text size="xs">{caso.sucursal_nombre}</Text></Table.Td>
-                            <Table.Td>
-                              <Badge color={caso.minutos_en_proceso > 20 ? 'orange' : 'blue'} size="sm">
-                                {caso.minutos_en_proceso} min
-                              </Badge>
-                            </Table.Td>
-                            <Table.Td>
-                              <Group gap={4} wrap="nowrap">
-                                <ActionIcon
-                                  variant="transparent"
-                                  color="blue"
-                                  onClick={() => verDetallePresupuesto(caso)}
-                                  title="Ver detalle"
-                                >
-                                  <EyeIcon style={{ width: 16, height: 16 }} />
-                                </ActionIcon>
-                                <Button
-                                  size="xs"
-                                  color="green"
-                                  leftSection={<CheckIcon style={{ width: 14, height: 14 }} />}
-                                  onClick={() => openModal('cargar', caso)}
-                                >
-                                  Marcar Cargado
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  variant="light"
-                                  color="orange"
-                                  leftSection={<ArrowUturnLeftIcon style={{ width: 14, height: 14 }} />}
-                                  onClick={() => openModal('devolver', caso)}
-                                >
-                                  Devolver
-                                </Button>
-                              </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        ))}
-                      </Table.Tbody>
-                    </Table>
-                  </Table.ScrollContainer>
-                </Paper>
-              </>
-            )}
-
             {/* Casos Pendientes */}
             <Paper p="md" radius="md" withBorder shadow="xs" mb="lg">
               <Group justify="space-between">
                 <Text size="lg" fw={500}>
-                  {pendientesFiltrados.length} caso{pendientesFiltrados.length !== 1 ? 's' : ''} pendiente{pendientesFiltrados.length !== 1 ? 's' : ''}
+                  {pendientesFiltrados.length} caso{pendientesFiltrados.length !== 1 ? 's' : ''} disponible{pendientesFiltrados.length !== 1 ? 's' : ''}
                 </Text>
                 <TextInput
                   placeholder="Filtrar por ID"
@@ -427,16 +358,15 @@ export default function OperadorCargaDashboard() {
             {pendientesFiltrados.length === 0 ? (
               <Paper p="xl" withBorder radius="md">
                 <Center>
-                  <Text size="xl" fw={400} c="green" ta="center">No hay casos pendientes de carga</Text>
+                  <Text size="xl" fw={400} c="green" ta="center">No hay casos disponibles</Text>
                 </Center>
               </Paper>
             ) : (
               <Paper withBorder radius="md" shadow="sm">
                 <Table.ScrollContainer minWidth={800}>
-                  <Table striped highlightOnHover>
+                  <Table striped highlightOnHover fontSize="xs">
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th>ID</Table.Th>
                         <Table.Th>Paciente</Table.Th>
                         <Table.Th>DNI</Table.Th>
                         <Table.Th>Monto</Table.Th>
@@ -450,27 +380,38 @@ export default function OperadorCargaDashboard() {
                       {pendientesFiltrados.map((caso) => (
                         <Table.Tr key={caso.idPresupuestos}>
                           <Table.Td>
-                            <Text fw={500} size="xs">{caso.idPresupuestos}</Text>
+                            <div>
+                              <Text size="sm">{caso.Nombre_Apellido}</Text>
+                              <Text size="xs" c="dimmed">ID: {caso.idPresupuestos}</Text>
+                            </div>
                           </Table.Td>
-                          <Table.Td><Text size="xs">{caso.Nombre_Apellido}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{caso.DNI}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{formatCurrency(caso.total_facturar)}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{caso.sucursal_nombre}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{caso.financiador_nombre}</Text></Table.Td>
+                          <Table.Td><Text size="sm">{caso.DNI}</Text></Table.Td>
+                          <Table.Td><Text size="sm">{formatCurrency(caso.total_facturar)}</Text></Table.Td>
+                          <Table.Td><Text size="sm">{caso.sucursal_nombre}</Text></Table.Td>
+                          <Table.Td><Text size="sm">{caso.financiador_nombre}</Text></Table.Td>
                           <Table.Td>
-                            <Text size="xs" style={{ color: caso.horas_pendiente < 2 ? 'green' : caso.horas_pendiente < 6 ? 'orange' : 'red' }}>
-                              {caso.horas_pendiente}h
+                            <Text size="sm" c={caso.horas_pendiente && caso.horas_pendiente > 7 ? 'red' : 'dimmed'}>
+                              {caso.horas_pendiente} hora{caso.horas_pendiente !== 1 ? 's' : ''}
                             </Text>
                           </Table.Td>
                           <Table.Td>
-                            <Button
-                              size="xs"
-                              leftSection={<EyeIcon style={{ width: 14, height: 14 }} />}
-                              onClick={() => tomarCaso(caso.idPresupuestos)}
-                              loading={procesando}
-                            >
-                              Tomar Caso
-                            </Button>
+                            <Group gap={4} wrap="nowrap">
+                              <ActionIcon
+                                variant="transparent"
+                                color="blue"
+                                onClick={() => verDetallePresupuesto(caso)}
+                                title="Ver detalle"
+                              >
+                                <EyeIcon style={{ width: 16, height: 16 }} />
+                              </ActionIcon>
+                              <Button
+                                size="xs"
+                                onClick={() => tomarCaso(caso.idPresupuestos)}
+                                loading={procesando}
+                              >
+                                Tomar Caso
+                              </Button>
+                            </Group>
                           </Table.Td>
                         </Table.Tr>
                       ))}
@@ -478,6 +419,75 @@ export default function OperadorCargaDashboard() {
                   </Table>
                 </Table.ScrollContainer>
               </Paper>
+            )}
+
+            {/* Mis Casos */}
+            {casosEnProceso.length > 0 && (
+              <>
+                <Alert icon={<ExclamationTriangleIcon style={{ width: 20, height: 20 }} />} color="blue" mt="xl" mb="md">
+                  Los casos se liberan automáticamente después de 30 minutos de inactividad
+                </Alert>
+                <Paper withBorder radius="md" shadow="sm">
+                  <Table.ScrollContainer minWidth={800}>
+                    <Table striped highlightOnHover fontSize="xs">
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Paciente</Table.Th>
+                          <Table.Th>DNI</Table.Th>
+                          <Table.Th>Monto</Table.Th>
+                          <Table.Th>Tiempo Asignado</Table.Th>
+                          <Table.Th>Acciones</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {casosEnProceso.map((caso) => (
+                          <Table.Tr key={caso.idPresupuestos}>
+                            <Table.Td>
+                              <div>
+                                <Text size="sm">{caso.Nombre_Apellido}</Text>
+                                <Text size="xs" c="dimmed">ID: {caso.idPresupuestos}</Text>
+                              </div>
+                            </Table.Td>
+                            <Table.Td><Text size="sm">{caso.DNI}</Text></Table.Td>
+                            <Table.Td><Text size="sm">{formatCurrency(caso.total_facturar)}</Text></Table.Td>
+                            <Table.Td>
+                              <Text size="sm" c={caso.minutos_en_proceso && caso.minutos_en_proceso > 20 ? 'orange' : 'dimmed'}>
+                                {caso.minutos_en_proceso || 0} min
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Group gap={4} wrap="nowrap">
+                                <ActionIcon
+                                  variant="transparent"
+                                  color="blue"
+                                  onClick={() => verDetallePresupuesto(caso)}
+                                >
+                                  <EyeIcon style={{ width: 16, height: 16 }} />
+                                </ActionIcon>
+                                <Button
+                                  size="xs"
+                                  color="green"
+                                  onClick={() => openModal('cargar', caso)}
+                                >
+                                  Marcar Cargado
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  color="orange"
+                                  onClick={() => openModal('devolver', caso)}
+                                >
+                                  Devolver
+                                </Button>
+                              </Group>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Table.ScrollContainer>
+                </Paper>
+              </>
             )}
           </Tabs.Panel>
 
