@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextInput, Table, Group, Stack, Modal, ActionIcon, Button, Tooltip, Tabs, Badge, Checkbox, Text, Title } from '@mantine/core';
+import { TextInput, Table, Group, Stack, Modal, ActionIcon, Button, Tooltip, Tabs, Checkbox, Text, Title } from '@mantine/core';
 import { PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon, PlusIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -32,6 +32,7 @@ export default function GestionSucursales() {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [filtro, setFiltro] = useState('');
+  const [filtroZonasModal, setFiltroZonasModal] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalZonaOpen, setModalZonaOpen] = useState(false);
   const [modalAsignarOpen, setModalAsignarOpen] = useState(false);
@@ -175,6 +176,7 @@ export default function GestionSucursales() {
 
   const handleAsignarZonas = async (sucursal: Sucursal) => {
     setSelectedSucursal(sucursal);
+    setFiltroZonasModal('');
     setLoading(true);
     try {
       const [zonasResp, asignadasResp] = await Promise.all([
@@ -235,9 +237,9 @@ export default function GestionSucursales() {
   };
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" >
       <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List>
+        <Tabs.List grow>
           <Tabs.Tab value="sucursales">Sucursales</Tabs.Tab>
           <Tabs.Tab value="zonas">Zonas</Tabs.Tab>
         </Tabs.List>
@@ -338,9 +340,9 @@ export default function GestionSucursales() {
                       )}
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={zona.activo ? 'green' : 'gray'}>
+                      <Text size="sm" c={zona.activo ? 'green' : 'gray'}>
                         {zona.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <ActionIcon variant="transparent" onClick={() => handleEditarZona(zona)}>
@@ -443,36 +445,90 @@ export default function GestionSucursales() {
       {/* Modal Asignar Zonas a Sucursal */}
       <Modal
         opened={modalAsignarOpen}
-        onClose={() => setModalAsignarOpen(false)}
+        onClose={() => {
+          setModalAsignarOpen(false);
+          setFiltroZonasModal('');
+        }}
         title={`Asignar Zonas: ${selectedSucursal ? formatName(selectedSucursal.Sucursales_mh) : ''}`}
-        size="md"
+        size="lg"
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
             Seleccione las zonas disponibles para esta sucursal. Marque una como principal para preselección automática.
           </Text>
-          {zonasDisponibles.map((zona) => {
-            const asignada = zonasAsignadas.find(z => z.id === zona.id);
-            return (
-              <Group key={zona.id} justify="space-between">
-                <Checkbox
-                  label={zona.nombre}
-                  checked={!!asignada}
-                  onChange={() => handleToggleZona(zona.id, !!asignada)}
-                />
-                {asignada && (
-                  <Checkbox
-                    label="Principal"
-                    checked={asignada.es_zona_principal === 1}
-                    onChange={() => handleTogglePrincipal(zona.id)}
-                    disabled={!asignada}
-                  />
-                )}
-              </Group>
-            );
-          })}
+          
+          <TextInput
+            placeholder="Buscar zonas..."
+            leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
+            value={filtroZonasModal}
+            onChange={(e) => setFiltroZonasModal(e.target.value)}
+            rightSection={
+              filtroZonasModal ? (
+                <ActionIcon variant="subtle" onClick={() => setFiltroZonasModal('')}>
+                  <XMarkIcon style={{ width: 16, height: 16 }} />
+                </ActionIcon>
+              ) : null
+            }
+          />
+
+          <Stack gap="sm">
+            {zonasDisponibles
+              .filter(zona => zona.nombre.toLowerCase().includes(filtroZonasModal.toLowerCase()))
+              .map((zona) => {
+                const asignada = zonasAsignadas.find(z => z.id === zona.id);
+                return (
+                  <div
+                    key={zona.id}
+                    style={{
+                      padding: '12px',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      backgroundColor: asignada ? '#f8f9fa' : 'white',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Group justify="space-between" wrap="nowrap">
+                      <Group gap="md" style={{ flex: 1 }}>
+                        <Checkbox
+                          checked={!!asignada}
+                          onChange={() => handleToggleZona(zona.id, !!asignada)}
+                          styles={{
+                            input: { cursor: 'pointer' }
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <Text size="sm" fw={500}>{zona.nombre}</Text>
+                          {zona.descripcion && (
+                            <Text size="xs" c="dimmed">{zona.descripcion}</Text>
+                          )}
+                        </div>
+                      </Group>
+                      {asignada && (
+                        <Checkbox
+                          label="Principal"
+                          checked={asignada.es_zona_principal === 1}
+                          onChange={() => handleTogglePrincipal(zona.id)}
+                          styles={{
+                            input: { cursor: 'pointer' }
+                          }}
+                        />
+                      )}
+                    </Group>
+                  </div>
+                );
+              })}
+            {zonasDisponibles.filter(zona => zona.nombre.toLowerCase().includes(filtroZonasModal.toLowerCase())).length === 0 && (
+              <Text size="sm" c="dimmed" ta="center" py="xl">
+                No se encontraron zonas
+              </Text>
+            )}
+          </Stack>
+
           <Group style={{ justifyContent: 'flex-end' }}>
-            <Button onClick={() => setModalAsignarOpen(false)}>
+            <Button onClick={() => {
+              setModalAsignarOpen(false);
+              setFiltroZonasModal('');
+            }}>
               Cerrar
             </Button>
           </Group>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Title, Group, Button, Text, Tabs, ActionIcon } from '@mantine/core';
-import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon, LifebuoyIcon } from '@heroicons/react/24/outline';
+import { ArrowRightStartOnRectangleIcon, UserCircleIcon, BeakerIcon, CurrencyDollarIcon, BanknotesIcon, BriefcaseIcon, NewspaperIcon, BuildingOfficeIcon, BuildingStorefrontIcon, Cog6ToothIcon, BellAlertIcon, LifebuoyIcon, DocumentCurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { UserPlusIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import ResponsiveContainer from '../components/ResponsiveContainer';
@@ -9,14 +9,13 @@ const ICON_SIZE = { width: 20, height: 20 };
 
 import GestionInsumos from './admin/GestionInsumos';
 import GestionFinanciadores from './admin/GestionFinanciadores';
-import ServiciosPorFinanciador from './admin/ServiciosPorFinanciador';
+import GestionConvenios from './admin/GestionConvenios';
 import GestionServicios from './admin/GestionServicios';
 import GestionSucursales from './admin/GestionSucursales';
 import GestionUsuarios from './admin/GestionUsuarios';
-import GestionReglasNegocio from './admin/GestionReglasNegocio';
-import GestionAlertasServicios from './admin/GestionAlertasServicios';
-import GestionEquipamientos from './admin/GestionEquipamientos';
+import GestionConfiguracion from './admin/GestionConfiguracion';
 import GestionEquipamientosBase from './admin/GestionEquipamientosBase';
+import GestionTarifario from './admin/GestionTarifario';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -43,18 +42,36 @@ export default function AdminDashboard() {
         </Group>
       </Group>
 
-      <Tabs defaultValue="insumos" variant="default" color="green">
-        <Tabs.List>
-          <Tabs.Tab value="insumos">
+      <Tabs defaultValue="sucursales" variant="default" color="green" mb="50">
+        <Tabs.List grow>
+          <Tabs.Tab value="sucursales">
             <Group gap="xs">
-              <BeakerIcon style={ICON_SIZE} />
-              Insumos
+              <BuildingStorefrontIcon style={ICON_SIZE} />
+              Sucursales
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="prestadores">
             <Group gap="xs">
               <BanknotesIcon style={ICON_SIZE} />
               Financiadores
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="convenios">
+            <Group gap="xs">
+              <BriefcaseIcon style={ICON_SIZE} />
+              Convenios
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="tarifario">
+            <Group gap="xs">
+              <DocumentCurrencyDollarIcon style={ICON_SIZE} />
+              Tarifario
+            </Group>
+          </Tabs.Tab>
+          <Tabs.Tab value="insumos">
+            <Group gap="xs">
+              <BeakerIcon style={ICON_SIZE} />
+              Insumos
             </Group>
           </Tabs.Tab>
           <Tabs.Tab value="servicios">
@@ -69,79 +86,47 @@ export default function AdminDashboard() {
               Equipamientos
             </Group>
           </Tabs.Tab>
-          <Tabs.Tab value="sucursales">
-            <Group gap="xs">
-              <BuildingStorefrontIcon style={ICON_SIZE} />
-              Sucursales
-            </Group>
-          </Tabs.Tab>
-          <Tabs.Tab value="servicios-prestador">
-            <Group gap="xs">
-              <BriefcaseIcon style={ICON_SIZE} />
-              Serv/ Financiador
-            </Group>
-          </Tabs.Tab>
-          <Tabs.Tab value="equipamientos">
-            <Group gap="xs">
-              <LifebuoyIcon style={ICON_SIZE} />
-              Equip/ Financiador
-            </Group>
-          </Tabs.Tab>
           {user?.username === 'admin' && (
-            <Tabs.Tab value="alertas">
+            <Tabs.Tab value="configuracion">
               <Group gap="xs">
-                <BellAlertIcon style={ICON_SIZE} />
-                Alertas/ Tipo
-              </Group>
-            </Tabs.Tab>
-          )}
-          {user?.username === 'admin' && (
-            <Tabs.Tab value="reglas">
-              <Group gap="xs">
-                <CurrencyDollarIcon style={ICON_SIZE} />
-                Reglas de Negocio
+                <Cog6ToothIcon style={ICON_SIZE} />
+                Configuración
               </Group>
             </Tabs.Tab>
           )}
         </Tabs.List>
 
-        <Tabs.Panel value="insumos" pt="md">
-          <GestionInsumos />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="prestadores" pt="md">
-          <GestionFinanciadores />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="servicios-prestador" pt="md">
-          <ServiciosPorFinanciador />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="servicios" pt="md">
-          <GestionServicios />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="sucursales" pt="md">
+        <Tabs.Panel value="sucursales" pt="lg">
           <GestionSucursales />
         </Tabs.Panel>
 
-        <Tabs.Panel value="equipamientos-base" pt="md">
+        <Tabs.Panel value="prestadores" pt="lg">
+          <GestionFinanciadores />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="convenios" pt="lg">
+          <GestionConvenios />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="tarifario" pt="lg">
+          <GestionTarifario />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="insumos" pt="lg">
+          <GestionInsumos />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="servicios" pt="lg">
+          <GestionServicios />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="equipamientos-base" pt="lg">
           <GestionEquipamientosBase />
         </Tabs.Panel>
 
-        <Tabs.Panel value="equipamientos" pt="md">
-          <GestionEquipamientos />
-        </Tabs.Panel>
-
         {user?.username === 'admin' && (
-          <Tabs.Panel value="reglas" pt="md">
-            <GestionReglasNegocio />
-          </Tabs.Panel>
-        )}
-
-        {user?.username === 'admin' && (
-          <Tabs.Panel value="alertas" pt="md">
-            <GestionAlertasServicios />
+          <Tabs.Panel value="configuracion" pt="lg">
+            <GestionConfiguracion />
           </Tabs.Panel>
         )}
       </Tabs>

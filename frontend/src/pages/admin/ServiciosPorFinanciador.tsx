@@ -33,9 +33,11 @@ interface Sucursal {
   suc_porcentaje_insumos: number;
 }
 
-export default function ServiciosPorFinanciador() {
-  const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
-  const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string>('');
+interface Props {
+  financiadorId: string;
+}
+
+export default function ServiciosPorFinanciador({ financiadorId }: Props) {
   const [servicios, setServicios] = useState<ServicioFinanciador[]>([]);
   const [filtroServicio, setFiltroServicio] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -67,28 +69,16 @@ export default function ServiciosPorFinanciador() {
   };
 
   useEffect(() => {
-    cargarFinanciadores();
     cargarSucursales();
   }, []);
 
   useEffect(() => {
-    if (financiadorSeleccionado) {
+    if (financiadorId) {
       cargarServicios();
+    } else {
+      setServicios([]);
     }
-  }, [financiadorSeleccionado]);
-
-  const cargarFinanciadores = async () => {
-    try {
-      const response = await api.get('/admin/servicios/financiadores');
-      setFinanciadores(response.data);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al cargar financiadores',
-        color: 'red'
-      });
-    }
-  };
+  }, [financiadorId]);
 
   const cargarSucursales = async () => {
     try {
@@ -100,11 +90,11 @@ export default function ServiciosPorFinanciador() {
   };
 
   const cargarServicios = async () => {
-    if (!financiadorSeleccionado) return;
+    if (!financiadorId) return;
     
     setLoading(true);
     try {
-      const response = await api.get(`/admin/servicios/financiador/${financiadorSeleccionado}/servicios`);
+      const response = await api.get(`/admin/servicios/financiador/${financiadorId}/servicios`);
       setServicios(response.data);
     } catch (error) {
       notifications.show({
@@ -121,7 +111,7 @@ export default function ServiciosPorFinanciador() {
     if (!editingServicio) return;
     
     try {
-      await api.put(`/admin/servicios/financiador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
+      await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id_servicio}`, {
         valor_facturar: 0,
         activo: activo,
         cant_total: editingServicio.cant_total || 0,
@@ -201,20 +191,7 @@ export default function ServiciosPorFinanciador() {
 
   return (
     <Stack gap="md">
-      <Select
-        label="Seleccionar Financiador"
-        placeholder="Seleccione un financiador activo"
-        value={financiadorSeleccionado}
-        onChange={(value) => setFinanciadorSeleccionado(value || '')}
-        data={financiadores.map(p => ({
-          value: String(p.id),
-          label: formatName(p.Financiador)
-        }))}
-        searchable
-        clearable
-      />
-
-      {financiadorSeleccionado && (
+      {financiadorId && (
         <Paper p="md" withBorder>
           <TextInput
             placeholder="Filtrar por servicio..."
@@ -371,7 +348,7 @@ export default function ServiciosPorFinanciador() {
                         variant="light"
                         onClick={async () => {
                           try {
-                            await api.put(`/admin/servicios/financiador/${financiadorSeleccionado}/servicio/${editingServicio.id_servicio}`, {
+                            await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id_servicio}`, {
                               valor_facturar: 0,
                               activo: editingServicio.activo || 0,
                               cant_total: editingServicio.cant_total || 0,
@@ -505,7 +482,7 @@ export default function ServiciosPorFinanciador() {
                             fecha_inicio: valor.fecha_inicio,
                             sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
                             id_servicio: editingServicio.id_servicio,
-                            financiador_id: financiadorSeleccionado
+                            financiador_id: financiadorId
                           });
                           // Actualizar id_prestador_servicio si se creó nuevo
                           if (!editingServicio.id_financiador_servicio && response.data.id_financiador_servicio) {

@@ -3,12 +3,30 @@
 // ============================================================================
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireSuperAdmin } from '../middleware/auth';
 import * as tarifarioController from '../controllers/tarifarioController';
 import * as zonasController from '../controllers/zonasController';
 import * as prestacionesTarifarioController from '../controllers/prestacionesTarifarioController';
+import * as tarifarioAdminController from '../controllers/tarifarioAdminController';
 
 const router = express.Router();
+
+// ============================================================================
+// ADMINISTRACIÓN DE SERVICIOS DEL TARIFARIO
+// ============================================================================
+
+router.get('/tarifario/servicios', authenticateToken, tarifarioAdminController.listarServicios);
+router.post('/tarifario/servicios', authenticateToken, requireSuperAdmin, tarifarioAdminController.crearServicio);
+router.put('/tarifario/servicios/:id', authenticateToken, requireSuperAdmin, tarifarioAdminController.actualizarServicio);
+router.patch('/tarifario/servicios/:id/activo', authenticateToken, requireSuperAdmin, tarifarioAdminController.toggleActivo);
+
+// ============================================================================
+// ADMINISTRACIÓN DE VALORES POR ZONA
+// ============================================================================
+
+router.get('/tarifario/valores/zona/:zonaId', authenticateToken, tarifarioAdminController.listarServiciosConValores);
+router.get('/tarifario/valores/historico/:servicioId/:zonaId', authenticateToken, tarifarioAdminController.obtenerHistorico);
+router.post('/tarifario/valores', authenticateToken, requireSuperAdmin, tarifarioAdminController.guardarValores);
 
 // ============================================================================
 // SERVICIOS DEL TARIFARIO

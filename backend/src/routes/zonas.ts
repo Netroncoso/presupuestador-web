@@ -10,6 +10,7 @@ const router = express.Router();
 
 // Listar todas las zonas
 router.get('/tarifario-zonas', authenticateToken, zonasController.listarZonas);
+router.get('/zonas', authenticateToken, zonasController.listarZonas);
 
 // Crear zona (solo super admin)
 router.post('/tarifario-zonas', authenticateToken, requireSuperAdmin, zonasController.crearZona);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Title, Text, Group, NumberInput, Button, Stack, Divider, Alert, Loader, Tooltip } from '@mantine/core';
+import { Paper, Title, Text, Group, NumberInput, Button, Stack, Alert, Loader, Tooltip } from '@mantine/core';
 import { IconAlertCircle, IconCheck, IconDeviceFloppy, IconInfoCircle } from '@tabler/icons-react';
 import { api } from '../../api/api';
 import { CurrencyInput } from '../../components/CurrencyInput';
@@ -13,7 +13,7 @@ interface Configuracion {
   unidad: string;
 }
 
-export default function GestionReglasNegocio() {
+export default function GestionAlertasPresupuesto() {
   const [configuraciones, setConfiguraciones] = useState<Configuracion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +27,7 @@ export default function GestionReglasNegocio() {
   const cargarConfiguracion = async () => {
     try {
       const { data } = await api.get('/configuracion');
-      setConfiguraciones(data);
+      setConfiguraciones(data.filter((c: Configuracion) => c.categoria === 'alerta'));
     } catch (err: any) {
       setError(err.message || 'Error al cargar configuración');
     } finally {
@@ -48,10 +48,10 @@ export default function GestionReglasNegocio() {
 
     try {
       await api.put('/configuracion/multiple', { configuraciones });
-      setSuccess('Configuración guardada exitosamente');
+      setSuccess('Alertas guardadas exitosamente');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.message || 'Error al guardar configuración');
+      setError(err.message || 'Error al guardar alertas');
     } finally {
       setSaving(false);
     }
@@ -67,29 +67,38 @@ export default function GestionReglasNegocio() {
     );
   }
 
-  const categorias = Array.from(new Set(configuraciones.filter(c => c.categoria !== 'alerta').map(c => c.categoria)));
-
   const getTooltipText = (clave: string): string => {
     const tooltips: Record<string, string> = {
       'alerta.financiador.cobranzaExtendida': '> 60 días → COBRANZA EXTENDIDA (rojo)\nEl financiador tarda demasiado, afecta flujo de caja.',
       'alerta.financiador.cobranzaLenta': '> 50 días → COBRANZA LENTA (amarillo)\nEl financiador tarda más de lo normal en pagar.',
       'alerta.financiador.tasaAlta': '> 5% → TASA ALTA (amarillo)\nTasa de interés alta que reduce la rentabilidad con plazo.',
-      'alerta.monto.critico': '>= $1,500,000 → MONTO CRÍTICO (rojo)\nRequiere gestión especial y aprobación adicional.',
-      'alerta.monto.elevado': '>= $1,000,000 → MONTO ELEVADO (naranja)\nRequiere revisión y aviso a las áreas correspondientes.',
+      'alerta.monto.critico': '>= $3,000,000 → MONTO CRÍTICO (rojo)\nRequiere gestión especial y aprobación adicional.',
+      'alerta.monto.elevado': '>= $2,000,000 → MONTO ELEVADO (naranja)\nRequiere revisión y aviso a las áreas correspondientes.',
       'alerta.rentabilidad.desaprobado': '< 20% → DESAPROBADO (rojo)\nRentabilidad muy baja. Requiere auditoría.',
-      'alerta.rentabilidad.mejorar': '20-30% → MEJORAR (naranja)\nRentabilidad baja. Revisar costos o renegociar.',
-      'alerta.rentabilidad.felicitaciones': '30-50% → FELICITACIONES (verde)\nExcelente rentabilidad. Cumple objetivos.',
-      'alerta.rentabilidad.excepcional': '>= 50% → EXCEPCIONAL (violeta)\nRentabilidad excepcional. Márgenes óptimos.',
+      'alerta.rentabilidad.mejorar': '20-40% → MEJORAR (naranja)\nRentabilidad baja. Revisar costos o renegociar.',
+      'alerta.rentabilidad.felicitaciones': '40-70% → FELICITACIONES (verde)\nExcelente rentabilidad. Cumple objetivos.',
+      'alerta.rentabilidad.excepcional': '>= 70% → EXCEPCIONAL (violeta)\nRentabilidad excepcional. Márgenes óptimos.',
+      'alerta.utilidad.critica': '< $100,000 → CRÍTICA (rojo)\nUtilidad muy baja.',
+      'alerta.utilidad.baja': '< $200,000 → BAJA (naranja)\nUtilidad baja.',
+      'alerta.utilidad.buena': '>= $500,000 → BUENA (verde)\nUtilidad buena.',
+      'alerta.utilidad.excelente': 'Utilidad excelente (violeta)\nUtilidad excepcional.',
     };
     return tooltips[clave] || '';
   };
+
+  const subcategorias = [
+    { key: 'financiador', label: 'Financiador', tooltip: 'Alertas relacionadas con días de cobranza y tasas de interés' },
+    { key: 'monto', label: 'Monto', tooltip: 'Alertas basadas en el monto total del presupuesto' },
+    { key: 'rentabilidad', label: 'Rentabilidad', tooltip: 'Alertas basadas en el porcentaje de rentabilidad' },
+    { key: 'utilidad', label: 'Utilidad', tooltip: 'Alertas basadas en la utilidad en pesos' }
+  ];
 
   return (
     <Stack gap="md">
       <Group justify="space-between">
         <div>
-          <Title order={3}>Reglas de Negocio</Title>
-          <Text size="sm" c="dimmed">Configuración de parámetros del sistema</Text>
+          <Title order={3}>Alertas de Presupuesto</Title>
+          <Text size="sm" c="dimmed">Configuración de umbrales para alertas visuales</Text>
         </div>
         <Button
           leftSection={<IconDeviceFloppy size={18} />}
@@ -113,59 +122,17 @@ export default function GestionReglasNegocio() {
         </Alert>
       )}
 
-      {categorias.map(categoria => {
-        const configs = configuraciones.filter(c => c.categoria === categoria && c.categoria !== 'alerta');
+      {subcategorias.map(subcat => {
+        const configs = configuraciones.filter(c => c.clave.includes(`.${subcat.key}.`));
+        if (configs.length === 0) return null;
+        
         return (
-          <Paper key={categoria} p="lg" withBorder>
+          <Paper key={subcat.key} p="lg" withBorder>
             <Group gap="xs" mb="md">
-              <Title order={4} tt="capitalize">{categoria}</Title>
-              {categoria === 'auditoria' && (
-                <Tooltip
-                  multiline
-                  w={300}
-                  label={
-                    <div>
-                      <Text size="sm" fw={500} mb={4}>Reglas de auditoría automática:</Text>
-                      <Text size="xs">• Rentabilidad &lt; 15% (configurable)</Text>
-                      <Text size="xs">• Costo total &gt; $150,000 (configurable)</Text>
-                      <Text size="xs">• Rentabilidad con plazo &gt; 25% (configurable)</Text>
-                      <Text size="xs">• Utilidad &gt; $50,000 (configurable)</Text>
-                    </div>
-                  }
-                >
-                  <IconInfoCircle size={18} style={{ cursor: 'help', color: '#228be6' }} />
-                </Tooltip>
-              )}
-              {categoria === 'financiero' && (
-                <Tooltip
-                  multiline
-                  w={280}
-                  label={
-                    <div>
-                      <Text size="sm" fw={500} mb={4}>Valores por defecto:</Text>
-                      <Text size="xs">• Se usan cuando el financiador no tiene valores configurados</Text>
-                      <Text size="xs">• Aplican en cálculo de rentabilidad con plazo</Text>
-                    </div>
-                  }
-                >
-                  <IconInfoCircle size={18} style={{ cursor: 'help', color: '#228be6' }} />
-                </Tooltip>
-              )}
-              {categoria === 'paginacion' && (
-                <Tooltip
-                  multiline
-                  w={280}
-                  label={
-                    <div>
-                      <Text size="sm" fw={500} mb={4}>Control de listados:</Text>
-                      <Text size="xs">• Limit: Máximo de registros por página</Text>
-                      <Text size="xs">• Offset: Desde qué registro empezar (siempre 0)</Text>
-                    </div>
-                  }
-                >
-                  <IconInfoCircle size={18} style={{ cursor: 'help', color: '#228be6' }} />
-                </Tooltip>
-              )}
+              <Title order={4}>{subcat.label}</Title>
+              <Tooltip multiline w={300} label={subcat.tooltip}>
+                <IconInfoCircle size={18} style={{ cursor: 'help', color: '#228be6' }} />
+              </Tooltip>
             </Group>
             <Stack gap="md">
               {configs.map(config => (
@@ -210,14 +177,12 @@ export default function GestionReglasNegocio() {
         );
       })}
 
-      <Divider my="md" />
-
       <Alert icon={<IconAlertCircle size={16} />} color="blue">
         <Text size="sm" fw={500}>Información importante:</Text>
         <Text size="sm">
-          • Los cambios afectan inmediatamente a todos los presupuestos nuevos<br />
-          • Los presupuestos existentes mantienen sus valores originales<br />
-          • Se recomienda notificar al equipo antes de realizar cambios significativos
+          • Las alertas son visuales y no bloquean la creación de presupuestos<br />
+          • Los colores ayudan a identificar rápidamente situaciones que requieren atención<br />
+          • Los cambios se aplican inmediatamente a todos los presupuestos
         </Text>
       </Alert>
     </Stack>

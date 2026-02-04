@@ -6,11 +6,6 @@ import { api } from '../../api/api';
 import { numberFormat } from '../../utils/numberFormat';
 import { CurrencyInput } from '../../components/CurrencyInput';
 
-interface Financiador {
-  id: string;
-  Financiador: string;
-}
-
 interface Equipamiento {
   id: number;
   nombre: string;
@@ -30,9 +25,11 @@ interface Sucursal {
   Sucursales_mh: string;
 }
 
-export default function GestionEquipamientos() {
-  const [financiadores, setFinanciadores] = useState<Financiador[]>([]);
-  const [financiadorSeleccionado, setFinanciadorSeleccionado] = useState<string>('');
+interface Props {
+  financiadorId: string;
+}
+
+export default function GestionEquipamientos({ financiadorId }: Props) {
   const [equipamientos, setEquipamientos] = useState<Equipamiento[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [filtro, setFiltro] = useState('');
@@ -59,28 +56,16 @@ export default function GestionEquipamientos() {
   };
 
   useEffect(() => {
-    cargarFinanciadores();
     cargarSucursales();
   }, []);
 
   useEffect(() => {
-    if (financiadorSeleccionado) {
+    if (financiadorId) {
       cargarEquipamientos();
+    } else {
+      setEquipamientos([]);
     }
-  }, [financiadorSeleccionado]);
-
-  const cargarFinanciadores = async () => {
-    try {
-      const response = await api.get('/admin/financiadores');
-      setFinanciadores(response.data);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al cargar financiadores',
-        color: 'red'
-      });
-    }
-  };
+  }, [financiadorId]);
 
   const cargarSucursales = async () => {
     try {
@@ -93,7 +78,7 @@ export default function GestionEquipamientos() {
 
   const cargarEquipamientos = async () => {
     try {
-      const response = await api.get(`/equipamientos/admin/financiador/${financiadorSeleccionado}`);
+      const response = await api.get(`/equipamientos/admin/financiador/${financiadorId}`);
       setEquipamientos(response.data);
     } catch (error) {
       notifications.show({
@@ -183,7 +168,7 @@ export default function GestionEquipamientos() {
           fecha_inicio: valor.fecha_inicio,
           sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
           id_equipamiento: editando?.id,
-          financiador_id: financiadorSeleccionado
+          financiador_id: financiadorId
         });
       }
       
@@ -209,7 +194,7 @@ export default function GestionEquipamientos() {
         setValoresHistoricos(res.data.filter((v: any) => !v.fecha_fin));
       } else {
         // Si era nuevo acuerdo (ID = 0), buscar el equipamiento actualizado
-        const response = await api.get(`/equipamientos/admin/financiador/${financiadorSeleccionado}`);
+        const response = await api.get(`/equipamientos/admin/financiador/${financiadorId}`);
         const equipoActualizado = response.data.find((e: Equipamiento) => e.id === editando?.id);
         if (equipoActualizado?.id_financiador_equipamiento) {
           setEditando(equipoActualizado);
@@ -260,20 +245,7 @@ export default function GestionEquipamientos() {
 
   return (
     <Stack gap="md">
-      <Select
-        label="Seleccionar Financiador"
-        placeholder="Seleccione un financiador"
-        value={financiadorSeleccionado}
-        onChange={(value) => setFinanciadorSeleccionado(value || '')}
-        data={financiadores.map(f => ({
-          value: String(f.id),
-          label: formatName(f.Financiador)
-        }))}
-        searchable
-        clearable
-      />
-
-      {financiadorSeleccionado && (
+      {financiadorId && (
         <Paper p="md" withBorder>
           <TextInput
             placeholder="Filtrar por nombre..."
