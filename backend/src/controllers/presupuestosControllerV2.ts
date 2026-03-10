@@ -331,14 +331,14 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
 
   res.json({
     ...presupuesto,
-    Sucursal: sucursal[0][0]?.Sucursales_mh || null,
-    zona_tarifario_nombre: zonaT[0][0]?.nombre || null,
-    zona_financiador_nombre: zonaF[0][0]?.nombre || null,
-    Financiador: financiador[0][0]?.Financiador || null,
-    tasa_mensual: financiador[0][0]?.tasa_mensual || null,
-    dias_cobranza_teorico: financiador[0][0]?.dias_cobranza_teorico || null,
-    dias_cobranza_real: financiador[0][0]?.dias_cobranza_real || null,
-    usuario_creador: usuario[0][0]?.username || null,
+    Sucursal: (sucursal[0] as any[])[0]?.Sucursales_mh || null,
+    zona_tarifario_nombre: (zonaT[0] as any[])[0]?.nombre || null,
+    zona_financiador_nombre: (zonaF[0] as any[])[0]?.nombre || null,
+    Financiador: (financiador[0] as any[])[0]?.Financiador || null,
+    tasa_mensual: (financiador[0] as any[])[0]?.tasa_mensual || null,
+    dias_cobranza_teorico: (financiador[0] as any[])[0]?.dias_cobranza_teorico || null,
+    dias_cobranza_real: (financiador[0] as any[])[0]?.dias_cobranza_real || null,
+    usuario_creador: (usuario[0] as any[])[0]?.username || null,
     prestaciones,
     insumos,
     equipamientos
