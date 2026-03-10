@@ -1,0 +1,83 @@
+﻿Código;Producto;Imp. Valor;Zona
+30050562;Acompañante Terapeutico hs;7,127.78;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050562;Acompañante Terapeutico hs;6,564.93;(GALENO) CORDOBA
+30050383;Consulta Especiliasta;36,439.88;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050383;Consulta Especiliasta;34,162.38;(GALENO) CORDOBA
+30050459;Consulta Medica Adulto;50,104.82;(GALENO) Prov. Neuquen y Rio Negro
+30050459;Consulta Medica Adulto;59,681.95;(GALENO) Prov. Chubut y Sta. Cruz
+30050459;Consulta Medica Adulto;31,884.87;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050459;Consulta Medica Adulto;28,468.66;(GALENO) CORDOBA
+30050429;Consulta medica Pediatria;34,162.38;(GALENO) CORDOBA
+30050429;Consulta medica Pediatria;39,856.10;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050429;Consulta medica Pediatria;66,313.37;(GALENO) Prov. Chubut y Sta. Cruz
+30050429;Consulta medica Pediatria;59,681.95;(GALENO) Prov. Neuquen y Rio Negro
+30050429;Consulta medica Pediatria;0.01;(FUERA DE CONVENIO)
+30050410;Cuidador hs;6,263.11;(GALENO) Prov. Neuquen y Rio Negro
+30050410;Cuidador hs;4,554.98;(GALENO) CORDOBA
+30050410;Cuidador hs;5,352.10;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050410;Cuidador hs;7,294.48;(GALENO) Prov. Chubut y Sta. Cruz
+30050585;Enfermeria Vestida para Control/Aseo/Aplicacion ATB ( Incluye material descartable);15,942.45;(GALENO) Prov. Neuquen y Rio Negro
+30050585;Enfermeria Vestida para Control/Aseo/Aplicacion ATB ( Incluye material descartable);10,610.17;(GALENO) Prov. Chubut y Sta. Cruz
+30050585;Enfermeria Vestida para Control/Aseo/Aplicacion ATB ( Incluye material descartable);9,109.96;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050585;Enfermeria Vestida para Control/Aseo/Aplicacion ATB ( Incluye material descartable);7,971.22;(GALENO) CORDOBA
+30050584;Enfermeria Vestida para Tratamiento de heridas / escaras/ Curaciones (Incluye Material descartable);9,109.96;(GALENO) CORDOBA
+30050584;Enfermeria Vestida para Tratamiento de heridas / escaras/ Curaciones (Incluye Material descartable);9,109.96;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050584;Enfermeria Vestida para Tratamiento de heridas / escaras/ Curaciones (Incluye Material descartable);10,610.17;(GALENO) Prov. Chubut y Sta. Cruz
+30050584;Enfermeria Vestida para Tratamiento de heridas / escaras/ Curaciones (Incluye Material descartable);15,942.45;(GALENO) Prov. Neuquen y Rio Negro
+ENV/GAS;ENVIO Y GASTOS DE ENTREGA;0.01;
+30050419;Estimulacion Temprana;33,156.62;(GALENO) Prov. Neuquen y Rio Negro
+30050419;Estimulacion Temprana;17,081.20;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050419;Estimulacion Temprana;17,081.20;(GALENO) CORDOBA
+30050590;Estimulacion Temprana Pediatria;17,081.20;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050590;Estimulacion Temprana Pediatria;17,081.20;(GALENO) CORDOBA
+30050590;Estimulacion Temprana Pediatria;33,156.62;(GALENO) Prov. Neuquen y Rio Negro
+30050413;FISIOTERAPIA, KINESIOLOGIA Y REHABILITACION ADULTO;17,081.20;(GALENO) CORDOBA
+30050413;FISIOTERAPIA, KINESIOLOGIA Y REHABILITACION ADULTO;15,942.45;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050413;FISIOTERAPIA, KINESIOLOGIA Y REHABILITACION ADULTO;23,913.67;(GALENO) Prov. Neuquen y Rio Negro
+30050413;FISIOTERAPIA, KINESIOLOGIA Y REHABILITACION ADULTO;33,156.62;(GALENO) Prov. Chubut y Sta. Cruz
+30050587;Fisioterapia, Kinesiologia y Rehabilitacion Pediatria;17,081.20;(GALENO) CORDOBA
+30050587;Fisioterapia, Kinesiologia y Rehabilitacion Pediatria;15,942.45;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050587;Fisioterapia, Kinesiologia y Rehabilitacion Pediatria;33,156.62;(GALENO) Prov. Chubut y Sta. Cruz
+30050587;Fisioterapia, Kinesiologia y Rehabilitacion Pediatria;23,913.67;(GALENO) Prov. Neuquen y Rio Negro
+30050587;Fisioterapia, Kinesiologia y Rehabilitacion Pediatria;0.01;(FUERA DE CONVENIO)
+30050415;Fonoaudiologia;43,103.63;(GALENO) Prov. Chubut y Sta. Cruz
+30050415;Fonoaudiologia;30,835.71;(GALENO) Prov. Neuquen y Rio Negro
+30050415;Fonoaudiologia;17,081.20;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050415;Fonoaudiologia;17,081.20;(GALENO) CORDOBA
+30050588;Fonoaudiologia Pediatria;30,835.71;(GALENO) Prov. Neuquen y Rio Negro
+30050588;Fonoaudiologia Pediatria;43,103.63;(GALENO) Prov. Chubut y Sta. Cruz
+30050588;Fonoaudiologia Pediatria;17,081.20;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050588;Fonoaudiologia Pediatria;17,081.20;(GALENO) CORDOBA
+30050411;KINESIOLOGIA RESPIRATORIA EN INTERNACION DOMICILIARIA INTERIOR;23,913.67;(GALENO) Prov. Neuquen y Rio Negro
+30050411;KINESIOLOGIA RESPIRATORIA EN INTERNACION DOMICILIARIA INTERIOR;33,156.62;(GALENO) Prov. Chubut y Sta. Cruz
+30050411;KINESIOLOGIA RESPIRATORIA EN INTERNACION DOMICILIARIA INTERIOR;15,942.45;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050411;KINESIOLOGIA RESPIRATORIA EN INTERNACION DOMICILIARIA INTERIOR;17,081.20;(GALENO) CORDOBA
+LAB;LABORATORIO COMPLETO;0.01;
+MAGNETOTERAPIA;MAGNETOTERAPIA;0.01;
+30050333;Nutricionista;19,894.03;(GALENO) Prov. Neuquen y Rio Negro
+30050333;Nutricionista;10,879.19;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050333;Nutricionista;10,550.92;(GALENO) CORDOBA
+30050460;Presupuestos, excepciones;0.01;
+30050461;Presupuestos, excepciones;0.01;
+30050335;Psicologia;18,219.92;(GALENO) CORDOBA
+30050335;Psicologia;20,497.41;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050335;Psicologia;27,851.60;(GALENO) Prov. Neuquen y Rio Negro
+REC20;RECARGO DEL 20 % POR DISTANCIA Y/Ó ZONA DESFAVORABLE.;20%;
+REC20NOC;RECARGO DEL 20 % POR PRESTACION BRINDADA EN HORARIO NOCTURNO;20%;
+REC35;RECARGO DEL 35% POR DISTANCIA DESDE 61KM HASTA 100KM;35%;
+30050417;Terapia Ocupacional;9,097.25;(GALENO) CORDOBA
+30050417;Terapia Ocupacional;15,942.45;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050417;Terapia Ocupacional;28,514.70;(GALENO) Prov. Neuquen y Rio Negro
+30050589;Terapia Ocupacional Pediatria;9,097.25;(GALENO) CORDOBA
+30050589;Terapia Ocupacional Pediatria;15,942.45;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050589;Terapia Ocupacional Pediatria;28,514.70;(GALENO) Prov. Neuquen y Rio Negro
+30050408;Visita de Enfermaria Adulto hs;5,693.74;(GALENO) CORDOBA
+30050408;Visita de Enfermaria Adulto hs;6,263.11;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050408;Visita de Enfermaria Adulto hs;8,620.72;(GALENO) Prov. Chubut y Sta. Cruz
+30050408;Visita de Enfermaria Adulto hs;8,620.72;(GALENO) Prov. Neuquen y Rio Negro
+30050409;Visita de Enfermeria Pediatria hs;10,610.17;(GALENO) Prov. Neuquen y Rio Negro
+30050409;Visita de Enfermeria Pediatria hs;10,610.17;(GALENO) Prov. Chubut y Sta. Cruz
+30050409;Visita de Enfermeria Pediatria hs;6,832.47;(GALENO) GBA/SALTA/ER/MZA/SFE
+30050409;Visita de Enfermeria Pediatria hs;6,263.11;(GALENO) CORDOBA
+30050409;Visita de Enfermeria Pediatria hs;0.01;(FUERA DE CONVENIO)
+VMPAL;VISITA MEDICO PALIATIVISTA;0.01;

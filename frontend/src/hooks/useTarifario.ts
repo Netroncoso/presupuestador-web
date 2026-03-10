@@ -23,7 +23,7 @@ interface ValorVigente {
 
 interface ValoresVigentesResponse {
   servicio_id: number;
-  zona_id: number;
+  zona_tarifario_id: number;
   fecha_inicio: string;
   valores: ValorVigente[];
 }
@@ -37,7 +37,7 @@ export const useTarifario = (zonaId?: number | null) => {
   const cargarServicios = async () => {
     try {
       setLoading(true);
-      const url = zonaId ? `/tarifario-servicio/activos?zona_id=${zonaId}` : '/tarifario-servicio/activos';
+      const url = zonaId ? `/tarifario-servicio/activos?zona_tarifario_id=${zonaId}` : '/tarifario-servicio/activos';
       const response = await api.get(url);
       setServicios(response.data);
     } catch (error) {
@@ -54,7 +54,7 @@ export const useTarifario = (zonaId?: number | null) => {
     }
     
     try {
-      const response = await api.get(`/tarifario-servicio/${servicioId}/valores-vigentes?zona_id=${zonaId}`);
+      const response = await api.get(`/tarifario-servicio/${servicioId}/valores-vigentes?zona_tarifario_id=${zonaId}`);
       return response.data;
     } catch (error) {
       console.error('Error al obtener valores vigentes:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Paper, TextInput, Button, Group, Stack, Title, NumberInput, Table, ActionIcon, Checkbox, Text, Modal, Badge } from '@mantine/core'
 import { TrashIcon, PencilSquareIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
@@ -34,16 +34,59 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
   const [insumosTemporales, setInsumosTemporales] = useState<any[]>([])
   const [modalAbierto, setModalAbierto] = useState(false)
   const [cantidadesTemporales, setCantidadesTemporales] = useState<{[key: string]: number}>({})
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  useEffect(() => {
-    api.get('/insumos').then(res => {
-      const data = res.data.data || res.data;
-      setInsumosDisponibles(Array.isArray(data) ? data : []);
-    }).catch(err => {
+  // Estados para paginación
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+
+  // Cargar insumos desde el backend con búsqueda
+  const loadInsumos = useCallback(async (searchObj: { search?: string, page?: number, reset?: boolean } = {}) => {
+    const searchTerm = searchObj.search !== undefined ? searchObj.search : filtro;
+    const pageNum = searchObj.page || 1;
+    const isReset = searchObj.reset || false;
+
+    setLoading(true);
+    try {
+      const res = await api.get('/insumos', { 
+        params: { 
+          search: searchTerm,
+          page: pageNum,
+          limit: 50 
+        } 
+      });
+      
+      const data = res.data.data || [];
+      const pagination = res.data.pagination;
+
+      if (isReset) {
+        setInsumosDisponibles(data);
+        setPage(1);
+      } else {
+        setInsumosDisponibles(prev => [...prev, ...data]);
+        setPage(pageNum);
+      }
+      
+      setHasMore(data.length > 0 && pagination.page < pagination.totalPages);
+    } catch (err) {
       console.error('Error loading insumos:', err);
-      setInsumosDisponibles([]);
-    });
-  }, [])
+      // Don't clear on error if we have data, but maybe show notification
+    } finally {
+      setLoading(false);
+    }
+  }, [filtro]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadInsumos({ search: filtro, page: 1, reset: true });
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtro]);
+
+  // Initial load is handled by the effect above because filtro initiates as empty string
+
 
   useEffect(() => {
     const totalCosto = insumosSeleccionados.reduce((sum, insumo) => {
@@ -61,11 +104,8 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
     onTotalChange(totalCosto, totalFacturar);
   }, [insumosSeleccionados, onTotalChange, porcentajeInsumos, financiador])
 
-  const insumosFiltrados = useMemo(() => 
-    insumosDisponibles.filter(insumo =>
-      insumo.producto.toLowerCase().includes(filtro.toLowerCase())
-    ), [insumosDisponibles, filtro]
-  )
+  // Los insumos ya vienen ordenados del backend
+  const insumosFiltrados = insumosDisponibles;
 
   const toggleInsumoTemporal = useCallback((insumo: any) => {
     const existe = insumosTemporales.find(i => i.producto === insumo.producto)
@@ -338,33 +378,70 @@ export default function Insumos({ insumosSeleccionados, setInsumosSeleccionados,
               </Button>
             </Group>
 
-            <Table.ScrollContainer mt="xs" minWidth={600} maxHeight={300}>
+            <Table.ScrollContainer 
+              mt="xs" 
+              minWidth={600} 
+              maxHeight={300}
+            >
               <Table striped="odd" highlightOnHover stickyHeader>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th style={{ width: '70%', textAlign:"left", fontWeight: 500, fontSize: '13px' }}>Insumo</Table.Th>
+                    <Table.Th style={{ width: '5%', textAlign:"left", fontWeight: 500, fontSize: '13px' }}>Selec.</Table.Th>
+                    <Table.Th style={{ width: '10%', textAlign:"left", fontWeight: 500, fontSize: '13px' }}>Código</Table.Th>
+                    <Table.Th style={{ width: '55%', textAlign:"left", fontWeight: 500, fontSize: '13px' }}>Insumo</Table.Th>
                     <Table.Th style={{ width: '30%', textAlign: 'right', fontWeight: 500, fontSize: '13px' }}>Costo</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {insumosFiltrados.map((insumo, index) => (
-                    <Table.Tr key={index}>
-                      <Table.Td style={{ width: '70%' }}>
-                        <Group gap="xs" wrap="nowrap">
-                          <Checkbox
-                            size="xs"
-                            checked={insumosTemporales.some(i => i.producto === insumo.producto)}
-                            onChange={() => toggleInsumoTemporal(insumo)}
-                            disabled={soloLectura}
-                          />
-                          <span>{insumo.producto.charAt(0).toUpperCase() + insumo.producto.slice(1).toLowerCase()}</span>
-                        </Group>
+                  {insumosFiltrados.map((insumo, index) => {
+                    const isLast = index === insumosFiltrados.length - 1;
+                    return (
+                    <Table.Tr 
+                      key={index}
+                      ref={isLast ? (node) => {
+                         if (loading) return;
+                         if (observerRef.current) observerRef.current.disconnect();
+                         
+                         observerRef.current = new IntersectionObserver(entries => {
+                           if (entries[0].isIntersecting && hasMore) {
+                             loadInsumos({ page: page + 1, search: filtro });
+                           }
+                         });
+                         
+                         if (node) observerRef.current.observe(node);
+                      } : null}
+                    >
+                      <Table.Td style={{ width: '5%', textAlign: 'center' }}>
+                        <Checkbox
+                          size="xs"
+                          checked={insumosTemporales.some(i => i.producto === insumo.producto)}
+                          onChange={() => toggleInsumoTemporal(insumo)}
+                          disabled={soloLectura}
+                        />
                       </Table.Td>
-                      <Table.Td style={{ width: '30%', textAlign: 'right' }}>{numberFormat.formatCurrency(insumo.costo)}</Table.Td>
+                      <Table.Td style={{ width: '10%' }}>
+                        <Text size="sm" c={insumo.codigo_producto ? 'dark' : 'dimmed'}>
+                          {insumo.codigo_producto || '-'}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td style={{ width: '55%' }}>
+                        <Text c={Number(insumo.costo) === 0 ? 'dimmed' : 'dark'}>
+                          {insumo.producto.charAt(0).toUpperCase() + insumo.producto.slice(1).toLowerCase()}
+                          {Number(insumo.costo) === 0 && ' (Sin precio)'}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td style={{ width: '30%', textAlign: 'right' }}>
+                        <Text c={Number(insumo.costo) === 0 ? 'dimmed' : 'dark'}>
+                          {numberFormat.formatCurrency(insumo.costo)}
+                        </Text>
+                      </Table.Td>
                     </Table.Tr>
-                  ))}
+                  )})}
                 </Table.Tbody>
-              </Table>
+                {loading && (
+                   <Table.Caption>Cargando más insumos...</Table.Caption>
+                )}
+              </Table> 
             </Table.ScrollContainer>
           </Stack>
 

@@ -1,0 +1,50 @@
+﻿MEDIHOME (ID 16852);;;;;;;;;;
+No corresponde aplicar coseguros;;;;;;;;;;
+"CÓDIGOS 
+OSPEDYC";"CÓDIGOS
+PRESTADOR";Concepto;AMBA;INTERIOR;AMBA;INTERIOR;;;;
+;;Visita Médica;01/01/2026;01/01/2026;01/03/2026;01/03/2026;;;;
+990016;99.00.16;Consulta Médica Adulto;$ 19,551.84;$ 23,462.21;$ 19,783.68;$ 23,740.42;;;;
+990017;99.00.17;Consulta Médica Pediátrica;$ 19,551.84;$ 23,462.21;$ 19,783.68;$ 23,740.42;;;;
+990038;99.00.38;Consulta Especialista Adulto;$ 22,158.75;$ 27,372.58;$ 22,421.50;$ 27,697.15;;;;
+990039;99.00.39;Consulta Especialista Pediátrica;$ 22,158.75;$ 27,372.58;$ 22,421.50;$ 27,697.15;;;;
+;;Visita Enfermería;;;;;;;;
+990018;99.00.18;Adulto hs;$ 4,185.63;$ 5,442.54;$ 4,235.26;$ 5,507.07;;;;
+990019;99.00.19;Pediatría hs;$ 4,185.63;$ 5,442.54;$ 4,235.26;$ 5,507.07;;;;
+990047;99.00.47;Aplicaciones y controles Adulto;$ 6,740.93;$ 8,762.91;$ 6,820.86;$ 8,866.82;;;;
+990047;99.00.47;Aplicaciones y controles Pediátricos;$ 6,740.93;$ 8,762.91;$ 6,820.86;$ 8,866.82;;;;
+990048;99.00.48;Tratamiento de heridas y escaras Adultos;$ 10,569.33;$ 12,265.44;$ 10,694.66;$ 12,410.88;;;;
+990048;99.00.48;Tratamiento de heridas y escaras Pediátricos;$ 10,569.33;$ 12,265.44;$ 10,694.66;$ 12,410.88;;;;
+990049;99.00.49;Aplicación de medicación endovenosa Adulto;$ 11,234.21;$ 14,603.16;$ 11,367.42;$ 14,776.32;;;;
+990049;99.00.49;Aplicación de medicación endovenosa Pediátricos;$ 11,234.21;$ 14,603.16;$ 11,367.42;$ 14,776.32;;;;
+990050;99.00.50;Guardia 4 hs Adulto;$ 16,743.54;$ 21,177.11;$ 16,942.08;$ 21,428.22;;;;
+990051;99.00.51;Guardia 4 hs Pediátrica;$ 16,743.54;$ 21,177.11;$ 16,942.08;$ 21,428.22;;;;
+990052;99.00.52;Guardia 8 hs Adulto;$ 33,487.08;$ 40,920.22;$ 33,884.16;$ 41,405.44;;;;
+990053;99.00.53;Guardia 8 hs Pediátrica;$ 33,487.08;$ 40,920.22;$ 33,884.16;$ 41,405.44;;;;
+990054;99.00.54;Guardia 12 hs Adulto;$ 50,231.63;$ 60,437.65;$ 50,827.26;$ 61,154.30;;;;
+990055;99.00.55;Guardia 12 hs Pediátrica;$ 50,231.63;$ 60,437.65;$ 50,827.26;$ 61,154.30;;;;
+990056;99.00.56;Guardia 24 hs Adulto;$ 100,461.24;$ 120,894.53;$ 101,652.48;$ 122,328.06;;;;
+990057;99.00.57;Guardia 24 hs Pediátrica;$ 100,461.24;$ 120,894.53;$ 101,652.48;$ 122,328.06;;;;
+;;Cuidador / Acompañante Terapeútico;;;;;;;;
+990024;99.00.24;Cuidador hs Adulto;$ 3,737.32;$ 4,860.64;$ 3,781.63;$ 4,918.27;;;;
+990028;99.00.28;Cuidador hs Pediátrico;$ 3,737.32;$ 4,860.64;$ 3,781.63;$ 4,918.27;;;;
+990045;99.00.45;Acompañante Terapeútico hs Adulto;$ 6,201.54;$ 8,062.60;$ 6,275.07;$ 8,158.21;;;;
+990046;99.00.46;Acompañante Terapeútico hs Pediátrico;$ 6,201.54;$ 8,062.60;$ 6,275.07;$ 8,158.21;;;;
+;;Rehabilitación;;;;;;;;
+990020;99.00.20;Fisioterapia, Kinesiología y Rehabilitación Adulto;Por presupuesto ;$ 13,141.83;Por presupuesto ;$ 13,297.66;;;;
+990021;99.00.21;Fisioterapia, Kinesiología y Rehabilitación Pediátrico;Por presupuesto ;$ 13,141.83;Por presupuesto ;$ 13,297.66;;;;
+990022;99.00.22;Fonoaudiología Adulto;$ 11,234.21;$ 14,603.16;$ 11,367.42;$ 14,776.32;;;;
+990023;99.00.23;Fonoaudiología Pediátrico;$ 11,234.21;$ 14,603.16;$ 11,367.42;$ 14,776.32;;;;
+990042;99.00.42;Estimulación Temprana;$ 11,234.21;$ 14,603.16;$ 11,367.42;$ 14,776.32;;;;
+990040;99.00.40;Terapia Ocupacional Adulto;$ 10,109.88;$ 13,141.83;$ 10,229.76;$ 13,297.66;;;;
+990041;99.00.41;Terapia Ocupacional Pediátrico;$ 10,109.88;$ 13,141.83;$ 10,229.76;$ 13,297.66;;;;
+;;Medicamentos;;;;;;;;
+;"70.50.01
+70.50.02";Kairos;Por Presupuesto;Por Presupuesto;Por Presupuesto;Por Presupuesto;;;;
+;;Soporte Nutricional;OSPEDYC;OSPEDYC;OSPEDYC;OSPEDYC;;;;
+;99.00.36;Adicional por zona desfavorable;25%;25%;25%;25%;;;;
+;;y nocturnidad;;;;;;;;
+;;;;;;;;;;
+;;;;;;;;;;
+;;"Quedan por fuera del convenio y por presupuesto, las prestaciones que no están convenidas y la provisión de aparatología, oxigenoterapia y alimentación, y los pacientes de Patagonia Incluido La Pampa y el Paciente de Córdoba, Collimedaglia por tratarse de un paciente más complejo de lo habitual por zona, patología situación familiar y legal. Estos pacientes que en la actualidad son 3 (Belen, Claudia Patricia de Bariloche, Collimedaglia de San Francisco y Martinez de La Pampa) actualizaremos los valores en la mismo porcentaje que el convenio, es decir 20% en enero y 15% en Febrero (no acumulativo)
+Los siguientes paciente pasan al convenio: Bartolomé; Barrios; Restamo; De Paola; Santos; Sanchez ";;;;;;;;

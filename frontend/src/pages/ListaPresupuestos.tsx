@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Paper, ActionIcon, Select, Loader, Text, Group } from '@mantine/core';
-import { PencilSquareIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { Paper, ActionIcon, Select, Loader, Text, Group, Tooltip } from '@mantine/core';
+import { PencilSquareIcon, EyeIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table';
 import { api } from '../api/api';
 import { getEstadoBadgeColor, getEstadoLabel } from '../utils/estadoPresupuesto';
@@ -17,7 +17,10 @@ interface Presupuesto {
   Nombre_Apellido: string;
   DNI: string;
   Sucursal: string;
+  sucursal_id: number;
   financiador_id: string | null;
+  zona_tarifario_id: number | null;
+  zona_financiador_id: number | null;
   total_insumos: number;
   total_prestaciones: number;
   costo_total: number;
@@ -41,15 +44,29 @@ interface ListaPresupuestosProps {
 
 export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger, esAuditor = false, soloConsulta = false, onVerDetalle }: ListaPresupuestosProps) {
   const { user } = useAuth();
-  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Estados para server-side pagination/filtering/sorting
+  const [data, setData] = useState<Presupuesto[]>([]);
+  const [totalRowCount, setTotalRowCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
+  
+  // Estados de la tabla
+  const [columnFilters, setColumnFilters] = useState<any[]>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [sorting, setSorting] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
   const [filtroAuditor, setFiltroAuditor] = useState('todos');
   const [filtroCreador, setFiltroCreador] = useState('todos');
 
   const handleGenerarPDF = useCallback(async (presupuestoId: number) => {
     try {
       const response = await api.get(`/presupuestos/${presupuestoId}`);
-      const presupuesto = response.data;
+      const presupuesto = response.data; // Detalle sigue retornando objeto directo
 
       pdfClientService.generarYDescargar({
         cliente: presupuesto.Nombre_Apellido,
@@ -78,26 +95,85 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     }
   }, []);
 
-  const cargarPresupuestos = useCallback(async () => {
+  const fetchData = useCallback(async () => {
+    if (!data.length) setIsLoading(true); // Don't show full loader on subsequent fetches
+    setError(false);
+
     try {
       let endpoint = '/presupuestos';
-      if (esAuditor && filtroAuditor === 'mis-auditorias') {
-        endpoint = '/auditoria-multi/mis-auditorias';
-      } else if (!esAuditor && filtroCreador === 'solo-mios') {
-        endpoint = '/presupuestos?scope=solo-mios';
+      const params: any = {
+        page: pagination.pageIndex + 1,
+        limit: pagination.pageSize,
+        search: globalFilter || undefined,
+      };
+
+      if (esAuditor) {
+         if (filtroAuditor === 'mis-auditorias') {
+             // Endpoint auditoria especial - adaptarlo si soporta paginación, si no, fallback client-side
+             // Supuesto: no modifiqué auditoria-multi.ts, entonces auditoria usa paginación cliente o endpoint distinto
+             // Si el endpoint de auditoría NO soporta paginación, mantendremos comportamiento anterior para ese caso
+             endpoint = '/auditoria-multi/mis-auditorias'; 
+             // Auditoria endpoints suelen devolver array directo.
+             // TODO: Verificar si auditoría necesita paginación server-side.
+             const response = await api.get(endpoint);
+             // Si es array directo
+             if (Array.isArray(response.data)) {
+                 setData(response.data);
+                 setTotalRowCount(response.data.length);
+             }
+             setIsLoading(false);
+             return;
+         }
+      } else {
+         if (filtroCreador === 'solo-mios') {
+            params.scope = 'solo-mios';
+         }
       }
-      const response = await api.get(endpoint);
-      setPresupuestos(response.data);
+
+      // Filtros de columna
+      const estadoFilter = columnFilters.find(f => f.id === 'estado');
+      if (estadoFilter) {
+          params.estado = estadoFilter.value;
+      }
+
+      const pacienteFilter = columnFilters.find(f => f.id === 'Nombre_Apellido');
+      if (pacienteFilter) {
+          params.paciente = pacienteFilter.value;
+      }
+
+      const response = await api.get(endpoint, { params });
+      
+      // Manejar respuesta { data: [], meta: {} }
+      if (response.data.meta) {
+          setData(response.data.data);
+          setTotalRowCount(response.data.meta.total);
+      } else if (Array.isArray(response.data)) {
+          // Fallback por si acaso o endpoints viejos
+          setData(response.data);
+          setTotalRowCount(response.data.length);
+      }
+
     } catch (error) {
       console.error('Error cargando presupuestos:', error);
+      setError(true);
+      notifications.show({ title: 'Error', message: 'No se pudieron cargar los datos', color: 'red' });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [esAuditor, filtroAuditor, filtroCreador]);
+  }, [
+      pagination.pageIndex, 
+      pagination.pageSize, 
+      globalFilter, 
+      columnFilters, 
+      esAuditor, 
+      filtroAuditor, 
+      filtroCreador,
+      recargarTrigger
+  ]);
 
   useEffect(() => {
-    cargarPresupuestos();
-  }, [recargarTrigger, cargarPresupuestos, filtroAuditor, filtroCreador]);
+    fetchData();
+  }, [fetchData]);
 
   const columns = useMemo<MRT_ColumnDef<Presupuesto>[]>(
     () => [
@@ -105,7 +181,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
         accessorKey: 'idPresupuestos',
         header: 'ID',
         size: 80,
-        enableColumnFilter: true,
+        enableColumnFilter: false, // Server-side specific filter not impl yet, use global
       },
       {
         accessorKey: 'Nombre_Apellido',
@@ -178,14 +254,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             </Text>
           );
         },
-        filterVariant: 'select',
-        mantineFilterSelectProps: {
-          data: [
-            { value: 'aprobado', label: 'Aprobado' },
-            { value: 'aprobado_condicional', label: 'Aprobado Condicional' },
-            { value: 'rechazado', label: 'Rechazado' },
-          ],
-        },
+        enableColumnFilter: false,
       },
       {
         accessorKey: 'utilidad',
@@ -199,6 +268,7 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             </Text>
           );
         },
+        enableColumnFilter: false,
       },
       {
         accessorKey: 'rentabilidad',
@@ -212,12 +282,14 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
             </Text>
           );
         },
+        enableColumnFilter: false,
       },
       {
         accessorKey: 'created_at',
         header: 'Fecha',
         size: 120,
         Cell: ({ cell }) => new Date(cell.getValue<string>()).toLocaleDateString(),
+        enableColumnFilter: false,
       },
     ],
     []
@@ -225,14 +297,26 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
 
   const table = useMantineReactTable({
     columns,
-    data: presupuestos,
-    enableColumnResizing: true,
+    data,
+    rowCount: totalRowCount,
+    state: {
+      columnFilters,
+      globalFilter,
+      isLoading,
+      pagination,
+      showAlertBanner: error,
+      showProgressBars: isLoading,
+      sorting,
+    },
     enableGlobalFilter: true,
-    enableColumnFilters: true,
-    enableSorting: true,
-    enablePagination: true,
+    manualFiltering: true,
+    manualPagination: true,
+    manualSorting: false, // Sorting server-side not implemented yet, do client side sorting of current page or disable
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
     initialState: {
-      pagination: { pageSize: 20, pageIndex: 0 },
       density: 'xs',
       columnVisibility: {
         DNI: user?.rol !== 'user',
@@ -293,38 +377,46 @@ export default function ListaPresupuestos({ onEditarPresupuesto, recargarTrigger
     ),
   });
 
-  if (loading) {
-    return <Loader />;
-  }
-
   return (
     <Paper shadow="sm" p="md" radius="md" withBorder>
       {(esAuditor || !soloConsulta) && (
-        <Group mb="md">
-          {esAuditor && (
-            <Select
-              placeholder="Auditor"
-              value={filtroAuditor}
-              onChange={(value) => setFiltroAuditor(value || 'todos')}
-              data={[
-                { value: 'todos', label: 'Todos' },
-                { value: 'mis-auditorias', label: 'Mis auditorías' }
-              ]}
-              style={{ width: 200 }}
-            />
-          )}
-          {!esAuditor && !soloConsulta && (
-            <Select
-              placeholder="Creador"
-              value={filtroCreador}
-              onChange={(value) => setFiltroCreador(value || 'todos')}
-              data={[
-                { value: 'todos', label: 'Todos' },
-                { value: 'solo-mios', label: 'Solo míos' }
-              ]}
-              style={{ width: 200 }}
-            />
-          )}
+        <Group mb="md" justify="space-between">
+          <Group>
+            {esAuditor && (
+              <Select
+                placeholder="Auditor"
+                value={filtroAuditor}
+                onChange={(value) => setFiltroAuditor(value || 'todos')}
+                data={[
+                  { value: 'todos', label: 'Todos' },
+                  { value: 'mis-auditorias', label: 'Mis auditorías' }
+                ]}
+                style={{ width: 200 }}
+              />
+            )}
+            {!esAuditor && !soloConsulta && (
+              <Select
+                placeholder="Creador"
+                value={filtroCreador}
+                onChange={(value) => setFiltroCreador(value || 'todos')}
+                data={[
+                  { value: 'todos', label: 'Todos' },
+                  { value: 'solo-mios', label: 'Solo míos' }
+                ]}
+                style={{ width: 200 }}
+              />
+            )}
+          </Group>
+          <Tooltip label="Actualizar lista">
+            <ActionIcon
+              variant="light"
+              color="blue"
+              onClick={fetchData}
+              loading={isLoading}
+            >
+              <ArrowPathIcon style={ICON_SIZE_LG} />
+            </ActionIcon>
+          </Tooltip>
         </Group>
       )}
       <MantineReactTable table={table} />

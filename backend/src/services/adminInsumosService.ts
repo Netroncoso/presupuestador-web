@@ -4,12 +4,50 @@ import { AppError } from '../middleware/errorHandler';
 import { cacheService } from './cacheService';
 
 export class AdminInsumosService {
-  
-  async obtenerTodos() {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT idInsumos, producto, costo, codigo_producto, critico FROM insumos ORDER BY producto'
-    );
-    return rows;
+
+  async obtenerTodos(page: number = 1, limit: number = 50, search: string = '') {
+    const cacheKey = `admin:insumos:page:${page}:limit:${limit}:search:${search}`;
+    const cached = cacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const offset = (page - 1) * limit;
+
+    let query = 'SELECT idInsumos, producto, costo, codigo_producto, critico FROM insumos';
+    let countQuery = 'SELECT COUNT(*) as total FROM insumos';
+    const params: any[] = [];
+    const countParams: any[] = [];
+
+    if (search) {
+      const searchClause = ' WHERE producto LIKE ? OR codigo_producto LIKE ?';
+      query += searchClause;
+      countQuery += searchClause;
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam);
+      countParams.push(searchParam, searchParam);
+    }
+
+    query += ' ORDER BY producto LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+
+    const [countResult] = await pool.query<RowDataPacket[]>(countQuery, countParams);
+
+    const result = {
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        total: countResult[0].total,
+        totalPages: Math.ceil(countResult[0].total / limit)
+      }
+    };
+
+    cacheService.set(cacheKey, result, 300); // 5 minutes cache
+    return result;
   }
 
   async crear(datos: { producto: string; costo: number; codigo_producto?: string }) {
@@ -100,9 +138,14 @@ export class AdminInsumosService {
 
   private invalidateCache() {
     // Invalidar todas las páginas de insumos
-    cacheService.del('insumos:page:1:limit:100');
-    cacheService.del('insumos:page:1:limit:50');
-    cacheService.del('insumos:page:1:limit:20');
+    // Invalidar caché de admin insumos
+    try {
+      const keys = cacheService.keys();
+      const insumoKeys = keys.filter((key: string) => key.startsWith('admin:insumos:') || key.startsWith('insumos:'));
+      insumoKeys.forEach((key: string) => cacheService.del(key));
+    } catch (error) {
+      console.warn('Error clearing insumos cache:', error);
+    }
   }
 }
 

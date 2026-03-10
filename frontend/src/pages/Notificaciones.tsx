@@ -55,10 +55,6 @@ const Notificaciones: React.FC<NotificacionesProps> = ({ onIrAuditoria }) => {
 
   useEffect(() => {
     fetchNotifications();
-    
-    // Auto-refresh every 60 seconds as fallback
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
   }, [filtroEstado, filtroPaciente, filtroPresupuesto]);
 
   const fetchNotifications = async () => {

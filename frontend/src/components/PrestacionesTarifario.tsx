@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { useState, useEffect } from 'react';
-import { Select, NumberInput, Button, Table, Badge, Group, Stack, Text, Alert, Grid, Paper, Title, Checkbox, ActionIcon } from '@mantine/core';
+import { Select, NumberInput, Button, Table, Badge, Group, Stack, Text, Alert, Grid, Paper, Title, Checkbox, ActionIcon, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconAlertTriangle, IconTrash } from '@tabler/icons-react';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
@@ -22,7 +22,7 @@ interface PrestacionTarifario {
   tarifario_servicio_id: number;
   prestacion: string;
   cantidad: number;
-  zona_id: number;
+  zona_tarifario_id: number;
   orden_costo: number;
   valor_asignado: number;
   valor_facturar: number;
@@ -43,6 +43,7 @@ export default function PrestacionesTarifario({ presupuestoId, zonaId, soloLectu
   const [nuevoValor, setNuevoValor] = useState(0);
   const [alertasConfig, setAlertasConfig] = useState<any[]>([]);
   const [costoManual, setCostoManual] = useState<string>('');
+  const [busquedaServicio, setBusquedaServicio] = useState('');
 
   useEffect(() => {
     cargarPrestaciones();
@@ -131,8 +132,8 @@ export default function PrestacionesTarifario({ presupuestoId, zonaId, soloLectu
     // Alerta persistente si selecciona orden 5
     if (orden === 5) {
       notifications.show({
-        title: 'Requiere Autorización',
-        message: 'Este servicio requiere autorización de Gerencia Prestacional',
+        title: 'Valor Más Alto Seleccionado',
+        message: `${servicio?.nombre}: Requiere autorización de Gerencia Prestacional (valor máximo del tarifario)`,
         color: 'orange',
         autoClose: false,
         position: 'top-center'
@@ -141,9 +142,9 @@ export default function PrestacionesTarifario({ presupuestoId, zonaId, soloLectu
 
     try {
       const payload: any = {
-        tarifario_servicio_id: parseInt(servicioSeleccionado),
+        servicio_id: parseInt(servicioSeleccionado),
         cantidad,
-        zona_id: zonaId
+        zona_tarifario_id: zonaId
       };
 
       if (costoManual) {
@@ -263,7 +264,16 @@ export default function PrestacionesTarifario({ presupuestoId, zonaId, soloLectu
             <Grid>
               <Grid.Col span={6}>
                 <Stack gap="xs">
-                  <Title order={5}>Servicios Disponibles</Title>
+                  <Group justify="space-between">
+                    <Title order={5}>Servicios Disponibles</Title>
+                    <TextInput
+                      placeholder="Buscar servicio..."
+                      value={busquedaServicio}
+                      onChange={(e) => setBusquedaServicio(e.currentTarget.value)}
+                      size="xs"
+                      style={{ width: 200 }}
+                    />
+                  </Group>
                   <Table.ScrollContainer minWidth={700} h={400}>
                     <Table striped="odd" highlightOnHover stickyHeader>
                       <Table.Thead>
@@ -274,7 +284,9 @@ export default function PrestacionesTarifario({ presupuestoId, zonaId, soloLectu
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
-                        {servicios.map((s) => {
+                        {servicios
+                          .filter(s => s.nombre.toLowerCase().includes(busquedaServicio.toLowerCase()))
+                          .map((s) => {
                           const esSeleccionado = servicioSeleccionado === s.id.toString();
                           const valoresServicio = esSeleccionado ? valoresDisponibles : [];
                           

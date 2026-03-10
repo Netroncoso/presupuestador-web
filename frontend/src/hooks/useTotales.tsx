@@ -94,9 +94,6 @@ export const useTotales = (
 
   const setTotalesDesdeBaseDatos = useCallback((totales: any) => {
     setTotalesDesdeDB(totales);
-    setTotalCostoInsumos(totales.totalInsumos || 0);
-    setTotalFacturarInsumos(totales.totalInsumos || 0);
-    setTotalPrestaciones(totales.totalPrestaciones || 0);
   }, []);
 
   return {

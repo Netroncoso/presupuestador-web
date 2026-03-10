@@ -103,6 +103,8 @@ Catálogo de financiadores (obras sociales, prepagas, etc.).
 | dias_cobranza_real | int | YES | NULL | | | Días de cobranza reales calculados |
 | id_acuerdo | int | YES | NULL | MUL | | FK → financiador_acuerdo.id_acuerdo |
 | porcentaje_insumos | decimal(5,2) | YES | 0.00 | | | Porcentaje adicional para cálculo de insumos (se suma al % base) |
+| porcentaje_horas_nocturnas | decimal(5,2) | YES | 0.00 | | | Recargo % por horas nocturnas (aplica a servicios que lo permitan) |
+| porcentaje_dificil_acceso | decimal(5,2) | YES | 0.00 | | | Recargo % por zona desfavorable (aplica a todos los servicios) |
 
 **Foreign Keys:**
 - `id_acuerdo` → `financiador_acuerdo.id_acuerdo`
@@ -158,43 +160,44 @@ Valores históricos de equipamientos por financiador y sucursal.
 ---
 
 ### financiador_servicio
-Relación entre financiadores y servicios (acuerdos).
+Relación entre financiadores y servicios unificados (acuerdos por zona).
 
 | Column | Type | Nullable | Default | Key | Extra | Comment |
 |--------|------|----------|---------|-----|-------|---------|
 | id | int | NO | NULL | PRI | auto_increment | |
 | financiador_id | int | NO | NULL | MUL | | FK → financiador.id |
-| id_servicio | int | NO | NULL | MUL | | FK → servicios.id_servicio |
-| valor_facturar | decimal(10,2) | NO | NULL | | | |
-| total_mes | decimal(10,2) | YES | NULL | | | |
-| condicion | text | YES | NULL | | | |
-| activo | tinyint | YES | 1 | | | |
-| cant_total | int | YES | NULL | | | |
-| valor_sugerido | decimal(10,2) | YES | NULL | | | Valor recomendado |
+| servicio_id | int | NO | NULL | MUL | | FK → servicios.id |
+| unidades_base | decimal(10,2) | YES | 1 | MUL | | Cantidad de unidades del tarifario que componen este servicio |
+| admite_horas_nocturnas | tinyint(1) | YES | 0 | MUL | | Flag: si este servicio admite recargo por horas nocturnas |
+| activo | tinyint(1) | YES | 1 | MUL | | |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
 
 **Foreign Keys:**
 - `financiador_id` → `financiador.id`
-- `id_servicio` → `servicios.id_servicio`
+- `servicio_id` → `servicios.id`
+
+**Unique Constraints:**
+- `unique_financiador_servicio` (financiador_id, servicio_id)
 
 ---
 
 ### financiador_servicio_valores
-Valores históricos de servicios por financiador y sucursal (sistema timelapse).
+Valores históricos de convenios por zona (1 precio por zona).
 
 | Column | Type | Nullable | Default | Key | Extra | Comment |
 |--------|------|----------|---------|-----|-------|---------|
 | id | int | NO | NULL | PRI | auto_increment | |
 | financiador_servicio_id | int | NO | NULL | MUL | | FK → financiador_servicio.id |
-| sucursal_id | int | YES | NULL | MUL | | NULL = todas las sucursales, FK → sucursales_mh.ID |
-| valor_asignado | decimal(10,2) | NO | NULL | | | |
-| valor_facturar | decimal(10,2) | NO | NULL | | | |
+| zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
+| precio_facturar | decimal(10,2) | NO | NULL | | | Precio convenido único por zona |
 | fecha_inicio | date | NO | NULL | MUL | | |
 | fecha_fin | date | YES | NULL | | | |
 | created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
 
 **Foreign Keys:**
 - `financiador_servicio_id` → `financiador_servicio.id`
-- `sucursal_id` → `sucursales_mh.ID`
+- `zona_id` → `tarifario_zonas.id`
 
 ---
 
@@ -277,22 +280,34 @@ Insumos incluidos en un presupuesto.
 ---
 
 ### presupuesto_prestaciones
-Prestaciones (servicios) incluidas en un presupuesto.
+Prestaciones (servicios con convenio) incluidas en un presupuesto.
 
 | Column | Type | Nullable | Default | Key | Extra | Comment |
 |--------|------|----------|---------|-----|-------|---------|
 | id | int | NO | NULL | PRI | auto_increment | |
 | idPresupuestos | int | NO | NULL | MUL | | FK → presupuestos.idPresupuestos |
-| id_servicio | varchar(50) | NO | NULL | | | |
+| servicio_id | int | YES | NULL | MUL | | FK → servicios.id |
+| zona_financiador_id | int | YES | NULL | MUL | | FK → financiador_zonas.id (snapshot histórico) |
+| zona_tarifario_id | int | YES | NULL | MUL | | FK → tarifario_zonas.id (para servicios del tarifario) |
+| zona_id | int | YES | NULL | MUL | | DEPRECATED: Usar zona_financiador_id o zona_tarifario_id |
+| orden_costo | tinyint | YES | NULL | | | 1-5: orden del costo usado |
+| id_servicio | varchar(50) | NO | NULL | | | Legacy: ID string del servicio |
 | prestacion | varchar(255) | NO | NULL | | | |
 | cantidad | int | NO | NULL | | | |
-| valor_asignado | decimal(10,2) | NO | NULL | | | |
-| valor_facturar | decimal(10,2) | NO | 0.00 | | | |
+| valor_asignado | decimal(10,2) | NO | NULL | | | Snapshot histórico del costo |
+| valor_facturar | decimal(10,2) | NO | 0.00 | | | Snapshot histórico del precio |
+| aplicar_horas_nocturnas | tinyint(1) | YES | 0 | MUL | | Flag: si se aplicó recargo por horas nocturnas |
+| porcentaje_aplicado | decimal(5,2) | YES | 0.00 | | | Porcentaje de recargo aplicado (para histórico) |
 | created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
 | updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
 
 **Foreign Keys:**
 - `idPresupuestos` → `presupuestos.idPresupuestos`
+- `servicio_id` → `servicios.id`
+- `zona_financiador_id` → `financiador_zonas.id`
+- `zona_tarifario_id` → `tarifario_zonas.id`
+
+**Nota:** Esta tabla almacena snapshots históricos. Las columnas `zona_*_id`, `valor_asignado` y `valor_facturar` congelan los valores exactos usados al momento de crear el presupuesto.
 
 ---
 
@@ -303,7 +318,7 @@ Servicios del tarifario interno incluidos en un presupuesto (separado de conveni
 |--------|------|----------|---------|-----|-------|---------|
 | id | int | NO | NULL | PRI | auto_increment | |
 | idPresupuestos | int | NO | NULL | MUL | | FK → presupuestos.idPresupuestos |
-| tarifario_servicio_id | int | NO | NULL | MUL | | FK → tarifario_servicio.id |
+| servicio_id | int | NO | NULL | MUL | | FK → servicios.id (antes tarifario_servicio_id) |
 | prestacion | varchar(255) | NO | NULL | | | Nombre del servicio |
 | cantidad | int | NO | NULL | | | Cantidad de unidades |
 | zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
@@ -316,7 +331,7 @@ Servicios del tarifario interno incluidos en un presupuesto (separado de conveni
 
 **Foreign Keys:**
 - `idPresupuestos` → `presupuestos.idPresupuestos`
-- `tarifario_servicio_id` → `tarifario_servicio.id`
+- `servicio_id` → `servicios.id`
 - `zona_id` → `tarifario_zonas.id`
 
 ---
@@ -352,6 +367,9 @@ Tabla principal de presupuestos con sistema de versionado.
 | version | int | YES | 1 | | | |
 | porcentaje_insumos | decimal(5,2) | YES | 0.00 | | | Porcentaje de margen aplicado a insumos |
 | referencia_externa | varchar(255) | YES | NULL | MUL | | Referencia/ID en Softwerk para búsqueda |
+| razones_auditoria | json | YES | NULL | | | Razones detalladas por las que requiere auditoría (v4.0) |
+| tiene_orden_5 | tinyint | YES | 0 | MUL | | Flag: contiene servicios con orden 5 (v4.0) |
+| tiene_insumos_criticos | tinyint | YES | 0 | MUL | | Flag: contiene insumos críticos (v4.0) |
 
 **Estados posibles:**
 - `borrador`
@@ -378,17 +396,22 @@ Tabla principal de presupuestos con sistema de versionado.
 ---
 
 ### servicios
-Catálogo de servicios médicos.
+Catálogo unificado de servicios médicos (tarifario + convenios).
 
 | Column | Type | Nullable | Default | Key | Extra | Comment |
 |--------|------|----------|---------|-----|-------|---------|
-| id_servicio | int | NO | NULL | PRI | auto_increment | |
-| nombre | varchar(100) | NO | NULL | MUL | | |
+| id | int | NO | NULL | PRI | auto_increment | |
+| nombre | varchar(255) | NO | NULL | UNI | | |
+| descripcion | text | YES | NULL | | | |
 | tipo_unidad | varchar(50) | YES | NULL | MUL | | FK → tipos_unidad.nombre |
-| max_unidades_sugerido | int | YES | NULL | | | |
+| activo | tinyint(1) | YES | 1 | MUL | | |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
 
 **Foreign Keys:**
 - `tipo_unidad` → `tipos_unidad.nombre`
+
+**Note:** Tabla unificada post-migración 009. Antes existían `servicios` (convenios) y `tarifario_servicio` (tarifario) como tablas separadas.
 
 ---
 
@@ -399,7 +422,6 @@ Catálogo de sucursales.
 |--------|------|----------|---------|-----|-------|---------|
 | ID | int | NO | NULL | PRI | auto_increment | |
 | Sucursales_mh | varchar(45) | NO | NULL | UNI | | |
-| suc_porcentaje_dificil_acceso | int | YES | NULL | | | |
 | suc_porcentaje_insumos | int | YES | NULL | | | |
 
 ---
@@ -421,43 +443,31 @@ Relación entre sucursales y zonas del tarifario (N:M).
 
 ---
 
-### tarifario_servicio
-Catálogo de servicios del tarifario interno.
-
-| Column | Type | Nullable | Default | Key | Extra | Comment |
-|--------|------|----------|---------|-----|-------|---------|
-| id | int | NO | NULL | PRI | auto_increment | |
-| nombre | varchar(255) | NO | NULL | UNI | | Ej: HORA CUIDADOR, HORA ENFERMERIA ADULTO |
-| descripcion | text | YES | NULL | | | |
-| tipo_unidad | varchar(50) | YES | NULL | MUL | | FK → tipos_unidad.nombre |
-| activo | tinyint(1) | YES | 1 | MUL | | |
-| created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
-| updated_at | timestamp | YES | CURRENT_TIMESTAMP | | on update CURRENT_TIMESTAMP | |
-
-**Foreign Keys:**
-- `tipo_unidad` → `tipos_unidad.nombre`
+### tarifario_servicio (DEPRECATED)
+**NOTA:** Esta tabla fue unificada con `servicios` en migración 009. Ahora existe solo la tabla `servicios` unificada.
 
 ---
 
 ### tarifario_servicio_valores
-Valores históricos de servicios del tarifario por zona (5 costos por zona).
+Valores históricos del tarifario MediHome por zona (5 costos por zona).
 
 | Column | Type | Nullable | Default | Key | Extra | Comment |
 |--------|------|----------|---------|-----|-------|---------|
 | id | int | NO | NULL | PRI | auto_increment | |
-| tarifario_servicio_id | int | NO | NULL | MUL | | FK → tarifario_servicio.id |
+| servicio_id | int | NO | NULL | MUL | | FK → servicios.id (antes tarifario_servicio_id) |
 | zona_id | int | NO | NULL | MUL | | FK → tarifario_zonas.id |
 | costo_1 | decimal(10,2) | NO | NULL | | | Costo orden 1 (más bajo) |
 | costo_2 | decimal(10,2) | NO | NULL | | | Costo orden 2 |
 | costo_3 | decimal(10,2) | NO | NULL | | | Costo orden 3 |
 | costo_4 | decimal(10,2) | NO | NULL | | | Costo orden 4 |
 | costo_5 | decimal(10,2) | NO | NULL | | | Costo orden 5 (más alto) |
+| valor_maximo | decimal(10,2) | YES | NULL | | | Valor máximo permitido para este servicio/zona |
 | fecha_inicio | date | NO | NULL | MUL | | Inicio de vigencia |
 | fecha_fin | date | YES | NULL | | | Fin de vigencia (NULL = vigente) |
 | created_at | timestamp | YES | CURRENT_TIMESTAMP | | DEFAULT_GENERATED | |
 
 **Foreign Keys:**
-- `tarifario_servicio_id` → `tarifario_servicio.id`
+- `servicio_id` → `servicios.id`
 - `zona_id` → `tarifario_zonas.id`
 
 ---
@@ -557,14 +567,18 @@ presupuestos
 ```
 financiador
 ├── financiador_servicio (1:N)
-│   └── financiador_servicio_valores (1:N)
+│   └── financiador_servicio_valores (1:N) - 1 precio por zona
 └── financiador_equipamiento (1:N)
     └── financiador_equipamiento_valores (1:N)
+
+servicios (unificado)
+├── financiador_servicio (1:N) - Convenios
+└── tarifario_servicio_valores (1:N) - Tarifario MediHome (5 costos/zona)
 ```
 
 ### Tarifario System
 ```
-tarifario_servicio
+servicios (unificado)
 └── tarifario_servicio_valores (1:N)
     └── tarifario_zonas (N:1)
 
@@ -573,18 +587,20 @@ sucursales_mh
     └── tarifario_zonas (N:1)
 
 presupuestos
-└── presupuesto_prestaciones_tarifario (1:N)
-    ├── tarifario_servicio (N:1)
+├── presupuesto_prestaciones (1:N) - Convenios con zona
+│   ├── servicios (N:1)
+│   └── tarifario_zonas (N:1)
+└── presupuesto_prestaciones_tarifario (1:N) - Tarifario
+    ├── servicios (N:1)
     └── tarifario_zonas (N:1)
 ```
 
 ### Catalog Tables
 ```
-servicios → tipos_unidad
+servicios → tipos_unidad (tabla unificada post-migración 009)
 equipamientos → tipos_equipamiento
 insumos (standalone)
 sucursales_mh (standalone)
-tarifario_servicio → tipos_unidad
 tarifario_zonas (standalone)
 ```
 
@@ -619,5 +635,95 @@ tarifario_zonas (standalone)
 
 ---
 
-**Last Updated:** January 2025  
-**Source:** Tablas-full2.csv + Tarifario migrations (001-005)
+**Last Updated:** February 2025  
+**Source:** Tablas-full2.csv + Tarifario migrations (001-005) + Unificación servicios (009) + Mejoras servicios (018)
+
+## Migration History
+
+### Migration 019: Eliminar Columna Obsoleta (Febrero 2025)
+**Cambios principales:**
+1. Eliminada columna `suc_porcentaje_dificil_acceso` de `sucursales_mh`
+   - Columna legacy que no se usaba en cálculos
+   - El sistema usa `financiador.porcentaje_dificil_acceso` desde migración 018
+   - Limpieza de código: eliminadas referencias en services y controllers
+
+### Migration 018: Mejoras Sistema de Servicios (Febrero 2025)
+**Cambios principales:**
+1. Agregada columna `unidades_base` a `financiador_servicio`
+   - Permite calcular correctamente el costo de servicios "combo" (ej: Guardia 4 hs = 4 unidades)
+2. Agregada columna `porcentaje_horas_nocturnas` a `financiador`
+   - Recargo global por horas nocturnas (aplica a servicios que lo permitan)
+3. Agregada columna `admite_horas_nocturnas` a `financiador_servicio`
+   - Flag para marcar qué servicios admiten recargo nocturno
+4. Agregada columna `porcentaje_dificil_acceso` a `financiador`
+   - Recargo por zona desfavorable (movido de sucursal a financiador)
+5. Agregadas columnas `aplicar_horas_nocturnas` y `porcentaje_aplicado` a `presupuesto_prestaciones`
+   - Histórico de recargos aplicados en cada presupuesto
+6. Índices agregados para performance:
+   - `idx_financiador_servicio_unidades`
+   - `idx_financiador_servicio_nocturnas`
+   - `idx_prestaciones_nocturnas`
+
+### Migration 022: Sistema Dual de Zonas en presupuesto_prestaciones (Enero 2025)
+**Cambios principales:**
+1. Agregadas columnas `zona_financiador_id` y `zona_tarifario_id` a `presupuesto_prestaciones`
+2. Migrados datos existentes: `zona_id` → `zona_financiador_id`
+3. Agregadas FKs a `financiador_zonas` y `tarifario_zonas`
+4. `zona_id` marcada como DEPRECATED (mantener temporalmente para rollback)
+5. Clarifica que prestaciones con convenio usan `zona_financiador_id` (precio)
+6. Prestaciones del tarifario usarían `zona_tarifario_id` (costo)
+
+### Migration 012: Valor Máximo por Servicio (Enero 2025)
+**Cambios principales:**
+1. Agregada columna `valor_maximo` a `tarifario_servicio_valores`
+2. Define límite máximo permitido por servicio/zona
+3. Markup excesivo ahora compara contra valor específico por servicio
+4. Valores por defecto: costo_5 * 1.8 para servicios existentes
+5. Índice optimizado para consultas de auditoría
+
+### Migration 011: Sistema de Evaluación de Auditoría v4.0 (Enero 2025)
+**Cambios principales:**
+1. Agregadas columnas para múltiples razones de auditoría:
+   - `razones_auditoria` (JSON): Almacena todas las violaciones detectadas
+   - `tiene_orden_5` (TINYINT): Flag para servicios con valor más alto
+   - `tiene_insumos_criticos` (TINYINT): Flag para insumos críticos
+2. Evaluación completa de TODAS las reglas antes de determinar estado
+3. Servicios con orden 5 ahora fuerzan auditoría automáticamente
+4. Auditoría manual con evaluación de contexto
+5. Transparencia total: usuario y auditor ven todas las razones
+6. Estructura JSON para razones:
+   ```json
+   {
+     "razones": [
+       {"tipo": "rentabilidad_baja", "valor": 8.5, "umbral": 15, "mensaje": "..."},
+       {"tipo": "orden_5", "servicios": [...], "mensaje": "..."}
+     ],
+     "evaluado_en": "2025-01-06T10:30:00Z",
+     "total_violaciones": 2,
+     "tipo_evaluacion": "automatica" | "manual"
+   }
+   ```
+
+### Migration 010: Optimización de Queries (Febrero 2026)
+**Cambios principales:**
+1. Agregados índices en tablas de items de presupuestos para mejorar performance
+2. Índices en: presupuesto_insumos, presupuesto_prestaciones, presupuesto_equipamiento, presupuesto_prestaciones_tarifario
+3. Mejora significativa en tiempo de respuesta de GET /presupuestos/:id
+
+### Migration 009: Unificación de Servicios (Enero 2025)
+**Cambios principales:**
+1. Unificó tablas `servicios` y `tarifario_servicio` en una sola tabla `servicios`
+2. `financiador_servicio.id_servicio` → `financiador_servicio.servicio_id` (INT)
+3. `financiador_servicio_valores` ahora usa `zona_id` en lugar de `sucursal_id`
+4. `tarifario_servicio_valores.tarifario_servicio_id` → `tarifario_servicio_valores.servicio_id`
+5. `presupuesto_prestaciones_tarifario.tarifario_servicio_id` → `presupuesto_prestaciones_tarifario.servicio_id`
+6. Agregadas columnas a `presupuesto_prestaciones`: `servicio_id`, `zona_id`, `orden_costo`
+7. Convenios ahora tienen 1 precio por zona (antes por sucursal)
+8. Tarifario mantiene 5 costos por zona
+
+**Tablas eliminadas:**
+- `servicios_old` (legacy)
+- `tarifario_servicio_old` (legacy)
+- `tarifario_servicio_valores_old` (legacy)
+- `financiador_servicio_old` (legacy)
+- `financiador_servicio_valores_old` (legacy)

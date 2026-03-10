@@ -37,7 +37,7 @@ export interface TarifarioServicio extends RowDataPacket {
 // Valores Históricos del Servicio
 export interface TarifarioServicioValor extends RowDataPacket {
   id: number;
-  tarifario_servicio_id: number;
+  servicio_id: number;
   zona_id: number;
   costo_1: number;
   costo_2: number;
@@ -53,7 +53,7 @@ export interface TarifarioServicioValor extends RowDataPacket {
 export interface PresupuestoPrestacionTarifario extends RowDataPacket {
   id: number;
   idPresupuestos: number;
-  tarifario_servicio_id: number;
+  servicio_id: number;
   prestacion: string;
   cantidad: number;
   zona_id: number;
@@ -68,9 +68,10 @@ export interface PresupuestoPrestacionTarifario extends RowDataPacket {
 // DTOs para API
 
 export interface CrearPrestacionTarifarioDTO {
-  tarifario_servicio_id: number;
+  servicio_id: number;
   cantidad: number;
   zona_id: number;
+  zona_tarifario_id?: number; // Alias para zona_id (compatibilidad)
   orden_costo: number;
   valor_asignado?: number; // Opcional si edita manualmente
   fuera_tarifario?: number; // 1 si editó manualmente
@@ -83,7 +84,7 @@ export interface ActualizarPrestacionTarifarioDTO {
 }
 
 export interface CrearValorTarifarioDTO {
-  tarifario_servicio_id: number;
+  servicio_id: number;
   zona_id: number;
   costo_1: number;
   costo_2: number;

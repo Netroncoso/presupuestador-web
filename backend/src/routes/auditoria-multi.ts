@@ -45,16 +45,24 @@ router.use(authenticateToken);
  * GET /api/auditoria-multi/pendientes
  * Obtiene casos pendientes para la gerencia del usuario
  */
+/**
+ * GET /api/auditoria-multi/pendientes
+ * Obtiene casos pendientes para la gerencia del usuario
+ */
 router.get('/pendientes', requireAnyGerencia, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const rol = req.user.rol;
   const usuarioId = req.user.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = (page - 1) * limit;
+  const search = req.query.search as string;
 
   // Mapear rol a estado pendiente
   const estadoMap: Record<string, string> = {
     'gerencia_prestacional': 'pendiente_prestacional',
     'gerencia_comercial': 'pendiente_comercial',
     'gerencia_general': 'pendiente_general',
-    'admin': 'pendiente_prestacional' // Admin ve todos
+    'admin': 'pendiente_prestacional' // Admin ve todos (por defecto start)
   };
 
   const estado = estadoMap[rol];
@@ -62,15 +70,7 @@ router.get('/pendientes', requireAnyGerencia, asyncHandler(async (req: Authentic
     throw new AppError(403, 'Rol no autorizado para auditoría');
   }
 
-  // Obtener casos disponibles O asignados a mí
-  const [casos] = await pool.query<RowDataPacket[]>(`
-    SELECT 
-      p.*,
-      s.Sucursales_mh as sucursal_nombre,
-      f.Financiador as financiador_nombre,
-      u.username as usuario_creador,
-      revisor.username as revisor_nombre,
-      DATEDIFF(NOW(), p.created_at) as dias_pendiente
+  let baseQuery = `
     FROM presupuestos p
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
     LEFT JOIN financiador f ON p.financiador_id = f.id
@@ -79,10 +79,42 @@ router.get('/pendientes', requireAnyGerencia, asyncHandler(async (req: Authentic
     WHERE p.estado = ?
       AND p.es_ultima_version = 1
       AND (p.revisor_id IS NULL OR p.revisor_id = ?)
-    ORDER BY p.created_at ASC
-  `, [estado, usuarioId]);
+  `;
 
-  res.json(casos);
+  const params: any[] = [estado, usuarioId];
+
+  if (search) {
+    baseQuery += ` AND (p.Nombre_Apellido LIKE ? OR p.DNI LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  // Count query
+  const [countResult] = await pool.query<any[]>(`SELECT COUNT(*) as total ${baseQuery}`, params);
+  const total = countResult[0]?.total || 0;
+
+  // Data query
+  const [casos] = await pool.query<RowDataPacket[]>(`
+    SELECT 
+      p.*,
+      s.Sucursales_mh as sucursal_nombre,
+      f.Financiador as financiador_nombre,
+      u.username as usuario_creador,
+      revisor.username as revisor_nombre,
+      DATEDIFF(NOW(), p.created_at) as dias_pendiente
+    ${baseQuery}
+    ORDER BY p.created_at ASC
+    LIMIT ? OFFSET ?
+  `, [...params, limit, offset]);
+
+  res.json({
+    data: casos,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 }));
 
 /**
@@ -104,6 +136,29 @@ router.get('/pendientes', requireAnyGerencia, asyncHandler(async (req: Authentic
  */
 router.get('/mis-casos', requireAnyGerencia, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const usuarioId = req.user.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = (page - 1) * limit;
+  const search = req.query.search as string;
+
+  let baseQuery = `
+    FROM presupuestos p
+    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
+    LEFT JOIN financiador f ON p.financiador_id = f.id
+    LEFT JOIN usuarios u ON p.usuario_id = u.id
+    WHERE p.revisor_id = ?
+      AND p.estado IN ('en_revision_prestacional', 'en_revision_comercial', 'en_revision_general')
+      AND p.es_ultima_version = 1
+  `;
+  const params: any[] = [usuarioId];
+
+  if (search) {
+    baseQuery += ` AND (p.Nombre_Apellido LIKE ? OR p.DNI LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  const [countResult] = await pool.query<any[]>(`SELECT COUNT(*) as total ${baseQuery}`, params);
+  const total = countResult[0]?.total || 0;
 
   const [casos] = await pool.query<RowDataPacket[]>(`
     SELECT 
@@ -112,17 +167,20 @@ router.get('/mis-casos', requireAnyGerencia, asyncHandler(async (req: Authentica
       f.Financiador as financiador_nombre,
       u.username as usuario_creador,
       TIMESTAMPDIFF(MINUTE, p.revisor_asignado_at, NOW()) as minutos_asignado
-    FROM presupuestos p
-    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN financiador f ON p.financiador_id = f.id
-    LEFT JOIN usuarios u ON p.usuario_id = u.id
-    WHERE p.revisor_id = ?
-      AND p.estado IN ('en_revision_prestacional', 'en_revision_comercial', 'en_revision_general')
-      AND p.es_ultima_version = 1
+    ${baseQuery}
     ORDER BY p.revisor_asignado_at DESC
-  `, [usuarioId]);
+    LIMIT ? OFFSET ?
+  `, [...params, limit, offset]);
 
-  res.json(casos);
+  res.json({
+    data: casos,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 }));
 
 /**
@@ -131,13 +189,12 @@ router.get('/mis-casos', requireAnyGerencia, asyncHandler(async (req: Authentica
  */
 router.get('/mis-auditorias', requireAnyGerencia, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const usuarioId = req.user.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = (page - 1) * limit;
+  const search = req.query.search as string;
 
-  const [presupuestos] = await pool.query<RowDataPacket[]>(`
-    SELECT DISTINCT
-      p.*,
-      s.Sucursales_mh as Sucursal,
-      f.Financiador as financiador_nombre,
-      u.username as usuario_creador
+  let baseQuery = `
     FROM presupuestos p
     INNER JOIN auditorias_presupuestos a ON p.idPresupuestos = a.presupuesto_id
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
@@ -145,10 +202,37 @@ router.get('/mis-auditorias', requireAnyGerencia, asyncHandler(async (req: Authe
     LEFT JOIN usuarios u ON p.usuario_id = u.id
     WHERE a.auditor_id = ?
       AND p.es_ultima_version = 1
-    ORDER BY p.created_at DESC
-  `, [usuarioId]);
+  `;
+  const params: any[] = [usuarioId];
 
-  res.json(presupuestos);
+  if (search) {
+    baseQuery += ` AND (p.Nombre_Apellido LIKE ? OR p.DNI LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  const [countResult] = await pool.query<any[]>(`SELECT COUNT(DISTINCT p.idPresupuestos) as total ${baseQuery}`, params);
+  const total = countResult[0]?.total || 0;
+
+  const [presupuestos] = await pool.query<RowDataPacket[]>(`
+    SELECT DISTINCT
+      p.*,
+      s.Sucursales_mh as Sucursal,
+      f.Financiador as financiador_nombre,
+      u.username as usuario_creador
+    ${baseQuery}
+    ORDER BY p.created_at DESC
+    LIMIT ? OFFSET ?
+  `, [...params, limit, offset]);
+
+  res.json({
+    data: presupuestos,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 }));
 
 /**

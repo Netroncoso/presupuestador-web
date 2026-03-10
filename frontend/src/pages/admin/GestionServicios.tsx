@@ -6,9 +6,10 @@ import { api } from '../../api/api';
 import AdminTable from '../../components/AdminTable';
 
 interface Servicio {
-  id_servicio: string;
+  id: number;
   nombre: string;
   tipo_unidad?: string;
+  codigo_financiador?: string;
 }
 
 export default function GestionServicios() {
@@ -21,7 +22,8 @@ export default function GestionServicios() {
   const [deletingServicio, setDeletingServicio] = useState<Servicio | null>(null);
   const [formData, setFormData] = useState({ 
     nombre: '', 
-    tipo_unidad: ''
+    tipo_unidad: '',
+    codigo_financiador: ''
   });
   const [loading, setLoading] = useState(false);
   const [tiposModalOpen, setTiposModalOpen] = useState(false);
@@ -75,7 +77,7 @@ export default function GestionServicios() {
     setLoading(true);
     try {
       if (editingServicio) {
-        await api.put(`/admin/servicios-crud/${editingServicio.id_servicio}`, formData);
+        await api.put(`/admin/servicios-crud/${editingServicio.id}`, formData);
         notifications.show({
           title: 'Éxito',
           message: 'Servicio actualizado correctamente',
@@ -109,7 +111,8 @@ export default function GestionServicios() {
     setEditingServicio(servicio);
     setFormData({ 
       nombre: servicio.nombre,
-      tipo_unidad: servicio.tipo_unidad || ''
+      tipo_unidad: servicio.tipo_unidad || '',
+      codigo_financiador: servicio.codigo_financiador || ''
     });
     setModalOpen(true);
   };
@@ -124,7 +127,7 @@ export default function GestionServicios() {
 
     setLoading(true);
     try {
-      await api.delete(`/admin/servicios-crud/${deletingServicio.id_servicio}`);
+      await api.delete(`/admin/servicios-crud/${deletingServicio.id}`);
       notifications.show({
         title: 'Éxito',
         message: 'Servicio eliminado correctamente',
@@ -148,7 +151,8 @@ export default function GestionServicios() {
     setEditingServicio(null);
     setFormData({ 
       nombre: '', 
-      tipo_unidad: ''
+      tipo_unidad: '',
+      codigo_financiador: ''
     });
     setModalOpen(true);
   };
@@ -184,14 +188,16 @@ export default function GestionServicios() {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Servicio</Table.Th>
+            <Table.Th style={{ width: '150px' }}>Código Financiador</Table.Th>
             <Table.Th style={{ width: '120px' }}>Tipo Unidad</Table.Th>
             <Table.Th style={{ width: '120px' }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {serviciosFiltrados.map((servicio) => (
-            <Table.Tr key={servicio.id_servicio}>
+            <Table.Tr key={servicio.id}>
               <Table.Td>{formatName(servicio.nombre)}</Table.Td>
+              <Table.Td>{servicio.codigo_financiador || '-'}</Table.Td>
               <Table.Td style={{ textTransform: 'capitalize' }}>{servicio.tipo_unidad || '-'}</Table.Td>
               <Table.Td>
                 <Group gap="xs">
@@ -220,6 +226,12 @@ export default function GestionServicios() {
             value={formData.nombre}
             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
             required
+          />
+          <TextInput
+            label="Código Financiador"
+            placeholder="Código de identificación (opcional)"
+            value={formData.codigo_financiador}
+            onChange={(e) => setFormData({ ...formData, codigo_financiador: e.target.value })}
           />
           <Select
             label="Tipo de Unidad"

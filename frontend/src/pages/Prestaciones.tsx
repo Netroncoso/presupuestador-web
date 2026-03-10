@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Paper, Button, Title, Select, TextInput, Grid, Stack, Checkbox, Group, NumberInput, ActionIcon, Table, Badge, Text, Flex, Tooltip, Modal, Tabs } from '@mantine/core'
 import { TrashIcon, PlusIcon, PencilSquareIcon, DocumentCheckIcon, DocumentCurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { notifications } from '@mantine/notifications'
-import { getFinanciadores, getPrestacionesPorFinanciador } from '../api/api'
+import { getFinanciadores, getPrestacionesPorFinanciador, getFinanciadorZonas } from '../api/api'
 import { api } from '../api/api'
 import { numberFormat } from '../utils/numberFormat'
 import PrestacionesTarifario from '../components/PrestacionesTarifario'
+import SelectorDualServicios from '../components/SelectorDualServicios'
+import { useSelectorDual } from '../hooks/useSelectorDual'
+import type { ServicioFinanciador, ServicioTarifario, ZonaFinanciador, ServicioConvenio } from '../types'
 
 interface Prestacion {
   id_servicio: string
@@ -25,6 +28,11 @@ interface PrestacionDisponible {
   valor_sugerido: number
   tipo_unidad?: string
   dias_sin_actualizar?: number
+  costo_1?: number
+  costo_2?: number
+  costo_3?: number
+  costo_4?: number
+  costo_5?: number
 }
 
 interface Financiador {
@@ -42,306 +50,82 @@ interface Props {
   soloLectura?: boolean
   sucursalId?: number | null
   zonaId?: number | null
+  // Nuevos props para sistema dual
+  zonaTarifarioId?: number | null
+  zonaFinanciadorId?: number | null
 }
 
-export default function Prestaciones({ prestacionesSeleccionadas, setPrestacionesSeleccionadas, onTotalChange, presupuestoId, financiadorId, soloLectura = false, sucursalId, zonaId }: Props) {
-  const [financiadorInfo, setFinanciadorInfo] = useState<{tasa_mensual?: number, dias_cobranza_teorico?: number, dias_cobranza_real?: number, acuerdo_nombre?: string | null}>({})
-  const [prestacionesDisponibles, setPrestacionesDisponibles] = useState<PrestacionDisponible[]>([])
-  const [alertasConfig, setAlertasConfig] = useState<any[]>([])
-  const [cantidad, setCantidad] = useState('1')
-  const [valorAsignado, setValorAsignado] = useState('')
-  const [prestacionSeleccionada, setPrestacionSeleccionada] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [editandoIndex, setEditandoIndex] = useState<number | null>(null)
-  const [nuevaCantidad, setNuevaCantidad] = useState(1)
-  const [nuevoValor, setNuevoValor] = useState(0)
+export default function Prestaciones({ 
+  prestacionesSeleccionadas, 
+  setPrestacionesSeleccionadas, 
+  onTotalChange, 
+  presupuestoId, 
+  financiadorId, 
+  soloLectura = false, 
+  sucursalId, 
+  zonaId,
+  zonaTarifarioId,
+  zonaFinanciadorId
+}: Props) {
   const [totalesTarifario, setTotalesTarifario] = useState({ costo: 0, facturar: 0 })
+  const [financiadorInfo, setFinanciadorInfo] = useState<any>(null)
 
-  const totalCostoConvenio = useMemo(() => 
-    prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_asignado)), 0),
-    [prestacionesSeleccionadas]
+  // Cargar info del financiador
+  useEffect(() => {
+    if (financiadorId) {
+      api.get(`/prestaciones/financiador/${financiadorId}/info`)
+        .then(res => setFinanciadorInfo(res.data))
+        .catch(err => console.error('Error cargando info financiador:', err));
+    }
+  }, [financiadorId]);
+
+  // Hook para sistema dual
+  const selectorDual = useSelectorDual({
+    financiadorId,
+    zonaFinanciadorId,
+    zonaTarifarioId,
+    presupuestoId
+  })
+
+  const cargadoRef = useRef(false);
+
+  // Cargar prestaciones existentes al abrir presupuesto
+  useEffect(() => {
+    if (presupuestoId && !soloLectura && !cargadoRef.current) {
+      cargadoRef.current = true;
+      api.get(`/presupuestos/${presupuestoId}/prestaciones`)
+        .then(res => {
+          const prestaciones: ServicioConvenio[] = res.data.map((p: any) => ({
+            id_servicio_financiador: p.id_financiador_servicio || p.servicio_id,
+            servicio_id: p.servicio_id,
+            nombre: p.prestacion,
+            cantidad: p.cantidad,
+            precio_costo: p.valor_asignado * p.cantidad,
+            precio_facturar: p.valor_facturar * p.cantidad,
+            utilidad: (p.valor_facturar - p.valor_asignado) * p.cantidad,
+            aplicar_horas_nocturnas: p.aplicar_horas_nocturnas || false,
+            clave_unica: `${p.id_financiador_servicio || p.servicio_id}_${p.aplicar_horas_nocturnas || false}_${p.id}`
+          }));
+          selectorDual.setServiciosConvenio(prestaciones);
+        })
+        .catch(err => console.error('Error cargando prestaciones:', err));
+    }
+  }, [presupuestoId, soloLectura]);
+
+  // Totales incluyendo sistema dual
+  const totalCosto = useMemo(() => 
+    totalesTarifario.costo + selectorDual.totales.totalCosto, 
+    [totalesTarifario.costo, selectorDual.totales.totalCosto]
   )
-
-  const totalFacturarConvenio = useMemo(() => 
-    prestacionesSeleccionadas.reduce((sum, p) => sum + (Number(p.cantidad) * Number(p.valor_facturar)), 0),
-    [prestacionesSeleccionadas]
+  
+  const totalFacturar = useMemo(() => 
+    totalesTarifario.facturar + selectorDual.totales.totalFacturar, 
+    [totalesTarifario.facturar, selectorDual.totales.totalFacturar]
   )
-
-  const totalCosto = useMemo(() => totalCostoConvenio + totalesTarifario.costo, [totalCostoConvenio, totalesTarifario.costo])
-  const totalFacturar = useMemo(() => totalFacturarConvenio + totalesTarifario.facturar, [totalFacturarConvenio, totalesTarifario.facturar])
-
-  const prestacionSeleccionadaData = useMemo(() => 
-    prestacionSeleccionada ? prestacionesDisponibles.find(p => p.id_servicio === prestacionSeleccionada) : null,
-    [prestacionSeleccionada, prestacionesDisponibles]
-  )
-
-
 
   useEffect(() => {
     onTotalChange(totalCosto, totalFacturar)
   }, [totalCosto, totalFacturar, onTotalChange])
-
-  useEffect(() => {
-    cargarAlertasConfig()
-  }, [])
-
-  const cargarAlertasConfig = async () => {
-    try {
-      const response = await api.get('/alertas-servicios')
-      setAlertasConfig(response.data)
-    } catch (error) {
-      console.error('Error cargando alertas:', error)
-    }
-  }
-
-  useEffect(() => {
-    if (presupuestoId && financiadorId) {
-      const financiadorIdStr = String(financiadorId)
-      
-      if (soloLectura) {
-        api.get(`/presupuestos/${presupuestoId}`).then(presupuestoRes => {
-          const fechaPresupuesto = presupuestoRes.data.created_at?.slice(0, 10)
-          cargarPrestacionesPorFinanciador(financiadorIdStr, fechaPresupuesto)
-        }).catch(err => {
-          console.error('Error loading presupuesto:', err)
-          cargarPrestacionesPorFinanciador(financiadorIdStr)
-        })
-      } else {
-        cargarPrestacionesPorFinanciador(financiadorIdStr)
-      }
-      
-      api.get(`/prestaciones/financiador/${financiadorIdStr}/info`).then(infoRes => {
-        setFinanciadorInfo(infoRes.data)
-      }).catch((err: any) => console.error('Error loading financiador info:', err))
-    } else if (!presupuestoId) {
-      setPrestacionesDisponibles([])
-      setPrestacionSeleccionada(null)
-      setCantidad('1')
-      setValorAsignado('')
-      setFinanciadorInfo({})
-    }
-  }, [presupuestoId, financiadorId, soloLectura, sucursalId])
-
-
-
-  const cargarPrestacionesPorFinanciador = async (financiadorId: string, fecha?: string) => {
-    setLoading(true)
-    try {
-      const data = await getPrestacionesPorFinanciador(financiadorId, fecha, sucursalId || undefined)
-      setPrestacionesDisponibles(data)
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar las prestaciones',
-        color: 'red'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-  const valoresDisponibles = useMemo(() => {
-    if (!prestacionSeleccionadaData?.valor_sugerido) return []
-    const vs = Number(prestacionSeleccionadaData.valor_sugerido)
-    if (vs === 0) return []
-    
-    return [
-      { value: String(vs * 0.8), label: `${numberFormat.formatCurrency(vs * 0.8)}` },
-      { value: String(vs * 0.9), label: `${numberFormat.formatCurrency(vs * 0.9)}` },
-      { value: String(vs), label: `${numberFormat.formatCurrency(vs)} (Sugerido)` },
-      { value: String(vs * 1.1), label: `${numberFormat.formatCurrency(vs * 1.1)}` },
-      { value: String(vs * 1.2), label: `${numberFormat.formatCurrency(vs * 1.2)}` },
-      { value: String(vs * 1.5), label: `${numberFormat.formatCurrency(vs * 1.5)}` }
-    ]
-  }, [prestacionSeleccionadaData])
-
-  const handlePrestacionChange = (value: string | null) => {
-    setPrestacionSeleccionada(value)
-    if (value) {
-      const prestacionData = prestacionesDisponibles.find(p => p.id_servicio === value)
-      if (prestacionData) {
-        setCantidad('1')
-        setValorAsignado(String(prestacionData.valor_sugerido || 0))
-        
-        // Alerta si la prestación está desactualizada
-        if (prestacionData.dias_sin_actualizar && prestacionData.dias_sin_actualizar > 45) {
-          notifications.show({
-            id: `prestacion-desactualizada-${prestacionData.id_servicio}`,
-            title: '⚠️ Valor Desactualizado',
-            message: `${prestacionData.nombre}: sin actualizar hace ${prestacionData.dias_sin_actualizar} días`,
-            color: 'yellow',
-            autoClose: false,
-            withCloseButton: true,
-            position: 'top-center'
-          });
-        }
-      }
-    } else {
-      setCantidad('1')
-      setValorAsignado('')
-    }
-  }
-
-  const agregarPrestacion = useCallback(() => {
-    if (!prestacionSeleccionada || !cantidad || !valorAsignado) {
-      notifications.show({
-        title: 'Campos incompletos',
-        message: 'Complete todos los campos',
-        color: 'orange'
-      })
-      return
-    }
-
-    const cantidadNum = parseInt(cantidad)
-    const valorNum = parseFloat(valorAsignado)
-
-    if (cantidadNum <= 0 || valorNum <= 0) {
-      notifications.show({
-        title: 'Valores inválidos',
-        message: 'La cantidad y valor deben ser positivos',
-        color: 'orange'
-      })
-      return
-    }
-
-    const prestacionData = prestacionesDisponibles.find(p => p.id_servicio === prestacionSeleccionada)
-    if (!prestacionData) return
-
-    const nuevaPrestacion: Prestacion = {
-      id_servicio: prestacionSeleccionada,
-      prestacion: prestacionData.nombre,
-      cantidad: cantidadNum,
-      valor_asignado: valorNum,
-      valor_facturar: Number(prestacionData.valor_facturar),
-      tipo_unidad: prestacionData.tipo_unidad,
-      cant_total: prestacionData.cant_total
-    }
-
-    const existeIndex = prestacionesSeleccionadas.findIndex(p => p.id_servicio === prestacionSeleccionada)
-    const prestacionesAnteriores = [...prestacionesSeleccionadas]
-
-    // Verificar alerta por cantidad
-    const alertaConfig = alertasConfig.find(a => a.tipo_unidad === prestacionData.tipo_unidad && a.activo === 1)
-    if (alertaConfig && cantidadNum >= alertaConfig.cantidad_maxima) {
-      notifications.show({
-        id: `alerta-prestacion-${prestacionData.tipo_unidad}`,
-        title: `⚠️ ${alertaConfig.mensaje_alerta || 'Cantidad excedida'}`,
-        message: `${prestacionData.nombre} (máx. recomendado: ${alertaConfig.cantidad_maxima} ${prestacionData.tipo_unidad})`,
-        color: alertaConfig.color_alerta || 'orange',
-        autoClose: false,
-        withCloseButton: true,
-        position: 'top-center'
-      })
-    }
-    
-    if (existeIndex >= 0) {
-      const nuevas = [...prestacionesSeleccionadas]
-      nuevas[existeIndex] = nuevaPrestacion
-      setPrestacionesSeleccionadas(nuevas)
-    } else {
-      setPrestacionesSeleccionadas([...prestacionesSeleccionadas, nuevaPrestacion])
-    }
-
-    if (presupuestoId) {
-      api.post(`/presupuestos/${presupuestoId}/prestaciones`, {
-        id_servicio: prestacionSeleccionada,
-        prestacion: prestacionData.nombre,
-        cantidad: cantidadNum,
-        valor_asignado: valorNum,
-        valor_facturar: Number(prestacionData.valor_facturar)
-      }).catch((err: any) => {
-        console.error('Error saving prestacion:', err)
-        setPrestacionesSeleccionadas(prestacionesAnteriores)
-        notifications.show({
-          title: 'Error',
-          message: 'No se pudo guardar la prestación',
-          color: 'red'
-        })
-        return
-      })
-    }
-
-    setCantidad('1')
-    setValorAsignado('')
-    setPrestacionSeleccionada(null)
-    
-    notifications.show({
-      title: 'Prestación agregada',
-      message: `Se agregó ${prestacionData.nombre}`,
-      color: 'blue'
-    })
-  }, [prestacionSeleccionada, cantidad, valorAsignado, prestacionesDisponibles, prestacionesSeleccionadas, setPrestacionesSeleccionadas, alertasConfig, presupuestoId])
-
-  const eliminarPrestacion = useCallback((index: number) => {
-    const prestacion = prestacionesSeleccionadas[index]
-    const prestacionesAnteriores = [...prestacionesSeleccionadas]
-    const nuevas = prestacionesSeleccionadas.filter((_, i) => i !== index)
-    setPrestacionesSeleccionadas(nuevas)
-    
-    if (presupuestoId) {
-      api.delete(`/presupuestos/${presupuestoId}/prestaciones`, {
-        data: { id_servicio: prestacion.id_servicio }
-      }).catch((err: any) => {
-        console.error('Error deleting prestacion:', err)
-        setPrestacionesSeleccionadas(prestacionesAnteriores)
-        notifications.show({
-          title: 'Error',
-          message: 'No se pudo eliminar la prestación',
-          color: 'red'
-        })
-        return
-      })
-    }
-    
-    notifications.show({ 
-      title: 'Prestación Eliminada', 
-      message: 'Se eliminó la prestación seleccionada', 
-      color: 'blue' 
-    })
-  }, [prestacionesSeleccionadas, setPrestacionesSeleccionadas, presupuestoId])
-
-  const actualizarPrestacion = (index: number) => {
-    if (nuevaCantidad <= 0 || nuevoValor <= 0) return
-    
-    const nuevas = [...prestacionesSeleccionadas]
-    const prestacionActual = nuevas[index]
-    
-    nuevas[index] = { ...prestacionActual, cantidad: nuevaCantidad, valor_asignado: nuevoValor }
-
-    // Verificar alerta por cantidad
-    const alertaConfig = alertasConfig.find(a => a.tipo_unidad === prestacionActual.tipo_unidad && a.activo === 1)
-    if (alertaConfig && nuevaCantidad >= alertaConfig.cantidad_maxima) {
-      notifications.show({
-        id: `alerta-prestacion-${prestacionActual.tipo_unidad}`,
-        title: `⚠️ ${alertaConfig.mensaje_alerta || 'Cantidad excedida'}`,
-        message: `${prestacionActual.prestacion} (máx. recomendado: ${alertaConfig.cantidad_maxima} ${prestacionActual.tipo_unidad})`,
-        color: alertaConfig.color_alerta || 'orange',
-        autoClose: false,
-        withCloseButton: true,
-        position: 'top-center'
-      })
-    }
-
-    setPrestacionesSeleccionadas(nuevas)
-    
-    if (presupuestoId) {
-      api.post(`/presupuestos/${presupuestoId}/prestaciones`, {
-        id_servicio: nuevas[index].id_servicio,
-        prestacion: nuevas[index].prestacion,
-        cantidad: nuevaCantidad,
-        valor_asignado: nuevoValor,
-        valor_facturar: nuevas[index].valor_facturar
-      }).catch((err: any) => console.error('Error updating prestacion:', err))
-    }
-    
-    setEditandoIndex(null)
-    notifications.show({
-      title: 'Prestación Actualizada',
-      message: 'Cantidad y valor modificados correctamente',
-      color: 'green'
-    })
-  }
 
   return (
     <Stack gap="lg" mb={25}>
@@ -370,216 +154,31 @@ export default function Prestaciones({ prestacionesSeleccionadas, setPrestacione
         </Tabs.List>
 
         <Tabs.Panel value="convenio" pt="md">
-          <Paper p="md" withBorder style={{ opacity: soloLectura ? 0.8 : 1 }}>
-        <Stack gap="xl">
-
-          {financiadorId && prestacionesDisponibles.length > 0 && (
-            <>
-            <Grid>
-              <Grid.Col span={6}>
-                <Stack gap="xs">
-                  <Title order={5}>Prestaciones Disponibles</Title>
-                  <Table.ScrollContainer minWidth={700} h={400}>
-                  <Table striped="odd" highlightOnHover stickyHeader>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>Prestación</Table.Th>
-                        <Table.Th style={{ width: '80px', fontWeight: 500, fontSize: '13px' }}>Tipo</Table.Th>
-                        <Table.Th style={{ fontWeight: 500, fontSize: '13px' }}>
-                          <Tooltip label="Valor a facturar por unidad de servicio">
-                            <span>Valor a Facturar</span>
-                          </Tooltip>
-                        </Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {prestacionesDisponibles.map((p) => (
-                        <Table.Tr key={p.id_servicio}>
-                          <Table.Td>
-                            <Group gap="xs">
-                              <Checkbox
-                                size="sm"
-                                checked={prestacionSeleccionada === p.id_servicio}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    handlePrestacionChange(p.id_servicio)
-                                  } else {
-                                    setPrestacionSeleccionada(null)
-                                    setCantidad('1')
-                                    setValorAsignado('')
-                                  }
-                                }}
-                                disabled={soloLectura}
-                              />
-                              <span>{p.nombre.charAt(0).toUpperCase() + p.nombre.slice(1).toLowerCase()}</span>
-                            </Group>
-                          </Table.Td>
-                          <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{p.tipo_unidad || '-'}</Table.Td>
-                          <Table.Td>{numberFormat.formatCurrency(p.valor_facturar)}</Table.Td>
-                        </Table.Tr> 
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                </Table.ScrollContainer>
-                </Stack>
-              </Grid.Col>
-              
-              <Grid.Col span={6}>
-                <Stack gap="xs" style={{ backgroundColor: prestacionSeleccionada ? '#f8f9fa' : '#f5f5f5', opacity: (prestacionSeleccionada && !soloLectura) ? 1 : 0.6, padding: '1rem', borderRadius: '8px' }}>
-                  <Title order={5}>Agregar al Presupuesto</Title>
-                  <TextInput
-                    label={<Text size="sm" fw={400}>Prestación</Text>}
-                    value={prestacionSeleccionadaData?.nombre || ''}
-                    placeholder={prestacionSeleccionada ? '' : 'Seleccione una prestación de la tabla'}
-                    readOnly
-                    size="sm"
-                    disabled={!prestacionSeleccionada}
-                  />
-                  <TextInput
-                    label={<Text size="sm" fw={400}>Cantidad</Text>}
-                    value={cantidad}
-                    onChange={(e) => setCantidad(e.target.value)}
-                    type="number"
-                    min="1"
-                    size="sm"
-                    disabled={!prestacionSeleccionada || soloLectura}
-                  />
-                  <Select
-                    label={<Text size="sm" fw={400}>Valor</Text>}
-                    placeholder="Seleccione un valor"
-                    data={valoresDisponibles}
-                    value={valorAsignado}
-                    onChange={(val) => setValorAsignado(val || '')}
-                    disabled={!prestacionSeleccionada || soloLectura}
-                    searchable
-                  />
-                  <Group>
-                    <Button size="sm" onClick={agregarPrestacion} disabled={!prestacionSeleccionada || soloLectura}>Agregar</Button>
-                    <Button size="sm" variant="outline" color="gray" disabled={!prestacionSeleccionada || soloLectura} onClick={() => {
-                      setPrestacionSeleccionada(null)
-                      setCantidad('1')
-                      setValorAsignado('')
-                    }}>Cancelar</Button>
-                  </Group>
-                </Stack>
-              </Grid.Col>
-            </Grid>
-
-            <Stack gap="xs">
-              <Title order={5}>Prestaciones Seleccionadas</Title>
-              <Table.ScrollContainer minWidth={1000}>
-                <Table striped="odd" highlightOnHover stickyHeader>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ textAlign: 'left', fontWeight: 500, fontSize: '12px' }}>Prestación</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Cantidad</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Costo Unit.</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Precio a Facturar</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Costo</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Subtotal Facturar</Table.Th>
-                    <Table.Th style={{ fontWeight: 500, fontSize: '12px' }}>Acciones</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {prestacionesSeleccionadas.map((p, i) => {
-                    const costoUnitario = Number(p.valor_asignado);
-                    const precioFacturar = Number(p.valor_facturar);
-                    const subtotalCosto = costoUnitario * p.cantidad;
-                    const subtotalFacturar = precioFacturar * p.cantidad;
-                    
-                    return (
-                      <Table.Tr key={`${p.id_servicio}-${i}`}>
-                        <Table.Td>{p.prestacion}</Table.Td>
-                        <Table.Td>
-                          {editandoIndex === i ? (
-                            <Group gap="xs" justify="Left">
-                              <NumberInput
-                                value={nuevaCantidad}
-                                onChange={(value) => setNuevaCantidad(Number(value) || 1)}
-                                min={1}
-                                w={80}
-                                size="xs"
-                                hideControls
-                              />
-                            </Group>
-                          ) : (
-                            p.cantidad
-                          )}
-                        </Table.Td>
-                        <Table.Td>
-                          {editandoIndex === i ? (
-                            <NumberInput
-                              value={nuevoValor}
-                              onChange={(value) => setNuevoValor(Number(value) || 0)}
-                              min={0}
-                              w={100}
-                              size="xs"
-                              hideControls
-                              prefix="$"
-                            />
-                          ) : (
-                            numberFormat.formatCurrency(costoUnitario)
-                          )}
-                        </Table.Td>
-                        <Table.Td>{numberFormat.formatCurrency(precioFacturar)}</Table.Td>
-                        <Table.Td>{numberFormat.formatCurrency(subtotalCosto)}</Table.Td>
-                        <Table.Td>{numberFormat.formatCurrency(subtotalFacturar)}</Table.Td>
-                        <Table.Td>
-                          {!soloLectura && (
-                            editandoIndex === i ? (
-                              <Group gap={4} justify="left" wrap="nowrap">
-                                <Button size="xs" onClick={() => actualizarPrestacion(i)}>
-                                  OK
-                                </Button>
-                                <Button size="xs" variant="outline" onClick={() => setEditandoIndex(null)}>
-                                  Cancelar
-                                </Button>
-                              </Group>
-                            ) : (
-                              <Group gap={4} justify="left" wrap="nowrap">
-                                <ActionIcon
-                                  variant="transparent"
-                                  onClick={() => {
-                                    setEditandoIndex(i)
-                                    setNuevaCantidad(p.cantidad)
-                                    setNuevoValor(Number(p.valor_asignado))
-                                  }}
-                                >
-                                  <PencilSquareIcon  width={16} height={16} />
-                                </ActionIcon>
-                                <ActionIcon
-                                  variant="transparent"
-                                  color="red"
-                                  onClick={() => eliminarPrestacion(i)}
-                                >
-                                  <TrashIcon  width={16} height={16} />
-                                </ActionIcon>
-                              </Group>
-                            )
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    )
-                  })}
-                </Table.Tbody>
-              </Table>
-              </Table.ScrollContainer>
-              {prestacionesSeleccionadas.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                  No hay prestaciones seleccionadas
-                </div>
-              )}
-            </Stack>
-            </>
+          {selectorDual.isReady ? (
+            <SelectorDualServicios
+              serviciosFinanciador={selectorDual.serviciosFinanciador}
+              serviciosTarifario={selectorDual.serviciosTarifario}
+              serviciosSeleccionados={selectorDual.serviciosConvenio}
+              onServiciosChange={selectorDual.setServiciosConvenio}
+              onAgregarServicio={selectorDual.agregarServicio}
+              onEliminarServicio={selectorDual.eliminarServicio}
+              soloLectura={soloLectura}
+              loading={selectorDual.loading}
+              error={selectorDual.error}
+              financiadorInfo={financiadorInfo}
+            />
+          ) : (
+            <Paper p="md" withBorder>
+              <Text size="sm" c="dimmed" ta="center">
+                {selectorDual.loading ? 'Cargando servicios...' :
+                 selectorDual.error ? `Error: ${selectorDual.error}` :
+                 !financiadorId ? 'Debe seleccionar un financiador' : 
+                 !zonaFinanciadorId ? 'Debe seleccionar una zona financiador' :
+                 !zonaTarifarioId ? 'Debe seleccionar una zona tarifario' :
+                 'Complete los datos del paciente'}
+              </Text>
+            </Paper>
           )}
-
-          {financiadorId && prestacionesDisponibles.length === 0 && !loading && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-              No hay prestaciones disponibles para este financiador
-            </div>
-          )}
-        </Stack>
-      </Paper>
         </Tabs.Panel>
 
         <Tabs.Panel value="tarifario" pt="md">

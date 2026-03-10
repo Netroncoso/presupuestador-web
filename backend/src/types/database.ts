@@ -50,6 +50,9 @@ export interface Financiador extends RowDataPacket {
   dias_cobranza_teorico?: number;
   dias_cobranza_real?: number;
   id_acuerdo?: number;
+  porcentaje_insumos?: number;
+  porcentaje_horas_nocturnas?: number;
+  porcentaje_dificil_acceso?: number;
 }
 
 export interface FinanciadorAcuerdo extends RowDataPacket {
@@ -77,23 +80,21 @@ export interface Notificaciones extends RowDataPacket {
 export interface FinanciadorServicio extends RowDataPacket {
   id: number;
   financiador_id: number;
-  id_servicio: number;
-  valor_facturar: number;
-  total_mes?: number;
-  condicion?: string;
+  servicio_id: number;
+  unidades_base?: number;
+  admite_horas_nocturnas?: boolean;
   activo?: boolean;
-  cant_total?: number;
-  valor_sugerido?: number;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface FinanciadorServicioValores extends RowDataPacket {
   id: number;
   financiador_servicio_id: number;
-  valor_asignado: number;
-  valor_facturar: number;
+  zona_id: number;
+  precio_facturar: number;
   fecha_inicio: Date;
   fecha_fin?: Date | null;
-  sucursal_id?: number | null;
   created_at?: Date;
 }
 
@@ -112,11 +113,16 @@ export interface PresupuestoInsumos extends RowDataPacket {
 export interface PresupuestoPrestaciones extends RowDataPacket {
   id: number;
   idPresupuestos: number;
+  servicio_id?: number;
+  zona_id?: number;
+  orden_costo?: number;
   id_servicio: string;
   prestacion: string;
   cantidad: number;
   valor_asignado: number;
   valor_facturar: number;
+  aplicar_horas_nocturnas?: boolean;
+  porcentaje_aplicado?: number;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -148,16 +154,18 @@ export interface Presupuestos extends RowDataPacket {
 }
 
 export interface Servicios extends RowDataPacket {
-  id_servicio: number;
+  id: number;
   nombre: string;
+  descripcion?: string;
   tipo_unidad?: string;
-  max_unidades_sugerido?: number;
+  activo?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface SucursalesMh extends RowDataPacket {
   ID: number;
   Sucursales_mh: string;
-  suc_porcentaje_dificil_acceso?: number;
   suc_porcentaje_insumos?: number;
 }
 
@@ -189,15 +197,15 @@ export type MutationResult = ResultSetHeader;
 
 // Para queries con JOIN que combinan múltiples tablas
 export interface PrestacionConValores extends RowDataPacket {
-  id_servicio: number;
+  id: number;
+  servicio_id: number;
   nombre: string;
   tipo_unidad?: string;
-  cant_total?: number;
-  valor_sugerido?: number;
-  valor_facturar?: number;
-  valor_asignado?: number;
+  zona_id?: number;
+  precio_facturar?: number;
   id_financiador_servicio?: number;
   financiador_servicio_id?: number;
+  dias_sin_actualizar?: number;
 }
 
 export interface PresupuestoCompleto extends Presupuestos {

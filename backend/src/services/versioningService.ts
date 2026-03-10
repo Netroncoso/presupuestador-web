@@ -46,7 +46,7 @@ export class VersioningService {
       const presupuestoPadreId = original.presupuesto_padre || idOriginal;
 
       // Obtener datos necesarios
-      const [[maxVersion], [insumos], [prestaciones], [equipamientos], [sucursal]] = await Promise.all([
+      const [[maxVersion], [insumos], [prestaciones], [prestacionesTarifario], [equipamientos], [sucursal]] = await Promise.all([
         connection.query<any[]>(
           'SELECT MAX(version) as max_version FROM presupuestos WHERE idPresupuestos = ? OR presupuesto_padre = ?',
           [presupuestoPadreId, presupuestoPadreId]
@@ -56,7 +56,11 @@ export class VersioningService {
           [idOriginal]
         ),
         connection.query<any[]>(
-          'SELECT id_servicio, prestacion, valor_asignado, valor_facturar, cantidad FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+          'SELECT servicio_id, zona_financiador_id, id_servicio, prestacion, valor_asignado, valor_facturar, cantidad FROM presupuesto_prestaciones WHERE idPresupuestos = ?',
+          [idOriginal]
+        ),
+        connection.query<any[]>(
+          'SELECT servicio_id, zona_tarifario_id, prestacion, cantidad, orden_costo, valor_asignado, valor_facturar, fuera_tarifario FROM presupuesto_prestaciones_tarifario WHERE idPresupuestos = ?',
           [idOriginal]
         ),
         connection.query<any[]>(
@@ -108,7 +112,7 @@ export class VersioningService {
 
       const nuevoId = resultPresupuesto.insertId;
 
-      // Copiar insumos, prestaciones y equipamientos
+      // Copiar insumos, prestaciones, prestaciones tarifario y equipamientos
       if (insumos.length > 0) {
         const insumosValues = insumos.map(i => [nuevoId, i.producto, i.costo, i.precio_facturar, i.cantidad]);
         await connection.query(
@@ -119,11 +123,21 @@ export class VersioningService {
 
       if (prestaciones.length > 0) {
         const prestacionesValues = prestaciones.map(p => [
-          nuevoId, p.id_servicio, p.prestacion, p.cantidad, p.valor_asignado, p.valor_facturar
+          nuevoId, p.servicio_id, p.zona_financiador_id, p.id_servicio, p.prestacion, p.cantidad, p.valor_asignado, p.valor_facturar
         ]);
         await connection.query(
-          'INSERT INTO presupuesto_prestaciones (idPresupuestos, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES ?',
+          'INSERT INTO presupuesto_prestaciones (idPresupuestos, servicio_id, zona_financiador_id, id_servicio, prestacion, cantidad, valor_asignado, valor_facturar) VALUES ?',
           [prestacionesValues]
+        );
+      }
+
+      if (prestacionesTarifario.length > 0) {
+        const prestacionesTarifarioValues = prestacionesTarifario.map(pt => [
+          nuevoId, pt.servicio_id, pt.zona_tarifario_id, pt.prestacion, pt.cantidad, pt.orden_costo, pt.valor_asignado, pt.valor_facturar, pt.fuera_tarifario || 0
+        ]);
+        await connection.query(
+          'INSERT INTO presupuesto_prestaciones_tarifario (idPresupuestos, servicio_id, zona_tarifario_id, prestacion, cantidad, orden_costo, valor_asignado, valor_facturar, fuera_tarifario) VALUES ?',
+          [prestacionesTarifarioValues]
         );
       }
 

@@ -9,6 +9,8 @@ interface FinanciadorInfo {
   Financiador?: string;
   id?: string;
   porcentaje_insumos?: number;
+  porcentaje_horas_nocturnas?: number;
+  porcentaje_dificil_acceso?: number;
 }
 
 export const useFinanciador = (

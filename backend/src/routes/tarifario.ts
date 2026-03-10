@@ -15,7 +15,22 @@ const router = express.Router();
 // ADMINISTRACIÓN DE SERVICIOS DEL TARIFARIO
 // ============================================================================
 
-router.get('/tarifario/servicios', authenticateToken, tarifarioAdminController.listarServicios);
+// GET /api/tarifario/servicios?zona_tarifario_id=1 - Para sistema dual
+router.get('/tarifario/servicios', authenticateToken, async (req, res) => {
+  const { zona_tarifario_id } = req.query;
+  
+  if (zona_tarifario_id) {
+    // Si se especifica zona, usar el servicio de zonas dual
+    const { financiadorZonasController } = await import('../controllers/financiadorZonasController');
+    return await financiadorZonasController.obtenerServiciosTarifario(
+      { ...req, params: { zonaId: zona_tarifario_id } } as any,
+      res
+    );
+  } else {
+    // Si no se especifica zona, usar el controlador normal
+    return await tarifarioAdminController.listarServicios(req, res);
+  }
+});
 router.post('/tarifario/servicios', authenticateToken, requireSuperAdmin, tarifarioAdminController.crearServicio);
 router.put('/tarifario/servicios/:id', authenticateToken, requireSuperAdmin, tarifarioAdminController.actualizarServicio);
 router.patch('/tarifario/servicios/:id/activo', authenticateToken, requireSuperAdmin, tarifarioAdminController.toggleActivo);
@@ -88,6 +103,20 @@ router.get('/tarifario-servicio/markup', authenticateToken, tarifarioController.
 // ============================================================================
 // ZONAS
 // ============================================================================
+
+/**
+ * @swagger
+ * /api/tarifario/zonas:
+ *   get:
+ *     summary: Listar todas las zonas
+ *     tags: [Tarifario]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de zonas
+ */
+router.get('/tarifario/zonas', authenticateToken, zonasController.listarZonas);
 
 /**
  * @swagger

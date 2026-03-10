@@ -6,9 +6,10 @@ interface AdminTableProps {
   emptyMessage?: string;
   isEmpty?: boolean;
   minWidth?: number;
+  onScrollPositionChange?: (position: { x: number; y: number }) => void;
 }
 
-export default function AdminTable({ children, emptyMessage = 'No se encontraron resultados', isEmpty = false, minWidth = 800 }: AdminTableProps) {
+export default function AdminTable({ children, emptyMessage = 'No se encontraron resultados', isEmpty = false, minWidth = 800, onScrollPositionChange }: AdminTableProps) {
   return (
     <Paper p="md" withBorder>
       {isEmpty ? (
@@ -16,7 +17,7 @@ export default function AdminTable({ children, emptyMessage = 'No se encontraron
           {emptyMessage}
         </div>
       ) : (
-        <ScrollArea>
+        <ScrollArea onScrollPositionChange={onScrollPositionChange} h={600}>
           <Table striped="odd" highlightOnHover stickyHeader style={{ minWidth }}>
             {children}
           </Table>

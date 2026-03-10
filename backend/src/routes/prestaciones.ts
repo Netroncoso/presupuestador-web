@@ -29,18 +29,18 @@ const validateServicioId = (req: Request, res: Response, next: NextFunction) => 
 };
 
 const validateValorData = (req: Request, res: Response, next: NextFunction) => {
-  const { valor_asignado, valor_facturar, fecha_inicio } = req.body;
+  const { precio_facturar, fecha_inicio, unidades_base } = req.body;
   
-  if (!valor_asignado || isNaN(parseFloat(valor_asignado))) {
-    return res.status(400).json({ error: 'Valor asignado válido es requerido' });
-  }
-  
-  if (!valor_facturar || isNaN(parseFloat(valor_facturar))) {
-    return res.status(400).json({ error: 'Valor facturar válido es requerido' });
+  if (!precio_facturar || isNaN(parseFloat(precio_facturar))) {
+    return res.status(400).json({ error: 'Precio a facturar válido es requerido' });
   }
   
   if (!fecha_inicio) {
     return res.status(400).json({ error: 'Fecha de inicio es requerida' });
+  }
+  
+  if (unidades_base !== undefined && (isNaN(parseFloat(unidades_base)) || parseFloat(unidades_base) <= 0)) {
+    return res.status(400).json({ error: 'Unidades base debe ser un número positivo' });
   }
   
   next();

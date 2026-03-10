@@ -27,6 +27,11 @@ export const presupuestoService = {
     return res.data;
   },
 
+  solicitarAuditoriaManual: async (id: number) => {
+    const res = await api.post(`/presupuestos/${id}/auditoria-manual`, {});
+    return res.data;
+  },
+
   crearVersionParaEdicion: async (id: number, confirmar: boolean = false) => {
     const res = await api.post(`/presupuestos/${id}/version/editar`, { confirmar });
     return res.data;
@@ -68,7 +73,7 @@ export const presupuestoService = {
    */
   obtenerEquipamientos: async (id: number, soloLectura: boolean = false): Promise<any[]> => {
     try {
-      const res = await api.get(`/presupuestos/${id}/equipamientos?soloLectura=${soloLectura}`);
+      const res = await api.get(`/equipamientos/presupuesto/${id}?soloLectura=${soloLectura}`);
       return res.data;
     } catch (error) {
       console.error('Error loading equipamientos:', error);

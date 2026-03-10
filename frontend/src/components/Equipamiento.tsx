@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Title, Checkbox, ActionIcon, Tooltip } from '@mantine/core';
-import { TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Paper, Table, Button, NumberInput, Group, Stack, Badge, Text, Grid, Title, Checkbox, ActionIcon, Tooltip, TextInput } from '@mantine/core';
+import { TrashIcon, PencilSquareIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../api/api';
 import { numberFormat } from '../utils/numberFormat';
@@ -52,6 +52,13 @@ export default function Equipamiento({
   const [nuevoCosto, setNuevoCosto] = useState(0);
   const [nuevoPrecio, setNuevoPrecio] = useState(0);
 
+  // Estados para búsqueda y paginación
+  const [filtro, setFiltro] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
   const totalCosto = useMemo(
     () => equipamientosSeleccionados.reduce((sum, e) => sum + Number(e.cantidad) * Number(e.costo), 0),
     [equipamientosSeleccionados]
@@ -71,27 +78,58 @@ export default function Equipamiento({
     onTotalChange(totalCosto, totalFacturar);
   }, [totalCosto, totalFacturar, onTotalChange]);
 
-  useEffect(() => {
-    if (financiadorId) {
-      cargarEquipamientos();
-    }
-  }, [financiadorId, sucursalId]);
+  const loadEquipamientos = useCallback(async (searchObj: { search?: string, page?: number, reset?: boolean } = {}) => {
+    if (!financiadorId) return;
 
-  const cargarEquipamientos = async () => {
+    const searchTerm = searchObj.search !== undefined ? searchObj.search : filtro;
+    const pageNum = searchObj.page || 1;
+    const isReset = searchObj.reset || false;
+
+    setLoading(true);
     try {
-      const url = sucursalId 
-        ? `/equipamientos/financiador/${financiadorId}?sucursal_id=${sucursalId}`
-        : `/equipamientos/financiador/${financiadorId}`;
-      const response = await api.get(url);
-      setEquipamientosDisponibles(response.data);
+      const response = await api.get(`/equipamientos/financiador/${financiadorId}`, {
+        params: {
+          sucursal_id: sucursalId,
+          search: searchTerm,
+          page: pageNum,
+          limit: 50
+        }
+      });
+      
+      // Backend returns array directly, not { data: [] }
+      const data = Array.isArray(response.data) ? response.data : [];
+      
+      if (isReset) {
+        setEquipamientosDisponibles(data);
+        setPage(1);
+      } else {
+        setEquipamientosDisponibles(prev => [...prev, ...data]);
+        setPage(pageNum);
+      }
+      
+      setHasMore(data.length === 50);
+
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error al cargar equipamientos',
         color: 'red'
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [financiadorId, sucursalId, filtro]);
+
+  // Debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadEquipamientos({ search: filtro, page: 1, reset: true });
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtro, financiadorId, sucursalId]); 
+
+  // Remove old useEffect that called cargarEquipamientos
+
 
   const handleEquipamientoChange = (id: number) => {
     setEquipamientoSeleccionado(id);
@@ -310,7 +348,17 @@ export default function Equipamiento({
             <Grid>
               <Grid.Col span={6}>
                 <Stack gap="xs">
-                  <Title order={5}>Equipamientos Disponibles</Title>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Title order={5}>Equipamientos Disponibles</Title>
+                    <TextInput 
+                      placeholder="Buscar..." 
+                      value={filtro}
+                      onChange={(e) => setFiltro(e.target.value)}
+                      rightSection={loading ? <div style={{ fontSize: '10px' }}>⏳</div> : <MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
+                      style={{ width: '200px' }}
+                      size="xs"
+                    />
+                  </div>
                   <Table.ScrollContainer minWidth={700} h={400}>
                     <Table striped="odd" highlightOnHover stickyHeader>
                       <Table.Thead>
@@ -323,8 +371,22 @@ export default function Equipamiento({
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
-                        {equipamientosDisponibles.map((eq) => (
-                          <Table.Tr key={eq.id}>
+                        {equipamientosDisponibles.map((eq, index) => {
+                          const isLast = index === equipamientosDisponibles.length - 1;
+                          return (
+                          <Table.Tr 
+                            key={eq.id}
+                            ref={isLast ? (node) => {
+                               if (loading) return;
+                               if (observerRef.current) observerRef.current.disconnect();
+                               observerRef.current = new IntersectionObserver(entries => {
+                                 if (entries[0].isIntersecting && hasMore) {
+                                   loadEquipamientos({ page: page + 1, search: filtro });
+                                 }
+                               });
+                               if (node) observerRef.current.observe(node);
+                            } : null}
+                          >
                             <Table.Td>
                               <Group gap="xs">
                                 <Checkbox
@@ -348,7 +410,8 @@ export default function Equipamiento({
                             <Table.Td>{formatPeso(eq.valor_facturar)}</Table.Td>
                             <Table.Td>{eq.tiene_acuerdo ? 'Sí' : 'No'}</Table.Td>
                           </Table.Tr>
-                        ))}
+                        )})}
+                        {loading && <Table.Tr><Table.Td colSpan={5} style={{textAlign: 'center'}}>Cargando más...</Table.Td></Table.Tr>}
                       </Table.Tbody>
                     </Table>
                   </Table.ScrollContainer>

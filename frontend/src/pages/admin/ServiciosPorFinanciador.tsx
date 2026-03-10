@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput, Text } from '@mantine/core';
+import { Paper, Select, Table, Group, Stack, Modal, Switch, ActionIcon, Button, TextInput, Tooltip, Text as MantineText, NumberInput, Text, MultiSelect } from '@mantine/core';
 import { PencilSquareIcon, MagnifyingGlassIcon,SwatchIcon, XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -13,8 +13,9 @@ interface Financiador {
 }
 
 interface ServicioFinanciador {
-  id_servicio: string;
+  id: number;
   nombre: string;
+  descripcion?: string;
   id_financiador_servicio: number | null;
   valor_facturar: number | null;
   activo: number | null;
@@ -22,15 +23,17 @@ interface ServicioFinanciador {
   valor_sugerido: number | null;
   tipo_unidad?: string;
   count_valores_vigentes?: number;
-  valor_facturar_vigente?: number;
-  valor_asignado_vigente?: number;
-  sucursal_id_vigente?: number | null;
+  precio_facturar_vigente?: number;
+  zona_financiador_id_vigente?: number | null;
+  unidades_base?: number;
+  admite_horas_nocturnas?: boolean;
+  codigo_financiador?: string;
 }
 
-interface Sucursal {
-  ID: number;
-  Sucursales_mh: string;
-  suc_porcentaje_insumos: number;
+interface Zona {
+  id: number;
+  nombre: string;
+  activo: number;
 }
 
 interface Props {
@@ -40,6 +43,7 @@ interface Props {
 export default function ServiciosPorFinanciador({ financiadorId }: Props) {
   const [servicios, setServicios] = useState<ServicioFinanciador[]>([]);
   const [filtroServicio, setFiltroServicio] = useState('');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<ServicioFinanciador | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,17 +51,15 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
   const [valoresVigentes, setValoresVigentes] = useState<any[]>([]);
   const [modalValoresOpen, setModalValoresOpen] = useState(false);
   const [servicioValores, setServicioValores] = useState<ServicioFinanciador | null>(null);
-  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [zonas, setZonas] = useState<Zona[]>([]);
   const [nuevosValores, setNuevosValores] = useState<Array<{
-    valor_asignado: string;
     valor_facturar: string;
     fecha_inicio: string;
-    sucursal_id: string;
+    zonas_ids: string[];
   }>>([{
-    valor_asignado: '',
     valor_facturar: '',
     fecha_inicio: new Date().toISOString().slice(0, 10),
-    sucursal_id: ''
+    zonas_ids: []
   }]);
 
   const formatName = (name: string) => {
@@ -69,7 +71,7 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
   };
 
   useEffect(() => {
-    cargarSucursales();
+    cargarZonas();
   }, []);
 
   useEffect(() => {
@@ -80,12 +82,12 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
     }
   }, [financiadorId]);
 
-  const cargarSucursales = async () => {
+  const cargarZonas = async () => {
     try {
-      const response = await api.get('/sucursales');
-      setSucursales(response.data);
+      const response = await api.get('/financiador/zonas');
+      setZonas(response.data.filter((z: Zona) => z.activo === 1));
     } catch (error) {
-      console.error('Error al cargar sucursales:', error);
+      console.error('Error al cargar zonas:', error);
     }
   };
 
@@ -111,7 +113,7 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
     if (!editingServicio) return;
     
     try {
-      await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id_servicio}`, {
+      await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id}`, {
         valor_facturar: 0,
         activo: activo,
         cant_total: editingServicio.cant_total || 0,
@@ -160,12 +162,12 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
     }
   };
 
-  const renderValorCell = (servicio: ServicioFinanciador, valor: number | null | undefined, tipo: 'facturar' | 'asignado') => {
+  const renderValorCell = (servicio: ServicioFinanciador) => {
     const count = servicio.count_valores_vigentes ?? 0;
     
     if (count > 1) {
       return (
-        <Tooltip label="Ver valores por sucursal">
+        <Tooltip label="Ver valores por zona">
           <ActionIcon color="red" variant="subtle" size="sm" onClick={() => handleVerValores(servicio)}>
             <SwatchIcon />
           </ActionIcon>
@@ -174,16 +176,7 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
     }
     
     if (count === 1) {
-      return (
-        <div>
-          <Text size="sm">{numberFormat.formatCurrency(formatNumber(valor))}</Text>
-          <Text size="xs" c="dimmed">
-            ({servicio.sucursal_id_vigente 
-              ? sucursales.find(s => s.ID === servicio.sucursal_id_vigente)?.Sucursales_mh || 'Sucursal'
-              : 'Todas'})
-          </Text>
-        </div>
-      );
+      return <Text size="sm">{numberFormat.formatCurrency(formatNumber(servicio.precio_facturar_vigente))}</Text>;
     }
     
     return <Text size="sm" c="dimmed">-</Text>;
@@ -193,35 +186,41 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
     <Stack gap="md">
       {financiadorId && (
         <Paper p="md" withBorder>
-          <TextInput
-            placeholder="Filtrar por servicio..."
-            leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
-            value={filtroServicio}
-            onChange={(e) => setFiltroServicio(e.currentTarget.value)}
-            rightSection={
-              filtroServicio ? (
-                <ActionIcon variant="subtle" onClick={() => setFiltroServicio('')}>
-                  <XMarkIcon style={{ width: 16, height: 16 }} />
-                </ActionIcon>
-              ) : null
-            }
-            mb="md"
-          />
+          <Group justify="space-between" mb="md">
+            <TextInput
+              placeholder="Filtrar por servicio..."
+              leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
+              value={filtroServicio}
+              onChange={(e) => setFiltroServicio(e.currentTarget.value)}
+              rightSection={
+                filtroServicio ? (
+                  <ActionIcon variant="subtle" onClick={() => setFiltroServicio('')}>
+                    <XMarkIcon style={{ width: 16, height: 16 }} />
+                  </ActionIcon>
+                ) : null
+              }
+              style={{ flex: 1 }}
+            />
+            <Switch
+              label={<Text size="xs">Inactivos</Text>}
+              checked={mostrarInactivos}
+              onChange={(e) => setMostrarInactivos(e.currentTarget.checked)}
+              size="xs"
+            />
+          </Group>
           <Table striped="odd" highlightOnHover layout="fixed" stickyHeader>
             <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
               <Table.Tr>
                 <Table.Th>Servicio</Table.Th>
+                <Table.Th style={{ width: '120px' }}>Código</Table.Th>
+                <Table.Th>Descripción</Table.Th>
                 <Table.Th style={{ width: '80px' }}>Tipo</Table.Th>
-                <Table.Th style={{ width: '140px' }}>Estado</Table.Th>
+                <Table.Th style={{ width: '80px' }}>Unid. Base</Table.Th>
+                <Table.Th style={{ width: '100px' }}>Nocturno</Table.Th>
+                <Table.Th style={{ width: '100px' }}>Estado</Table.Th>
                 <Table.Th style={{ width: '140px' }}>
                   <Tooltip label="Valor a facturar por unidad de servicio">
                     <span>Valor a Facturar</span>
-                  </Tooltip>
-                </Table.Th>
-                <Table.Th style={{ width: '130px' }}>Valor Sugerido</Table.Th>
-                <Table.Th style={{ width: '110px' }}>
-                  <Tooltip label="Cantidad inicial sugerida y límite para alertas">
-                    <span>Cant. Sugerida</span>
                   </Tooltip>
                 </Table.Th>
                 <Table.Th style={{ width: '90px' }}>Acciones</Table.Th>
@@ -230,22 +229,33 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
             <Table.Tbody>
               {servicios
                 .filter(s => s.nombre.toLowerCase().includes(filtroServicio.toLowerCase()))
+                .filter(s => mostrarInactivos ? true : s.activo === 1)
                 .map((servicio) => (
-                <Table.Tr key={`servicio-${servicio.id_servicio}-${servicio.id_financiador_servicio || 'no-financiador'}`}>
+                <Table.Tr key={`servicio-${servicio.id}-${servicio.id_financiador_servicio || 'no-financiador'}`}>
                   <Table.Td>{formatName(servicio.nombre)}</Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">{servicio.codigo_financiador || '-'}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">{servicio.descripcion || '-'}</Text>
+                  </Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize', fontSize: '12px' }}>{servicio.tipo_unidad || '-'}</Table.Td>
+                  <Table.Td>
+                    <Text size="sm" ta="center">{servicio.unidades_base || 1}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c={servicio.admite_horas_nocturnas ? 'blue' : 'gray'} ta="center">
+                      {servicio.admite_horas_nocturnas ? 'Sí' : 'No'}
+                    </Text>
+                  </Table.Td>
                   <Table.Td>
                     <Text size="sm" c={servicio.activo === 1 ? 'green' : 'gray'}>
                       {servicio.activo === 1 ? 'Activo' : 'Inactivo'}
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    {renderValorCell(servicio, servicio.valor_facturar_vigente, 'facturar')}
+                    {renderValorCell(servicio)}
                   </Table.Td>
-                  <Table.Td>
-                    {renderValorCell(servicio, servicio.valor_asignado_vigente, 'asignado')}
-                  </Table.Td>
-                  <Table.Td>{formatNumber(servicio.cant_total)}</Table.Td>
                   <Table.Td>
                     <Tooltip label="Editar valores">
                       <ActionIcon variant="transparent" onClick={() => handleEdit(servicio)}>
@@ -274,10 +284,9 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
           setEditingServicio(null);
           setValoresHistoricos([]);
           setNuevosValores([{
-            valor_asignado: '',
             valor_facturar: '',
             fecha_inicio: new Date().toISOString().slice(0, 10),
-            sucursal_id: ''
+            zonas_ids: []
           }]);
         }}
         title={`Editar Servicio: ${editingServicio ? formatName(editingServicio.nombre) : ''}`}
@@ -328,17 +337,19 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                 </Group>
                 
                 <Group justify="space-between" align="center">
-                  <Tooltip label="Cantidad inicial al agregar prestación y límite para alertas">
-                    <MantineText size="sm" fw={500}>Cantidad Sugerida</MantineText>
+                  <Tooltip label="Cantidad de unidades del tarifario que componen este servicio">
+                    <MantineText size="sm" fw={500}>Unidades Base</MantineText>
                   </Tooltip>
                   <Group gap="xs">
                     <NumberInput
-                      value={editingServicio.cant_total || 0}
+                      value={editingServicio.unidades_base || 1}
                       onChange={(val) => setEditingServicio({
                         ...editingServicio,
-                        cant_total: Number(val) || 0
+                        unidades_base: Number(val) || 1
                       })}
-                      min={0}
+                      min={0.01}
+                      step={0.5}
+                      decimalScale={2}
                       allowNegative={false}
                       style={{ width: 100 }}
                     />
@@ -348,15 +359,17 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                         variant="light"
                         onClick={async () => {
                           try {
-                            await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id_servicio}`, {
+                            await api.put(`/admin/servicios/financiador/${financiadorId}/servicio/${editingServicio.id}`, {
                               valor_facturar: 0,
                               activo: editingServicio.activo || 0,
                               cant_total: editingServicio.cant_total || 0,
-                              valor_sugerido: 0
+                              valor_sugerido: 0,
+                              unidades_base: editingServicio.unidades_base || 1,
+                              admite_horas_nocturnas: editingServicio.admite_horas_nocturnas || false
                             });
                             notifications.show({
                               title: 'Éxito',
-                              message: 'Cantidad actualizada',
+                              message: 'Configuración actualizada',
                               color: 'green'
                             });
                             cargarServicios();
@@ -374,6 +387,20 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                     )}
                   </Group>
                 </Group>
+                
+                <Group justify="space-between" align="center">
+                  <Tooltip label="Permite aplicar recargo por horas nocturnas a este servicio">
+                    <MantineText size="sm" fw={500}>Admite Horas Nocturnas</MantineText>
+                  </Tooltip>
+                  <Switch
+                    checked={editingServicio.admite_horas_nocturnas || false}
+                    onChange={(e) => setEditingServicio({
+                      ...editingServicio,
+                      admite_horas_nocturnas: e.currentTarget.checked
+                    })}
+                    size="md"
+                  />
+                </Group>
               </Stack>
             </Paper>
 
@@ -386,10 +413,9 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                   color="green" 
                   size="sm"
                   onClick={() => setNuevosValores([...nuevosValores, {
-                    valor_asignado: '',
                     valor_facturar: '',
                     fecha_inicio: new Date().toISOString().slice(0, 10),
-                    sucursal_id: ''
+                    zonas_ids: []
                   }])}
                 >
                   <PlusIcon style={{ width: 16, height: 16 }} />
@@ -399,31 +425,19 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
               <Stack gap="sm">
                 {nuevosValores.map((valor, index) => (
                   <Group key={index} align="flex-end" wrap="nowrap">
-                    <Select
-                      label="Sucursal"
-                      placeholder="Todas"
-                      value={valor.sucursal_id}
+                    <MultiSelect
+                      label="Zonas"
+                      placeholder="Seleccione zonas"
+                      value={valor.zonas_ids}
                       onChange={(val) => {
                         const updated = [...nuevosValores];
-                        updated[index].sucursal_id = val || '';
+                        updated[index].zonas_ids = val;
                         setNuevosValores(updated);
                       }}
-                      data={[
-                        { value: '', label: 'Todas las sucursales' },
-                        ...sucursales.filter(s => s.Sucursales_mh).map(s => ({ value: String(s.ID), label: s.Sucursales_mh }))
-                      ]}
+                      data={zonas.map(z => ({ value: String(z.id), label: z.nombre }))}
                       style={{ flex: 1 }}
-                      clearable
-                    />
-                    <CurrencyInput
-                      label="Valor Sugerido"
-                      value={valor.valor_asignado ? Number(valor.valor_asignado) : undefined}
-                      onChange={(val) => {
-                        const updated = [...nuevosValores];
-                        updated[index].valor_asignado = val?.toString() || '';
-                        setNuevosValores(updated);
-                      }}
-                      style={{ flex: 1 }}
+                      searchable
+                      required
                     />
                     <CurrencyInput
                       label="Valor a Facturar"
@@ -462,11 +476,11 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                   <Button 
                     onClick={async () => {
                       // Validar que todos los campos estén completos
-                      const validos = nuevosValores.every(v => v.valor_asignado && v.valor_facturar && v.fecha_inicio);
+                      const validos = nuevosValores.every(v => v.valor_facturar && v.fecha_inicio && v.zonas_ids.length > 0);
                       if (!validos) {
                         notifications.show({
                           title: 'Error',
-                          message: 'Todos los campos son obligatorios',
+                          message: 'Zonas, Valor a Facturar y Fecha son obligatorios',
                           color: 'red'
                         });
                         return;
@@ -474,37 +488,42 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                       
                       setLoading(true);
                       try {
-                        // Guardar todos los valores
+                        let idFinanciadorServicio = editingServicio.id_financiador_servicio;
+                        
+                        // Guardar cada valor con sus zonas (sin duplicar)
                         for (const valor of nuevosValores) {
-                          const response = await api.post(`/prestaciones/servicio/${editingServicio.id_financiador_servicio || 0}/valores`, {
-                            valor_asignado: parseFloat(valor.valor_asignado),
-                            valor_facturar: parseFloat(valor.valor_facturar),
-                            fecha_inicio: valor.fecha_inicio,
-                            sucursal_id: valor.sucursal_id ? parseInt(valor.sucursal_id) : null,
-                            id_servicio: editingServicio.id_servicio,
-                            financiador_id: financiadorId
-                          });
-                          // Actualizar id_prestador_servicio si se creó nuevo
-                          if (!editingServicio.id_financiador_servicio && response.data.id_financiador_servicio) {
-                            setEditingServicio({
-                              ...editingServicio,
-                              id_financiador_servicio: response.data.id_financiador_servicio,
-                              activo: 1
+                          for (const zonaId of valor.zonas_ids) {
+                            const response = await api.post(`/prestaciones/servicio/${idFinanciadorServicio || 0}/valores`, {
+                              precio_facturar: parseFloat(valor.valor_facturar),
+                              fecha_inicio: valor.fecha_inicio,
+                              zona_financiador_id: parseInt(zonaId),
+                              servicio_id: editingServicio.id,
+                              financiador_id: parseInt(financiadorId)
                             });
+                            
+                            // Actualizar id_financiador_servicio solo la primera vez
+                            if (!idFinanciadorServicio && response.data.id_financiador_servicio) {
+                              idFinanciadorServicio = response.data.id_financiador_servicio;
+                              setEditingServicio({
+                                ...editingServicio,
+                                id_financiador_servicio: idFinanciadorServicio,
+                                activo: 1
+                              });
+                            }
                           }
                         }
                         
+                        const totalZonas = nuevosValores.reduce((sum, v) => sum + v.zonas_ids.length, 0);
                         notifications.show({
                           title: 'Éxito',
-                          message: `${nuevosValores.length} valor(es) guardado(s) correctamente`,
+                          message: `Valores guardados para ${totalZonas} zona(s)`,
                           color: 'green'
                         });
                         
                         setNuevosValores([{
-                          valor_asignado: '',
                           valor_facturar: '',
                           fecha_inicio: new Date().toISOString().slice(0, 10),
-                          sucursal_id: ''
+                          zonas_ids: []
                         }]);
                         
                         // Recargar histórico solo si existe id_prestador_servicio
@@ -537,28 +556,26 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
                 <Table striped highlightOnHover>
                   <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
                     <Table.Tr>
-                      <Table.Th>Sucursal</Table.Th>
+                      <Table.Th>Zona</Table.Th>
                       <Table.Th>Fecha Inicio</Table.Th>
                       <Table.Th>Fecha Fin</Table.Th>
-                      <Table.Th style={{ textAlign: 'right' }}>Valor Sugerido</Table.Th>
                       <Table.Th style={{ textAlign: 'right' }}>Valor Facturar</Table.Th>
                       <Table.Th>Estado</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {valoresHistoricos.map((v: any, index) => {
-                      const sucursal = v.sucursal_id ? sucursales.find(s => s.ID === v.sucursal_id) : null;
+                      const zona = v.zona_financiador_id ? zonas.find(z => z.id === v.zona_financiador_id) : null;
                       return (
                         <Table.Tr key={`historico-${v.id || 'no-id'}-${index}-${v.fecha_inicio || 'no-fecha'}`}>
                           <Table.Td>
-                            <Text size="sm" fw={!v.sucursal_id ? 500 : 400}>
-                              {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
+                            <Text size="sm">
+                              {zona?.nombre || `Zona ${v.zona_financiador_id}`}
                             </Text>
                           </Table.Td>
                           <Table.Td>{new Date(v.fecha_inicio).toLocaleDateString('es-AR')}</Table.Td>
                           <Table.Td>{v.fecha_fin ? new Date(v.fecha_fin).toLocaleDateString('es-AR') : 'Vigente'}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
+                          <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.precio_facturar))}</Table.Td>
                           <Table.Td>
                             <Text size="sm" c={!v.fecha_fin ? 'green' : 'gray'}>
                               {!v.fecha_fin ? 'Vigente' : 'Histórico'}
@@ -628,23 +645,21 @@ export default function ServiciosPorFinanciador({ financiadorId }: Props) {
           <Table striped highlightOnHover>
             <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
               <Table.Tr>
-                <Table.Th>Sucursal</Table.Th>
-                <Table.Th style={{ textAlign: 'right' }}>Valor Sugerido</Table.Th>
+                <Table.Th>Zona</Table.Th>
                 <Table.Th style={{ textAlign: 'right' }}>Valor Facturar</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {valoresVigentes.map((v: any, index) => {
-                const sucursal = v.sucursal_id ? sucursales.find(s => s.ID === v.sucursal_id) : null;
+                const zona = v.zona_financiador_id ? zonas.find(z => z.id === v.zona_financiador_id) : null;
                 return (
-                  <Table.Tr key={`modal-${v.id || 'no-id'}-${index}-${v.sucursal_id || 'no-sucursal'}`}>
+                  <Table.Tr key={`modal-${v.id || 'no-id'}-${index}-${v.zona_financiador_id || 'no-zona'}`}>
                     <Table.Td>
-                      <Text size="sm" fw={!v.sucursal_id ? 500 : 400}>
-                        {v.sucursal_id ? (sucursal?.Sucursales_mh || `ID ${v.sucursal_id}`) : 'Todas'}
+                      <Text size="sm">
+                        {zona?.nombre || `Zona ${v.zona_financiador_id}`}
                       </Text>
                     </Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_asignado))}</Table.Td>
-                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.valor_facturar))}</Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>{numberFormat.formatCurrency(Number(v.precio_facturar))}</Table.Td>
                   </Table.Tr>
                 );
               })}

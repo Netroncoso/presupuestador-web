@@ -13,9 +13,9 @@ export const listarPrestacionesTarifario = async (req: Request, res: Response) =
     const { id } = req.params;
     
     const [prestaciones] = await pool.query<PresupuestoPrestacionTarifario[]>(
-      `SELECT ppt.*, ts.nombre as servicio_nombre, z.nombre as zona_nombre
+      `SELECT ppt.*, s.nombre as servicio_nombre, z.nombre as zona_nombre
        FROM presupuesto_prestaciones_tarifario ppt
-       INNER JOIN tarifario_servicio ts ON ppt.tarifario_servicio_id = ts.id
+       INNER JOIN servicios s ON ppt.servicio_id = s.id
        INNER JOIN tarifario_zonas z ON ppt.zona_id = z.id
        WHERE ppt.idPresupuestos = ?
        ORDER BY ppt.created_at`,
@@ -33,10 +33,13 @@ export const listarPrestacionesTarifario = async (req: Request, res: Response) =
 export const agregarPrestacionTarifario = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { tarifario_servicio_id, cantidad, zona_id, orden_costo, valor_asignado, fuera_tarifario }: CrearPrestacionTarifarioDTO = req.body;
+    const { servicio_id, cantidad, zona_id, zona_tarifario_id, orden_costo, valor_asignado, fuera_tarifario }: CrearPrestacionTarifarioDTO = req.body;
+    
+    // Aceptar zona_tarifario_id o zona_id (compatibilidad)
+    const zonaFinal = zona_tarifario_id || zona_id;
     
     // Validaciones
-    if (!tarifario_servicio_id || !cantidad || !zona_id) {
+    if (!servicio_id || !cantidad || !zonaFinal) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
     
@@ -51,8 +54,8 @@ export const agregarPrestacionTarifario = async (req: Request, res: Response) =>
     
     // Obtener nombre del servicio
     const [servicio] = await pool.query<RowDataPacket[]>(
-      'SELECT nombre FROM tarifario_servicio WHERE id = ?',
-      [tarifario_servicio_id]
+      'SELECT nombre FROM servicios WHERE id = ?',
+      [servicio_id]
     );
     
     if (servicio.length === 0) {
@@ -77,11 +80,11 @@ export const agregarPrestacionTarifario = async (req: Request, res: Response) =>
       const [valores] = await pool.query<RowDataPacket[]>(
         `SELECT costo_${orden_costo} as costo
          FROM tarifario_servicio_valores
-         WHERE tarifario_servicio_id = ? 
-           AND zona_id = ?
+         WHERE servicio_id = ? 
+           AND zona_tarifario_id = ?
            AND CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
          LIMIT 1`,
-        [tarifario_servicio_id, zona_id]
+        [servicio_id, zonaFinal]
       );
       
       if (valores.length === 0) {
@@ -104,9 +107,9 @@ export const agregarPrestacionTarifario = async (req: Request, res: Response) =>
     // Insertar prestación
     const [result] = await pool.query(
       `INSERT INTO presupuesto_prestaciones_tarifario 
-       (idPresupuestos, tarifario_servicio_id, prestacion, cantidad, zona_id, orden_costo, valor_asignado, valor_facturar, fuera_tarifario)
+       (idPresupuestos, servicio_id, prestacion, cantidad, zona_id, orden_costo, valor_asignado, valor_facturar, fuera_tarifario)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, tarifario_servicio_id, servicio[0].nombre, cantidad, zona_id, ordenFinal, costoFinal, valorFacturar, fueraTarifarioFlag]
+      [id, servicio_id, servicio[0].nombre, cantidad, zonaFinal, ordenFinal, costoFinal, valorFacturar, fueraTarifarioFlag]
     );
     
     // Recalcular totales del presupuesto
@@ -191,9 +194,9 @@ export const actualizarPrestacionTarifario = async (req: Request, res: Response)
     
     // Devolver prestación actualizada
     const [updated] = await pool.query<PresupuestoPrestacionTarifario[]>(
-      `SELECT ppt.*, ts.nombre as servicio_nombre, z.nombre as zona_nombre
+      `SELECT ppt.*, s.nombre as servicio_nombre, z.nombre as zona_nombre
        FROM presupuesto_prestaciones_tarifario ppt
-       INNER JOIN tarifario_servicio ts ON ppt.tarifario_servicio_id = ts.id
+       INNER JOIN servicios s ON ppt.servicio_id = s.id
        INNER JOIN tarifario_zonas z ON ppt.zona_id = z.id
        WHERE ppt.id = ?`,
       [itemId]

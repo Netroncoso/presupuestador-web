@@ -18,7 +18,6 @@ export const useRealtimeUpdates = () => {
   const lastUpdateRef = useRef<number>(Date.now());
   const NOTIFICATION_ID = 'sse-connection-error';
 
-  // Fallback function to refresh data manually
   const refreshData = async () => {
     try {
       const [notifResponse] = await Promise.all([
@@ -32,7 +31,6 @@ export const useRealtimeUpdates = () => {
       
       lastUpdateRef.current = Date.now();
     } catch (error) {
-      // Silenciar error de sesión expirada (ya manejado por useSessionExpiredNotification)
       if (error instanceof Error && error.message !== 'Sesión expirada') {
         console.error('Error refreshing data:', error);
       }
@@ -42,14 +40,9 @@ export const useRealtimeUpdates = () => {
   useEffect(() => {
     const connectSSE = () => {
       try {
-        // Get token from localStorage
         const token = localStorage.getItem('token');
-        if (!token) {
-          console.log('No token found, skipping SSE connection');
-          return;
-        }
+        if (!token) return;
 
-        // Create EventSource with token in URL (since headers aren't supported)
         const eventSource = new EventSource(`/api/sse/updates?token=${encodeURIComponent(token)}`);
         eventSourceRef.current = eventSource;
 
@@ -76,43 +69,36 @@ export const useRealtimeUpdates = () => {
           lastUpdateRef.current = Date.now();
         });
 
-        eventSource.onerror = (error) => {
+        eventSource.onerror = () => {
           setIsConnected(false);
-          console.log('SSE error, reconnecting...', error);
           eventSource.close();
           
-          // Always try to reconnect in development (Vite restarts)
           const currentToken = localStorage.getItem('token');
           if (currentToken) {
             retryCountRef.current++;
-            // Reset retry count if it's been a while since last attempt
             if (retryCountRef.current > maxRetries) {
               retryCountRef.current = 1;
             }
             
-            // Show alert if we hit max retries or if we are cycling and haven't connected
             if (retryCountRef.current === maxRetries) {
               notifications.show({
                 id: NOTIFICATION_ID,
                 title: 'Conexión perdida',
-                message: 'No se reciben actualizaciones. El sistema intentará reconectar, pero si persiste, por favor recarga la página.',
+                message: 'No se reciben actualizaciones. El sistema intentará reconectar.',
                 color: 'red',
                 autoClose: false,
                 withCloseButton: true,
               });
             }
 
-            const delay = Math.min(2000 * retryCountRef.current, 10000); // Faster reconnection
-            console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCountRef.current})`);
+            const delay = Math.min(2000 * retryCountRef.current, 10000);
             setTimeout(connectSSE, delay);
           }
         };
 
       } catch (error) {
-        console.error('Error connecting to SSE:', error);
         setIsConnected(false);
         
-        // Only reconnect if we have a token and haven't exceeded max retries
         const currentToken = localStorage.getItem('token');
         if (currentToken && retryCountRef.current < maxRetries) {
           retryCountRef.current++;
@@ -122,28 +108,28 @@ export const useRealtimeUpdates = () => {
       }
     };
 
-    // Start SSE connection
     connectSSE();
 
-    // Fallback polling every 20 seconds
-    fallbackIntervalRef.current = setInterval(() => {
-      const timeSinceLastUpdate = Date.now() - lastUpdateRef.current;
-      // If no update in 30 seconds, refresh manually
-      if (timeSinceLastUpdate > 30000) {
-        console.log('No SSE updates for 30s, refreshing manually');
-        refreshData();
+    // Fallback polling eliminado - SSE maneja reconexión automática
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token' && e.newValue) {
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+        retryCountRef.current = 0;
+        connectSSE();
       }
-    }, 20000);
+    };
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
-      if (fallbackIntervalRef.current) {
-        clearInterval(fallbackIntervalRef.current);
-      }
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []); // We don't add token as dependency to avoid reconnecting on every token change
+  }, []);
 
   return {
     notifications: data.notifications,

@@ -3,7 +3,11 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { adminInsumosService } from '../../services/adminInsumosService';
 
 export const getAllInsumos = asyncHandler(async (req: Request, res: Response) => {
-  const insumos = await adminInsumosService.obtenerTodos();
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const search = (req.query.search as string) || '';
+
+  const insumos = await adminInsumosService.obtenerTodos(page, limit, search);
   res.json(insumos);
 });
 

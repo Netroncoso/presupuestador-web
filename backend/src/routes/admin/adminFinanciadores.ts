@@ -18,7 +18,7 @@ const validateFinanciadorId = (req: Request, res: Response, next: NextFunction) 
 };
 
 const validateFinanciadorData = (req: Request, res: Response, next: NextFunction) => {
-  const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real } = req.body;
+  const { Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real, porcentaje_horas_nocturnas, porcentaje_dificil_acceso } = req.body;
   
   if (Financiador !== undefined && !Financiador?.trim()) {
     return res.status(400).json({ error: 'Nombre del financiador no puede estar vacío' });
@@ -34,6 +34,14 @@ const validateFinanciadorData = (req: Request, res: Response, next: NextFunction
   
   if (dias_cobranza_real !== undefined && (isNaN(parseInt(dias_cobranza_real)) || parseInt(dias_cobranza_real) < 0)) {
     return res.status(400).json({ error: 'Días cobranza real debe ser un número entero válido' });
+  }
+  
+  if (porcentaje_horas_nocturnas !== undefined && (isNaN(parseFloat(porcentaje_horas_nocturnas)) || parseFloat(porcentaje_horas_nocturnas) < 0 || parseFloat(porcentaje_horas_nocturnas) > 100)) {
+    return res.status(400).json({ error: 'Porcentaje horas nocturnas debe estar entre 0 y 100' });
+  }
+  
+  if (porcentaje_dificil_acceso !== undefined && (isNaN(parseFloat(porcentaje_dificil_acceso)) || parseFloat(porcentaje_dificil_acceso) < 0 || parseFloat(porcentaje_dificil_acceso) > 100)) {
+    return res.status(400).json({ error: 'Porcentaje difícil acceso debe estar entre 0 y 100' });
   }
   
   next();

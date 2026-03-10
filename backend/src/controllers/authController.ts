@@ -8,7 +8,15 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const verifyToken = async (req: Request, res: Response) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  const resultado = await authService.verifyToken(token!);
-  res.json(resultado);
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const resultado = await authService.verifyToken(token!);
+    res.json(resultado);
+  } catch (error: any) {
+    // Si el token expiró, devolver 401 en lugar de 500
+    if (error.name === 'TokenExpiredError' || error.message?.includes('expired')) {
+      return res.status(401).json({ error: 'Token expirado' });
+    }
+    throw error;
+  }
 };

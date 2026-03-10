@@ -8,7 +8,6 @@ import AdminTable from '../../components/AdminTable';
 interface Sucursal {
   ID: number;
   Sucursales_mh: string;
-  suc_porcentaje_dificil_acceso: number;
   suc_porcentaje_insumos: number;
 }
 
@@ -94,7 +93,6 @@ export default function GestionSucursales() {
   const handleEdit = (sucursal: Sucursal) => {
     setEditingSucursal({
       ...sucursal,
-      suc_porcentaje_dificil_acceso: formatNumber(sucursal.suc_porcentaje_dificil_acceso),
       suc_porcentaje_insumos: formatNumber(sucursal.suc_porcentaje_insumos)
     });
     setModalOpen(true);
@@ -106,7 +104,6 @@ export default function GestionSucursales() {
     setLoading(true);
     try {
       await api.put(`/admin/sucursales/${editingSucursal.ID}`, {
-        suc_porcentaje_dificil_acceso: formatNumber(editingSucursal.suc_porcentaje_dificil_acceso),
         suc_porcentaje_insumos: formatNumber(editingSucursal.suc_porcentaje_insumos)
       });
       
@@ -242,7 +239,7 @@ export default function GestionSucursales() {
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List grow>
           <Tabs.Tab value="sucursales">Sucursales</Tabs.Tab>
-          <Tabs.Tab value="zonas">Zonas</Tabs.Tab>
+          <Tabs.Tab value="zonas">Zonas (Tarifario)</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="sucursales" pt="md">
@@ -265,7 +262,6 @@ export default function GestionSucursales() {
               <Table.Thead style={{ backgroundColor: '#dce4f5' }}>
                 <Table.Tr>
                   <Table.Th>Sucursal</Table.Th>
-                  <Table.Th style={{ width: '150px' }}>% Difícil Acceso</Table.Th>
                   <Table.Th style={{ width: '150px' }}>
                     <Tooltip label="Incluye logística y ganancia" position="top">
                       <span>% Margen Insumos</span>
@@ -278,7 +274,6 @@ export default function GestionSucursales() {
                 {sucursalesFiltradas.map((sucursal) => (
                   <Table.Tr key={sucursal.ID}>
                     <Table.Td>{formatName(sucursal.Sucursales_mh)}</Table.Td>
-                    <Table.Td>{formatNumber(sucursal.suc_porcentaje_dificil_acceso)}%</Table.Td>
                     <Table.Td>{formatNumber(sucursal.suc_porcentaje_insumos)}%</Table.Td>
                     <Table.Td>
                       <Group gap="xs">
@@ -367,17 +362,6 @@ export default function GestionSucursales() {
       >
         {editingSucursal && (
           <Stack gap="md">
-            <TextInput
-              label="Porcentaje Difícil Acceso (%)"
-              type="number"
-              value={formatNumber(editingSucursal.suc_porcentaje_dificil_acceso).toString()}
-              onChange={(e) => setEditingSucursal({
-                ...editingSucursal,
-                suc_porcentaje_dificil_acceso: parseFloat(e.target.value) || 0
-              })}
-              min={0}
-              step={0.1}
-            />
             <TextInput
               label="Margen Total Insumos (%)"
               description="Incluye logística y ganancia. Se aplica sobre el costo base de cada insumo."

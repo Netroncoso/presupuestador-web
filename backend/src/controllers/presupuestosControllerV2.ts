@@ -19,7 +19,7 @@ function calcularTotalesPresupuesto(presupuesto: any) {
   const costoTotal = totalInsumos + totalPrestaciones + totalEquipamientos;
   const totalFacturar = Number(presupuesto.calc_total_insumos_facturar) + Number(presupuesto.calc_total_prestaciones_facturar) + Number(presupuesto.calc_total_equipamientos_facturar || 0);
   const rentabilidad = costoTotal > 0 ? ((totalFacturar - costoTotal) / costoTotal) * 100 : 0;
-  
+
   let rentabilidadConPlazo = rentabilidad;
   if (presupuesto.financiador_id && presupuesto.tasa_mensual && costoTotal > 0) {
     const diasCobranza = presupuesto.dias_cobranza_real || presupuesto.dias_cobranza_teorico || 30;
@@ -29,7 +29,7 @@ function calcularTotalesPresupuesto(presupuesto: any) {
     const utilidadConPlazo = valorPresente - costoTotal;
     rentabilidadConPlazo = (utilidadConPlazo / costoTotal) * 100;
   }
-  
+
   return {
     ...presupuesto,
     total_insumos: totalInsumos,
@@ -44,9 +44,9 @@ function calcularTotalesPresupuesto(presupuesto: any) {
 
 async function obtenerPrestacionesPresupuesto(id: number) {
   const [prestaciones] = await pool.query<any[]>(`
-    SELECT pp.*, s.nombre as servicio_nombre, s.tipo_unidad
+    SELECT pp.*, fs.codigo_financiador
     FROM presupuesto_prestaciones pp
-    LEFT JOIN servicios s ON CAST(pp.id_servicio AS UNSIGNED) = s.id_servicio
+    LEFT JOIN financiador_servicio fs ON pp.id_financiador_servicio = fs.id
     WHERE pp.idPresupuestos = ?
     ORDER BY pp.prestacion
   `, [id]);
@@ -75,83 +75,120 @@ async function obtenerEquipamientosPresupuesto(id: number) {
 }
 
 // Listar solo últimas versiones
+// Listar solo últimas versiones
 export const listarPresupuestos = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const limit = parseInt(req.query.limit as string) || BusinessRules.paginacion.limitDefault;
-  const offset = parseInt(req.query.offset as string) || BusinessRules.paginacion.offsetDefault;
+  const page = parseInt(req.query.page as string) || 1;
+  const offset = (page - 1) * limit;
   const estado = req.query.estado as string;
   const scope = req.query.scope as string;
+  const search = req.query.search as string;
+  const paciente = req.query.paciente as string;
   const userId = req.user?.id;
   const userRole = req.user?.rol;
-  
-  let whereClause = 'WHERE p.es_ultima_version = 1';
+
+  let baseWhere = 'WHERE p.es_ultima_version = 1';
   const params: any[] = [];
-  
+  let needsUserJoin = false;
+
   if (userRole === 'user') {
     if (scope === 'solo-mios') {
-      whereClause += ' AND p.usuario_id = ?';
+      baseWhere += ' AND p.usuario_id = ?';
       params.push(userId);
     } else {
-      whereClause += ' AND (p.usuario_id = ? OR u.sucursal_id = (SELECT sucursal_id FROM usuarios WHERE id = ?))';
+      // Necesitamos JOIN con usuarios solo para este caso (filtrar por sucursal del creador)
+      needsUserJoin = true;
+      baseWhere += ' AND (p.usuario_id = ? OR u.sucursal_id = (SELECT sucursal_id FROM usuarios WHERE id = ?))';
       params.push(userId, userId);
     }
   }
-  
+
   if (estado) {
-    whereClause += ' AND p.estado = ?';
+    baseWhere += ' AND p.estado = ?';
     params.push(estado);
   }
-  
-  params.push(limit, offset);
-  
+
+  if (search) {
+    baseWhere += ' AND (p.Nombre_Apellido LIKE ? OR p.DNI LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (paciente) {
+    baseWhere += ' AND p.Nombre_Apellido LIKE ?';
+    params.push(`%${paciente}%`);
+  }
+
+  // Query principal (siempre hace join con usuarios para mostrar nombre del creador)
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado, p.resultado_auditoria,
-      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, p.zona_id,
+      p.Nombre_Apellido, p.DNI, p.sucursal_id, s.Sucursales_mh as Sucursal, p.financiador_id, p.zona_tarifario_id, p.zona_financiador_id,
       p.total_insumos, p.total_prestaciones, p.costo_total, 
       p.total_facturar, (p.total_facturar - p.costo_total) AS utilidad, p.rentabilidad, p.rentabilidad_con_plazo, 
       p.created_at, u.username as usuario_creador
     FROM presupuestos p 
     LEFT JOIN usuarios u ON p.usuario_id = u.id 
     LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    ${whereClause}
+    ${baseWhere}
     ORDER BY p.created_at DESC 
     LIMIT ? OFFSET ?
-  `, params);
-  
-  res.json(rows);
+  `, [...params, limit, offset]);
+
+  // Query conteo total (Optimizado: Solo hace JOIN si es necesario por el filtro)
+  let countQuery = `SELECT COUNT(*) as total FROM presupuestos p`;
+
+  if (needsUserJoin) {
+    countQuery += ` LEFT JOIN usuarios u ON p.usuario_id = u.id`;
+  }
+
+  countQuery += ` ${baseWhere}`;
+
+  const [countResult] = await pool.query<any[]>(countQuery, params);
+
+  const total = countResult[0]?.total || 0;
+
+  res.json({
+    data: rows,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 });
 
 // Crear presupuesto (versión 1)
 export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
-  const { nombre, dni, sucursal_id, zona_id, dificil_acceso, porcentaje_insumos, financiador_id } = req.body;
+  const { nombre, dni, sucursal_id, zona_tarifario_id, zona_financiador_id, dificil_acceso, porcentaje_insumos, financiador_id } = req.body;
   const usuario_id = req.user?.id;
-  
+
   if (!nombre || !dni || !sucursal_id) {
     throw new AppError(400, 'Datos incompletos: nombre, dni y sucursal_id son requeridos');
   }
-  
+
   // Calcular porcentaje total (sucursal + financiador)
   let porcentajeTotal = Number(porcentaje_insumos) || 0;
-  
+
   if (financiador_id) {
     const [financiador] = await pool.query<any[]>(
       'SELECT porcentaje_insumos FROM financiador WHERE id = ?',
       [financiador_id]
     );
-    
+
     if (financiador.length > 0) {
       const porcentajeFinanciador = Number(financiador[0].porcentaje_insumos) || 0;
       porcentajeTotal += porcentajeFinanciador;
     }
   }
-  
+
   try {
     const [result] = await pool.query<MutationResult>(`
       INSERT INTO presupuestos 
-      (Nombre_Apellido, DNI, sucursal_id, zona_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
-      VALUES (?,?,?,?,?,?,?,?,?, 1, ?)
-    `, [nombre.trim(), dni, sucursal_id, zona_id || null, financiador_id || null, dificil_acceso || 'no', porcentajeTotal, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
-    
+      (Nombre_Apellido, DNI, sucursal_id, zona_tarifario_id, zona_financiador_id, financiador_id, dificil_acceso, porcentaje_insumos, usuario_id, version, es_ultima_version, estado) 
+      VALUES (?,?,?,?,?,?,?,?,?,?, 1, ?)
+    `, [nombre.trim(), dni, sucursal_id, zona_tarifario_id || null, zona_financiador_id || null, financiador_id || null, dificil_acceso || 'no', porcentajeTotal, usuario_id, BusinessRules.versionado.versionInicial, BusinessRules.estados.iniciales[0]]);
+
     res.status(201).json({ id: result.insertId, version: 1 });
   } catch (error) {
     throw new AppError(500, 'Error al crear presupuesto');
@@ -162,7 +199,16 @@ export const crearPresupuesto = asyncHandler(async (req: Request & { user?: any 
 export const finalizarPresupuesto = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
   const id = parseInt(req.params.id);
   const resultado = await presupuestoService.finalizar(id);
-  
+
+  res.json(resultado);
+});
+
+// Solicitar auditoría manual
+export const solicitarAuditoriaManual = asyncHandler(async (req: Request & { user?: any }, res: Response) => {
+  const id = parseInt(req.params.id);
+  const usuarioId = req.user?.id;
+
+  const resultado = await presupuestoService.solicitarAuditoriaManual(id, usuarioId);
   res.json(resultado);
 });
 
@@ -171,9 +217,9 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
   const idOriginal = parseInt(req.params.id);
   const usuario_id = req.user?.id;
   const { confirmar } = req.body;
-  
+
   const resultado = await versioningService.crearNuevaVersion(idOriginal, usuario_id, confirmar);
-  
+
   const statusCode = resultado.requiereNuevaVersion && resultado.id !== idOriginal ? 201 : 200;
   res.status(statusCode).json(resultado);
 });
@@ -181,7 +227,7 @@ export const crearVersionParaEdicion = asyncHandler(async (req: Request & { user
 // Obtener historial de versiones
 export const obtenerHistorial = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  
+
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, p.version, p.estado, p.es_ultima_version,
@@ -193,7 +239,7 @@ export const obtenerHistorial = asyncHandler(async (req: Request, res: Response)
     WHERE p.idPresupuestos = ? OR p.presupuesto_padre = ?
     ORDER BY p.version DESC
   `, [id, id]);
-  
+
   res.json(rows);
 });
 
@@ -202,7 +248,7 @@ export const cambiarEstado = asyncHandler(async (req: Request & { user?: any }, 
   const id = parseInt(req.params.id);
   const { estado, comentario } = req.body;
   const auditor_id = req.user?.id;
-  
+
   const resultado = await auditoriaService.cambiarEstado(id, estado, auditor_id, comentario);
   res.json(resultado);
 });
@@ -228,20 +274,22 @@ export const obtenerPendientes = asyncHandler(async (req: Request, res: Response
     AND p.es_ultima_version = 1
     ORDER BY p.created_at ASC
   `);
-  
+
   res.json(rows);
 });
 
 // Mantener funciones existentes para compatibilidad
 export const verificarDNI = asyncHandler(async (req: Request, res: Response) => {
   const { dni } = req.params;
-  
+
   const [rows] = await pool.query<any[]>(`
     SELECT 
       p.idPresupuestos, 
       p.Nombre_Apellido, 
       p.DNI, 
       p.sucursal_id,
+      p.zona_tarifario_id,
+      p.zona_financiador_id,
       p.estado,
       s.Sucursales_mh as Sucursal, 
       p.financiador_id, 
@@ -257,23 +305,10 @@ export const verificarDNI = asyncHandler(async (req: Request, res: Response) => 
 
 export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  
-  // Obtener presupuesto directamente sin recalcular (usa valores guardados en BD)
+
+  // Query principal simplificado - solo datos esenciales
   const [rows] = await pool.query<any[]>(`
-    SELECT 
-      p.*, 
-      s.Sucursales_mh as Sucursal,
-      z.nombre as zona_nombre,
-      f.Financiador, f.tasa_mensual, f.dias_cobranza_teorico, f.dias_cobranza_real,
-      fa.nombre as acuerdo_nombre,
-      u.username as usuario_creador
-    FROM presupuestos p 
-    LEFT JOIN sucursales_mh s ON p.sucursal_id = s.ID
-    LEFT JOIN tarifario_zonas z ON p.zona_id = z.id
-    LEFT JOIN financiador f ON p.financiador_id = f.id
-    LEFT JOIN financiador_acuerdo fa ON f.id_acuerdo = fa.id_acuerdo
-    LEFT JOIN usuarios u ON p.usuario_id = u.id
-    WHERE p.idPresupuestos = ?
+    SELECT p.* FROM presupuestos p WHERE p.idPresupuestos = ?
   `, [id]);
 
   if (rows.length === 0) {
@@ -282,12 +317,28 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
 
   const presupuesto = rows[0];
 
-  const prestaciones = await obtenerPrestacionesPresupuesto(id);
-  const insumos = await obtenerInsumosPresupuesto(id);
-  const equipamientos = await obtenerEquipamientosPresupuesto(id);
+  // Cargar datos relacionados en paralelo
+  const [prestaciones, insumos, equipamientos, sucursal, zonaT, zonaF, financiador, usuario] = await Promise.all([
+    obtenerPrestacionesPresupuesto(id),
+    obtenerInsumosPresupuesto(id),
+    obtenerEquipamientosPresupuesto(id),
+    presupuesto.sucursal_id ? pool.query('SELECT Sucursales_mh FROM sucursales_mh WHERE ID = ?', [presupuesto.sucursal_id]) : Promise.resolve([[]]),
+    presupuesto.zona_tarifario_id ? pool.query('SELECT nombre FROM tarifario_zonas WHERE id = ?', [presupuesto.zona_tarifario_id]) : Promise.resolve([[]]),
+    presupuesto.zona_financiador_id ? pool.query('SELECT nombre FROM financiador_zonas WHERE id = ?', [presupuesto.zona_financiador_id]) : Promise.resolve([[]]),
+    presupuesto.financiador_id ? pool.query('SELECT Financiador, tasa_mensual, dias_cobranza_teorico, dias_cobranza_real FROM financiador WHERE id = ?', [presupuesto.financiador_id]) : Promise.resolve([[]]),
+    presupuesto.usuario_id ? pool.query('SELECT username FROM usuarios WHERE id = ?', [presupuesto.usuario_id]) : Promise.resolve([[]])
+  ]);
 
   res.json({
     ...presupuesto,
+    Sucursal: sucursal[0][0]?.Sucursales_mh || null,
+    zona_tarifario_nombre: zonaT[0][0]?.nombre || null,
+    zona_financiador_nombre: zonaF[0][0]?.nombre || null,
+    Financiador: financiador[0][0]?.Financiador || null,
+    tasa_mensual: financiador[0][0]?.tasa_mensual || null,
+    dias_cobranza_teorico: financiador[0][0]?.dias_cobranza_teorico || null,
+    dias_cobranza_real: financiador[0][0]?.dias_cobranza_real || null,
+    usuario_creador: usuario[0][0]?.username || null,
     prestaciones,
     insumos,
     equipamientos
@@ -297,15 +348,56 @@ export const obtenerPresupuesto = asyncHandler(async (req: Request, res: Respons
 export const actualizarFinanciador = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   const { financiador_id } = req.body;
-  
+
   const resultado = await auditoriaService.actualizarFinanciador(id, financiador_id);
   res.json(resultado);
+});
+
+export const actualizarDatosPaciente = asyncHandler(async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { 
+    fecha_nacimiento, 
+    numero_afiliado, 
+    contacto_nombre, 
+    contacto_telefono, 
+    diagnostico_medico, 
+    domicilio, 
+    localidad 
+  } = req.body;
+
+  await pool.query(`
+    UPDATE presupuestos 
+    SET fecha_nacimiento = ?, 
+        numero_afiliado = ?, 
+        contacto_nombre = ?, 
+        contacto_telefono = ?, 
+        diagnostico_medico = ?, 
+        domicilio = ?, 
+        localidad = ?
+    WHERE idPresupuestos = ?
+  `, [
+    fecha_nacimiento || null,
+    numero_afiliado || null,
+    contacto_nombre || null,
+    contacto_telefono || null,
+    diagnostico_medico || null,
+    domicilio || null,
+    localidad || null,
+    id
+  ]);
+
+  res.json({ success: true, message: 'Datos del paciente actualizados' });
 });
 
 export const revertirABorrador = asyncHandler(async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
   const repo = new PresupuestoRepository();
   await repo.revertirABorrador(id);
+
+  // Recalcular totales después de revertir
+  const { presupuestoCalculosService } = await import('../services/presupuestoCalculosService');
+  await presupuestoCalculosService.recalcularTotales(id);
+
   res.json({ success: true });
 });
 

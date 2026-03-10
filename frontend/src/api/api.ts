@@ -1,6 +1,6 @@
 const getBackendUrl = () => {
   const url = (import.meta as any).env?.VITE_API_URL || '';
-  
+
   // Validate URL to prevent SSRF
   const allowedHosts = ['localhost', '127.0.0.1', '192.168.1.197'];
   try {
@@ -66,7 +66,7 @@ class ApiClient {
         const response = await fetch(url, {
           ...options,
           headers,
-          signal: AbortSignal.timeout(30000) // 30s timeout
+          signal: AbortSignal.timeout(120000) // 120s timeout
         });
         return response;
       } catch (error) {
@@ -77,8 +77,26 @@ class ApiClient {
     throw new Error('Max retries exceeded');
   }
 
-  async get(url: string) {
-    const res = await this.fetchWithRetry(`${BACKEND}/api${url}`);
+  async get(url: string, config?: RequestInit & { params?: Record<string, any> }) {
+    let finalUrl = `${BACKEND}/api${url}`;
+
+    // Extract params and keep the rest as fetch options
+    const { params, ...options } = config || {};
+
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        finalUrl += (finalUrl.includes('?') ? '&' : '?') + queryString;
+      }
+    }
+
+    const res = await this.fetchWithRetry(finalUrl, options);
     const data = await this.handleResponse(res);
     return { data };
   }
@@ -149,24 +167,46 @@ export async function getFinanciadorAcuerdos() {
   return res.data;
 }
 
-export async function getPrestacionesPorFinanciador(id: string, fecha?: string, sucursalId?: number) {
+export async function getPrestacionesPorFinanciador(id: string, fecha?: string, zonaId?: number, page: number = 1, limit: number = 50, search: string = '') {
   const params = new URLSearchParams();
   if (fecha) params.append('fecha', fecha);
-  if (sucursalId) params.append('sucursal_id', sucursalId.toString());
-  
-  const url = params.toString() 
+  if (zonaId) params.append('zona_financiador_id', zonaId.toString());
+  if (page) params.append('page', page.toString());
+  if (limit) params.append('limit', limit.toString());
+  if (search) params.append('search', search);
+
+  const url = params.toString()
     ? `/prestaciones/financiador/${id}?${params.toString()}`
     : `/prestaciones/financiador/${id}`;
   const res = await api.get(url);
-  // Backend retorna { data: [], pagination: {} }, extraer solo data
   return res.data.data || res.data;
 }
 
 export async function actualizarTotales(id: number, payload: { total_insumos: number; total_prestaciones: number }) {
   try {
-    const res = await api.put(`/presupuestos/${id}/totales`, payload);
+    const res = await api.get(`/presupuestos/${id}/totales`, payload);
     return res.data;
   } catch (error) {
     throw new Error(`Error updating totals: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+// Nuevas funciones para sistema dual de zonas
+export async function getFinanciadorZonas(financiadorId: string) {
+  const res = await api.get(`/financiador/${financiadorId}/zonas`);
+  return res.data.zonas;
+}
+
+export async function getServiciosFinanciador(financiadorId: string, zonaFinanciadorId: number) {
+  const res = await api.get(`/financiador/${financiadorId}/servicios`, {
+    params: { zona_financiador_id: zonaFinanciadorId }
+  });
+  return res.data.servicios;
+}
+
+export async function getServiciosTarifario(zonaTarifarioId: number) {
+  const res = await api.get('/tarifario/servicios', {
+    params: { zona_tarifario_id: zonaTarifarioId }
+  });
+  return res.data;
 }

@@ -51,10 +51,12 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
         api.get('/auditoria-multi/pendientes'),
         api.get('/auditoria-multi/mis-casos')
       ]);
-      setPendientes(pendientesRes.data);
-      setMisCasos(misCasosRes.data);
+      setPendientes(pendientesRes.data?.data || []);
+      setMisCasos(misCasosRes.data?.data || []);
     } catch (error) {
       console.error('Error cargando datos:', error);
+      setPendientes([]);
+      setMisCasos([]);
     } finally {
       setLoading(false);
     }
@@ -68,13 +70,15 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
       notifications.show({
         title: 'Caso Asignado',
         message: 'El caso ha sido asignado a ti',
-        color: 'green'
+        color: 'green',
+        position: 'top-center'
       });
     } catch (error: any) {
       notifications.show({
         title: 'Error',
         message: error.response?.data?.error || 'Error al tomar el caso',
-        color: 'red'
+        color: 'red',
+        position: 'top-center'
       });
     }
   };
@@ -183,7 +187,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
           ) : (
             <Paper withBorder radius="md" shadow="sm">
               <Table.ScrollContainer minWidth={800}>
-                <Table striped highlightOnHover fontSize="xs">
+                <Table striped highlightOnHover>
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Paciente</Table.Th>
@@ -258,7 +262,7 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
               </Alert>
               <Paper withBorder radius="md" shadow="sm">
                 <Table.ScrollContainer minWidth={800}>
-                  <Table striped highlightOnHover fontSize="xs">
+                  <Table striped highlightOnHover>
                     <Table.Thead>
                       <Table.Tr>
                         <Table.Th>Paciente</Table.Th>
@@ -319,7 +323,6 @@ const GerenciaDashboard: React.FC<GerenciaDashboardProps> = ({ titulo, rol }) =>
             onEditarPresupuesto={() => {}} 
             recargarTrigger={0} 
             esAuditor={true}
-            onVerDetalle={verDetallePresupuesto}
           />
         </Tabs.Panel>
       </Tabs>

@@ -20,7 +20,6 @@ import Notificaciones from "./Notificaciones";
 import { NotificationIndicator } from "../components/NotificationIndicator";
 import { ModalAuditoria } from "../components/ModalAuditoria";
 import { ModalConfirmarEdicion } from "../components/ModalConfirmarEdicion";
-import { ModalValidacionItems } from "../components/ModalValidacionItems";
 import { ConnectionStatus } from "../components/ConnectionStatus";
 import Insumos from "./Insumos";
 import Prestaciones from "./Prestaciones";
@@ -46,7 +45,6 @@ import { usePresupuesto } from "../hooks/usePresupuesto";
 import { useTotales } from "../hooks/useTotales";
 import { useFinanciador } from "../hooks/useFinanciador";
 import { useModalState } from "../hooks/useModalState";
-import { useItemValidation } from "../hooks/useItemValidation";
 import { usePdfGenerator } from "../hooks/usePdfGenerator";
 import { api } from "../api/api";
 
@@ -71,7 +69,7 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>("datos");
   const [esCargaHistorial, setEsCargaHistorial] = useState(false);
   const [datosHistorial, setDatosHistorial] = useState<
-    { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string; zonaId?: number } | undefined
+    { nombre: string; dni: string; sucursal: string; sucursal_id?: number; financiador_id?: string; zonaId?: number; zona_tarifario_id?: number; zona_financiador_id?: number } | undefined
   >();
   const [recargarHistorial, setRecargarHistorial] = useState(0);
   const [enviandoAuditoria, setEnviandoAuditoria] = useState(false);
@@ -79,20 +77,19 @@ export default function UserDashboard() {
   const [presupuestoParaEditar, setPresupuestoParaEditar] = useState<any>(null);
   const [infoEdicion, setInfoEdicion] = useState<any>(null);
   const [soloLectura, setSoloLectura] = useState(false);
-  const [itemsFaltantes, setItemsFaltantes] = useState<any[]>([]);
-  const [validacionCompletada, setValidacionCompletada] = useState(false);
   const [configDefaults, setConfigDefaults] = useState({ tasa: 2, dias: 30 });
+  
+  // Estados para sincronización en tiempo real de zonas
+  const [liveZonaTarifarioId, setLiveZonaTarifarioId] = useState<number | null>(null);
+  const [liveZonaFinanciadorId, setLiveZonaFinanciadorId] = useState<number | null>(null);
 
   const {
     modalAuditoriaAbierto,
     modalEdicionAbierto,
-    modalValidacionAbierto,
     abrirModalAuditoria,
     cerrarModalAuditoria,
     abrirModalEdicion,
     cerrarModalEdicion,
-    abrirModalValidacion,
-    cerrarModalValidacion,
   } = useModalState();
 
   const {
@@ -113,13 +110,20 @@ export default function UserDashboard() {
 
   const handlePresupuestoCreado = useCallback((data: PresupuestoCreadoData) => {
     crearPresupuesto(data.id, data.nombre, data.sucursal, data.porcentajeInsumos, data.financiadorId);
+    
+    // Sincronizar estados locales
+    if (data.zonaTarifarioId) setLiveZonaTarifarioId(data.zonaTarifarioId);
+    if (data.zonaFinanciadorId) setLiveZonaFinanciadorId(data.zonaFinanciadorId);
+    
     setDatosHistorial({ 
       nombre: data.nombre, 
       dni: data.dni, 
       sucursal: data.sucursal, 
       sucursal_id: data.sucursalId,
       financiador_id: data.financiadorId,
-      zonaId: data.zonaId
+      zonaId: data.zonaId,
+      zona_tarifario_id: data.zonaId,
+      zona_financiador_id: data.zonaFinanciadorId
     });
   }, [crearPresupuesto]);
 
@@ -169,8 +173,6 @@ export default function UserDashboard() {
     }).catch(() => {});
   }, []);
 
-  const { validarItems, procesarItem } = useItemValidation(presupuestoId);
-
   const rentabilidadFinal = useMemo(
     () =>
       financiadorInfo?.dias_cobranza_real ? rentabilidadConPlazo : rentabilidad,
@@ -203,6 +205,8 @@ export default function UserDashboard() {
     setDatosHistorial(undefined);
     setSoloLectura(false);
     setActiveTab('datos');
+    setLiveZonaTarifarioId(null);
+    setLiveZonaFinanciadorId(null);
   }, [resetPresupuesto, resetTotales]);
 
   const ejecutarFinalizacion = useCallback(async () => {
@@ -218,32 +222,27 @@ export default function UserDashboard() {
 
       const resultado = await finalizarPresupuesto(totales);
       setRecargarHistorial((prev) => prev + 1);
-      setValidacionCompletada(false);
 
       // Si requiere auditoría, abrir modal y marcar como automática
       if (resultado.estadoFinal === 'pendiente_prestacional') {
-        // Mostrar notificación según motivo
-        if (resultado.tieneInsumosCriticos) {
-          notifications.show({
-            title: '⚠️ Auditoría por Insumos Críticos',
-            message: 'El presupuesto contiene insumos críticos que requieren revisión gerencial obligatoria.',
-            color: 'orange',
-            position: 'top-center',
-            autoClose: false,
-          });
+        // Mostrar notificación con todas las razones
+        const razones = resultado.razones || [];
+        const totalViolaciones = resultado.totalViolaciones || razones.length;
+        
+        let mensaje = '';
+        if (razones.length > 0) {
+          mensaje = `${totalViolaciones} condición${totalViolaciones > 1 ? 'es' : ''} detectada${totalViolaciones > 1 ? 's' : ''}:\n• ${razones.join('\n• ')}`;
         } else {
-          const mensaje = resultado.razones && resultado.razones.length > 0
-            ? `Razones: ${resultado.razones.join(', ')}`
-            : 'El presupuesto requiere revisión gerencial según las reglas automáticas configuradas.';
-          
-          notifications.show({
-            title: '📋 Auditoría por Reglas de Negocio',
-            message: mensaje,
-            color: 'blue',
-            position: 'top-center',
-            autoClose: false,
-          });
+          mensaje = 'El presupuesto requiere revisión gerencial según las reglas automáticas configuradas.';
         }
+        
+        notifications.show({
+          title: '📋 Auditoría por Reglas de Negocio',
+          message: mensaje,
+          color: 'blue',
+          position: 'top-center',
+          autoClose: false,
+        });
         
         setAuditoriaAutomatica(true);
         abrirModalAuditoria();
@@ -268,7 +267,6 @@ export default function UserDashboard() {
       }, 500);
     } catch (error) {
       console.error("Error al finalizar presupuesto:", error);
-      setValidacionCompletada(false);
     }
   }, [
     finalizarPresupuesto,
@@ -283,6 +281,8 @@ export default function UserDashboard() {
   ]);
 
   const handleFinalizarPresupuesto = useCallback(async () => {
+    if (guardandoTotales) return;
+    
     if (costoTotal === 0) {
       notifications.show({
         title: '⚠️ Presupuesto Vacío',
@@ -294,30 +294,11 @@ export default function UserDashboard() {
       return;
     }
 
-    if (validacionCompletada) {
-      await ejecutarFinalizacion();
-      return;
-    }
-
-    const { valido, faltantes } = await validarItems(
-      insumosSeleccionados,
-      prestacionesSeleccionadas
-    );
-
-    if (!valido && faltantes.length > 0) {
-      setItemsFaltantes(faltantes);
-      abrirModalValidacion();
-    } else {
-      await ejecutarFinalizacion();
-    }
+    await ejecutarFinalizacion();
   }, [
     costoTotal,
-    validacionCompletada,
-    validarItems,
-    insumosSeleccionados,
-    prestacionesSeleccionadas,
-    abrirModalValidacion,
     ejecutarFinalizacion,
+    guardandoTotales,
   ]);
 
   const handleEditarPresupuesto = useCallback(
@@ -330,8 +311,28 @@ export default function UserDashboard() {
           sucursal: presupuesto.Sucursal,
           sucursal_id: presupuesto.sucursal_id,
           financiador_id: presupuesto.financiador_id?.toString(),
-          zonaId: presupuesto.zona_id
+          zonaId: presupuesto.zona_tarifario_id,
+          zona_tarifario_id: presupuesto.zona_tarifario_id,
+          zona_financiador_id: presupuesto.zona_financiador_id
         });
+        
+        // Sincronizar estados locales
+        setLiveZonaTarifarioId(presupuesto.zona_tarifario_id);
+        setLiveZonaFinanciadorId(presupuesto.zona_financiador_id);
+        
+        // Actualizar estado del hook ANTES de cargar items
+        const sucursalData = await api.get(`/sucursales`);
+        const sucursal = sucursalData.data.find((s: any) => s.ID === presupuesto.sucursal_id);
+        const porcentajeInsumos = sucursal?.suc_porcentaje_insumos || 0;
+        
+        crearPresupuesto(
+          presupuesto.idPresupuestos,
+          presupuesto.Nombre_Apellido,
+          presupuesto.Sucursal,
+          porcentajeInsumos,
+          presupuesto.financiador_id?.toString()
+        );
+        
         setSoloLectura(true);
         await cargarPresupuesto(
           presupuesto.idPresupuestos,
@@ -366,8 +367,28 @@ export default function UserDashboard() {
             sucursal: presupuesto.Sucursal,
             sucursal_id: presupuesto.sucursal_id,
             financiador_id: presupuesto.financiador_id?.toString(),
-            zonaId: presupuesto.zona_id
+            zonaId: presupuesto.zona_tarifario_id,
+            zona_tarifario_id: presupuesto.zona_tarifario_id,
+            zona_financiador_id: presupuesto.zona_financiador_id
           });
+          
+          // Sincronizar estados locales
+          setLiveZonaTarifarioId(presupuesto.zona_tarifario_id);
+          setLiveZonaFinanciadorId(presupuesto.zona_financiador_id);
+          
+          // Actualizar estado del hook ANTES de cargar items
+          const sucursalData = await api.get(`/sucursales`);
+          const sucursal = sucursalData.data.find((s: any) => s.ID === presupuesto.sucursal_id);
+          const porcentajeInsumos = sucursal?.suc_porcentaje_insumos || 0;
+          
+          crearPresupuesto(
+            response.id,
+            presupuesto.Nombre_Apellido,
+            presupuesto.Sucursal,
+            porcentajeInsumos,
+            presupuesto.financiador_id?.toString()
+          );
+          
           setSoloLectura(false);
           await cargarPresupuesto(
             response.id,
@@ -414,29 +435,37 @@ export default function UserDashboard() {
 
       setEnviandoAuditoria(true);
       try {
-        // Si NO es auditoría automática, finalizar primero
-        if (!auditoriaAutomatica) {
-          const totales = {
-            totalInsumos,
-            totalPrestaciones,
-            costoTotal,
-            totalFacturar,
-            rentabilidad,
-            rentabilidadConPlazo,
-          };
-          await finalizarPresupuesto(totales);
-        }
+        let resultado;
         
-        // Enviar mensaje a auditoría
-        await api.put(`/auditoria/pedir/${presupuestoId}`, {
-          mensaje: mensaje || null,
-        });
+        // Si NO es auditoría automática, usar endpoint de auditoría manual
+        if (!auditoriaAutomatica) {
+          resultado = await api.post(`/presupuestos/${presupuestoId}/auditoria-manual`, {});
+          
+          // Mostrar razones encontradas
+          if (resultado.data.razones && resultado.data.razones.length > 0) {
+            const totalViolaciones = resultado.data.totalViolaciones || resultado.data.razones.length;
+            const razonesTexto = resultado.data.razones.join('\n• ');
+            
+            notifications.show({
+              title: `🔍 Auditoría Manual Solicitada`,
+              message: `${totalViolaciones} condición${totalViolaciones > 1 ? 'es' : ''} detectada${totalViolaciones > 1 ? 's' : ''}:\n• ${razonesTexto}`,
+              color: "blue",
+              position: "top-center",
+              autoClose: 8000,
+            });
+          }
+        } else {
+          // Si es auditoría automática, solo enviar mensaje adicional
+          await api.put(`/auditoria/pedir/${presupuestoId}`, {
+            mensaje: mensaje || null,
+          });
+        }
 
         notifications.show({
           title: "Auditoría Solicitada",
           message:
             "La Gerencia Prestacional será notificada para revisar el presupuesto",
-          color: "blue",
+          color: "green",
           position: "top-center",
           autoClose: 5000,
         });
@@ -463,18 +492,8 @@ export default function UserDashboard() {
         setEnviandoAuditoria(false);
       }
     },
-    [presupuestoId, auditoriaAutomatica, finalizarPresupuesto, totalInsumos, totalPrestaciones, costoTotal, totalFacturar, rentabilidad, rentabilidadConPlazo, cerrarModalAuditoria, handleNuevoPresupuesto]
+    [presupuestoId, auditoriaAutomatica, cerrarModalAuditoria, handleNuevoPresupuesto]
   );
-
-  const handleContinuarValidacion = useCallback((continuar: boolean) => {
-    cerrarModalValidacion();
-    if (continuar) {
-      setValidacionCompletada(true);
-      handleFinalizarPresupuesto();
-    } else {
-      setItemsFaltantes([]);
-    }
-  }, [cerrarModalValidacion, handleFinalizarPresupuesto]);
 
   const handleConfirmarEdicion = useCallback(async () => {
     if (!presupuestoParaEditar) return;
@@ -492,8 +511,28 @@ export default function UserDashboard() {
         sucursal: presupuestoParaEditar.Sucursal,
         sucursal_id: presupuestoParaEditar.sucursal_id,
         financiador_id: presupuestoParaEditar.financiador_id?.toString(),
-        zonaId: presupuestoParaEditar.zona_id
+        zonaId: presupuestoParaEditar.zona_tarifario_id,
+        zona_tarifario_id: presupuestoParaEditar.zona_tarifario_id,
+        zona_financiador_id: presupuestoParaEditar.zona_financiador_id
       });
+      
+      // Sincronizar estados locales
+      setLiveZonaTarifarioId(presupuestoParaEditar.zona_tarifario_id);
+      setLiveZonaFinanciadorId(presupuestoParaEditar.zona_financiador_id);
+      
+      // Actualizar estado del hook ANTES de cargar items
+      const sucursalData = await api.get(`/sucursales`);
+      const sucursal = sucursalData.data.find((s: any) => s.ID === presupuestoParaEditar.sucursal_id);
+      const porcentajeInsumos = sucursal?.suc_porcentaje_insumos || 0;
+      
+      crearPresupuesto(
+        response.id,
+        presupuestoParaEditar.Nombre_Apellido,
+        presupuestoParaEditar.Sucursal,
+        porcentajeInsumos,
+        presupuestoParaEditar.financiador_id?.toString()
+      );
+      
       setSoloLectura(false);
 
       await cargarPresupuesto(
@@ -835,7 +874,10 @@ export default function UserDashboard() {
           <DatosPresupuesto
             onPresupuestoCreado={handlePresupuestoCreado}
             onNuevoPresupuesto={handleNuevoPresupuesto}
-            onCargarPresupuesto={handleCargarPresupuesto} // Nueva prop agregada
+            onCargarPresupuesto={handleCargarPresupuesto}
+            onFinanciadorIdChange={setFinanciadorId}
+            onZonaTarifarioIdChange={setLiveZonaTarifarioId}
+            onZonaFinanciadorIdChange={setLiveZonaFinanciadorId}
             esCargaHistorial={esCargaHistorial}
             setEsCargaHistorial={setEsCargaHistorial}
             datosHistorial={datosHistorial}
@@ -862,10 +904,12 @@ export default function UserDashboard() {
             setPrestacionesSeleccionadas={setPrestacionesSeleccionadas}
             onTotalChange={setTotalesPrestaciones}
             presupuestoId={presupuestoId}
-            financiadorId={financiadorId}
+            financiadorId={financiadorId || datosHistorial?.financiador_id || null}
             soloLectura={soloLectura}
             sucursalId={datosHistorial?.sucursal_id || null}
-            zonaId={datosHistorial?.zonaId || null}
+            zonaId={liveZonaTarifarioId || datosHistorial?.zonaId || null}
+            zonaTarifarioId={liveZonaTarifarioId || datosHistorial?.zona_tarifario_id || null}
+            zonaFinanciadorId={liveZonaFinanciadorId || datosHistorial?.zona_financiador_id || null}
           />
         </Tabs.Panel>
 
@@ -924,15 +968,6 @@ export default function UserDashboard() {
         }
         requiereNuevaVersion={infoEdicion?.requiereNuevaVersion || false}
         onConfirmar={handleConfirmarEdicion}
-      />
-
-      <ModalValidacionItems
-        opened={modalValidacionAbierto}
-        onClose={() => handleContinuarValidacion(false)}
-        itemsFaltantes={itemsFaltantes}
-        onReintentarItem={procesarItem}
-        onContinuarDeTodasFormas={() => handleContinuarValidacion(true)}
-        onFinalizarPresupuesto={() => handleContinuarValidacion(true)}
       />
     </ResponsiveContainer>
   );

@@ -69,9 +69,12 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
   const [auditorias, setAuditorias] = useState<any[]>([]);
   const [presupuestoActual, setPresupuestoActual] = useState<any>(presupuesto);
   const [prestacionesTarifario, setPrestacionesTarifario] = useState<any[]>([]);
+  const [lastLoadedId, setLastLoadedId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (opened && presupuesto?.idPresupuestos) {
+    if (opened && presupuesto?.idPresupuestos && presupuesto.idPresupuestos !== lastLoadedId) {
+      setLastLoadedId(presupuesto.idPresupuestos);
+      
       // Recargar presupuesto completo con totales actualizados
       api.get(`/presupuestos/${presupuesto.idPresupuestos}`)
         .then(res => setPresupuestoActual(res.data))
@@ -86,7 +89,12 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
         .then(res => setPrestacionesTarifario(res.data))
         .catch(err => console.error('Error cargando prestaciones tarifario:', err));
     }
-  }, [opened, presupuesto?.idPresupuestos]);
+    
+    // Reset cuando se cierra el modal
+    if (!opened) {
+      setLastLoadedId(null);
+    }
+  }, [opened, presupuesto?.idPresupuestos, lastLoadedId]);
 
   if (!presupuestoActual) return null;
 
@@ -172,6 +180,53 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
           </Table>
         </Paper>
 
+        {/* Evaluaciones Automáticas */}
+        {presupuestoActual.razones_auditoria && (
+          <Paper p="md" withBorder>
+            <Group justify="space-between" mb="sm">
+              <Title order={4}>Evaluaciones Automáticas</Title>
+              {(() => {
+                try {
+                  const razones = typeof presupuestoActual.razones_auditoria === 'string' 
+                    ? JSON.parse(presupuestoActual.razones_auditoria)
+                    : presupuestoActual.razones_auditoria;
+                  return razones?.evaluado_en ? (
+                    <Text size="xs" c="dimmed">
+                      {new Date(razones.evaluado_en).toLocaleString('es-AR')}
+                    </Text>
+                  ) : null;
+                } catch (error) {
+                  return null;
+                }
+              })()}
+            </Group>
+            {(() => {
+              try {
+                const razones = typeof presupuestoActual.razones_auditoria === 'string' 
+                  ? JSON.parse(presupuestoActual.razones_auditoria)
+                  : presupuestoActual.razones_auditoria;
+                
+                if (!razones || !razones.razones || razones.razones.length === 0) {
+                  return <Text size="sm" c="dimmed">No hay evaluaciones registradas</Text>;
+                }
+                
+                return (
+                  <Stack gap="xs">
+                    {razones.razones.map((razon: any, idx: number) => (
+                      <Text key={idx} size="sm">
+                        • {razon.mensaje}
+                      </Text>
+                    ))}
+                  </Stack>
+                );
+              } catch (error) {
+                console.error('Error parsing razones_auditoria:', error);
+                return <Text size="sm" c="red">Error al mostrar evaluaciones</Text>;
+              }
+            })()}
+          </Paper>
+        )}
+
         {auditorias.length > 0 && (
           <Accordion variant="contained">
             <Accordion.Item value="auditorias">
@@ -204,20 +259,30 @@ export const ModalDetallePresupuesto: React.FC<ModalDetallePresupuestoProps> = (
               <Table striped>
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th>Código</Table.Th>
                     <Table.Th>Prestación</Table.Th>
                     <Table.Th>Cantidad</Table.Th>
                     <Table.Th>Valor Asignado</Table.Th>
                     <Table.Th>Valor Facturar</Table.Th>
+                    <Table.Th>Recargos</Table.Th>
                     <Table.Th>Subtotal</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {presupuestoActual.prestaciones.map((prest: any, idx: number) => (
                     <Table.Tr key={idx}>
+                      <Table.Td><Text size="xs" c="dimmed">{prest.codigo_financiador || '-'}</Text></Table.Td>
                       <Table.Td>{prest.prestacion || prest.nombre}</Table.Td>
                       <Table.Td>{prest.cantidad}</Table.Td>
                       <Table.Td>${Number(prest.valor_asignado || prest.precio_unitario || 0).toFixed(2)}</Table.Td>
                       <Table.Td>${Number(prest.valor_facturar || prest.precio_unitario || 0).toFixed(2)}</Table.Td>
+                      <Table.Td>
+                        {prest.aplicar_horas_nocturnas === 1 ? (
+                          <Text size="xs" c="indigo">Nocturno +{prest.porcentaje_aplicado}%</Text>
+                        ) : (
+                          <Text size="xs" c="dimmed">-</Text>
+                        )}
+                      </Table.Td>
                       <Table.Td>${(Number(prest.cantidad) * Number(prest.valor_facturar || prest.precio_unitario || 0)).toFixed(2)}</Table.Td>
                     </Table.Tr>
                   ))}

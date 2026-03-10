@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, NumberInput, Text, Switch, Tooltip } from '@mantine/core';
+import { TextInput, Button, Table, Group, Stack, Modal, ActionIcon, Select, Text, Switch, Tooltip } from '@mantine/core';
 import { PencilSquareIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { notifications } from '@mantine/notifications';
 import { api } from '../../api/api';
@@ -13,6 +13,7 @@ interface Equipamiento {
   tipo: string;
   precio_referencia: number;
   activo: number;
+  codigo_producto?: string;
 }
 
 interface TipoEquipamiento {
@@ -26,6 +27,9 @@ export default function GestionEquipamientosBase() {
   const [equipamientos, setEquipamientos] = useState<Equipamiento[]>([]);
   const [tipos, setTipos] = useState<TipoEquipamiento[]>([]);
   const [filtro, setFiltro] = useState('');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editando, setEditando] = useState<Equipamiento | null>(null);
@@ -36,34 +40,58 @@ export default function GestionEquipamientosBase() {
     precio_referencia: 0,
     activo: 1
   });
-  const [loading, setLoading] = useState(false);
   const [tiposModalOpen, setTiposModalOpen] = useState(false);
   const [nuevoTipo, setNuevoTipo] = useState({ nombre: '', descripcion: '' });
 
-  const formatName = (name: string) => {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-  };
-
-  const equipamientosFiltrados = equipamientos.filter(e =>
-    e.nombre.toLowerCase().includes(filtro.toLowerCase())
-  );
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      cargarEquipamientos(1, true);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [filtro]);
 
   useEffect(() => {
-    cargarEquipamientos();
     cargarTipos();
   }, []);
 
-  const cargarEquipamientos = async () => {
+  const cargarEquipamientos = async (pageNum: number, reset: boolean = false) => {
+    if (loading) return;
+    setLoading(true);
     try {
-      const response = await api.get('/equipamientos/admin');
-      const data = response.data.data || response.data;
-      setEquipamientos(Array.isArray(data) ? data : []);
+      const response = await api.get('/equipamientos/admin', {
+        params: {
+          page: pageNum,
+          limit: 50,
+          search: filtro
+        }
+      });
+      
+      const newData = response.data.data || response.data;
+      const pagination = response.data.pagination;
+
+      if (reset) {
+        setEquipamientos(Array.isArray(newData) ? newData : []);
+        setPage(1);
+      } else {
+        setEquipamientos(prev => [...prev, ...(Array.isArray(newData) ? newData : [])]);
+        setPage(pageNum);
+      }
+      
+      setHasMore(Array.isArray(newData) && newData.length > 0 && pagination && pagination.page < pagination.totalPages);
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error al cargar equipamientos',
         color: 'red'
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      cargarEquipamientos(page + 1);
     }
   };
 
@@ -107,7 +135,7 @@ export default function GestionEquipamientosBase() {
       setModalOpen(false);
       setEditando(null);
       setFormData({ nombre: '', tipo_equipamiento_id: '', precio_referencia: 0, activo: 1 });
-      cargarEquipamientos();
+      cargarEquipamientos(1, true);
     } catch (error: any) {
       notifications.show({
         title: 'Error',
@@ -148,7 +176,7 @@ export default function GestionEquipamientosBase() {
       });
       setDeleteModalOpen(false);
       setEliminando(null);
-      cargarEquipamientos();
+      cargarEquipamientos(1, true);
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -170,7 +198,7 @@ export default function GestionEquipamientosBase() {
     <Stack gap="md">
       <Group style={{ justifyContent: 'space-between' }}>
         <TextInput
-          placeholder="Buscar equipamientos..."
+          placeholder="Buscar por nombre o código..."
           leftSection={<MagnifyingGlassIcon style={{ width: 16, height: 16 }} />}
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
@@ -193,10 +221,11 @@ export default function GestionEquipamientosBase() {
         </Group>
       </Group>
 
-      <AdminTable isEmpty={equipamientosFiltrados.length === 0} emptyMessage="No se encontraron equipamientos" minWidth={700}>
+      <AdminTable isEmpty={equipamientos.length === 0 && !loading} emptyMessage="No se encontraron equipamientos" minWidth={700}>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Equipamiento</Table.Th>
+            <Table.Th style={{ width: '150px' }}>Código</Table.Th>
             <Table.Th style={{ width: '120px' }}>Tipo</Table.Th>
             <Table.Th style={{ width: '140px' }}>
               <Tooltip label="Valores mensuales">
@@ -208,9 +237,28 @@ export default function GestionEquipamientosBase() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {equipamientosFiltrados.map((equipo) => (
-            <Table.Tr key={equipo.id}>
+          {equipamientos.map((equipo, index) => {
+            const isLast = index === equipamientos.length - 1;
+            return (
+            <Table.Tr key={`${equipo.id}-${index}`}
+              ref={isLast ? (node) => {
+                if (node && hasMore && !loading) {
+                  const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                      loadMore();
+                      observer.disconnect();
+                    }
+                  });
+                  observer.observe(node);
+                }
+              } : null}
+            >
               <Table.Td>{equipo.nombre}</Table.Td>
+              <Table.Td>
+                <Text size="sm" c={equipo.codigo_producto ? 'dark' : 'dimmed'}>
+                  {equipo.codigo_producto || '-'}
+                </Text>
+              </Table.Td>
               <Table.Td style={{ textTransform: 'capitalize' }}>{equipo.tipo}</Table.Td>
               <Table.Td>{numberFormat.formatCurrency(equipo.precio_referencia)}</Table.Td>
               <Table.Td>
@@ -229,7 +277,14 @@ export default function GestionEquipamientosBase() {
                 </Group>
               </Table.Td>
             </Table.Tr>
-          ))}
+          )})}
+          {loading && (
+            <Table.Tr>
+              <Table.Td colSpan={6} style={{ textAlign: 'center', padding: '20px' }}>
+                <Text size="sm" c="dimmed">Cargando más equipamientos...</Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
         </Table.Tbody>
       </AdminTable>
 

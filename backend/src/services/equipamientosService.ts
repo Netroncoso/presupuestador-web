@@ -4,7 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 import { cacheService } from './cacheService';
 
 export class EquipamientosService {
-  
+
   // Validaciones
   private validateFinanciadorId(id: string): number {
     const numId = Number(id);
@@ -32,39 +32,51 @@ export class EquipamientosService {
   private validateNumericValues(valor_asignado: any, valor_facturar: any): { valorAsignado: number; valorFacturar: number } {
     const valorAsignado = Number(valor_asignado);
     const valorFacturar = Number(valor_facturar);
-    
+
     if (isNaN(valorAsignado) || valorAsignado < 0) {
       throw new AppError(400, 'Valor asignado debe ser un número positivo');
     }
-    
+
     if (isNaN(valorFacturar) || valorFacturar < 0) {
       throw new AppError(400, 'Valor facturar debe ser un número positivo');
     }
-    
+
     return { valorAsignado, valorFacturar };
   }
 
   // Métodos de datos
-  async obtenerTodos(page: number = 1, limit: number = 100) {
-    const cacheKey = `catalogos:equipamientos:all:page:${page}:limit:${limit}`;
-    const cached = cacheService.get(cacheKey);
-    if (cached) return cached;
-    
+  async obtenerTodos(page: number = 1, limit: number = 100, search: string = '') {
     const offset = (page - 1) * limit;
-    
-    const [rows] = await pool.query(
-      `SELECT e.id, e.nombre, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
+
+    let query = `SELECT e.id, e.nombre, e.codigo_producto, e.tipo_equipamiento_id, te.nombre as tipo, e.precio_referencia, e.activo 
        FROM equipamientos e
        LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-       ORDER BY e.nombre
-       LIMIT ? OFFSET ?`,
-      [limit, offset]
-    );
+       WHERE 1=1`;
     
-    const [countResult] = await pool.query<any[]>('SELECT COUNT(*) as total FROM equipamientos');
+    const params: any[] = [];
+    
+    if (search) {
+      query += ` AND (e.nombre LIKE ? OR e.codigo_producto LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    
+    query += ` ORDER BY e.nombre LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(query, params);
+
+    let countQuery = 'SELECT COUNT(*) as total FROM equipamientos e WHERE 1=1';
+    const countParams: any[] = [];
+    
+    if (search) {
+      countQuery += ` AND (e.nombre LIKE ? OR e.codigo_producto LIKE ?)`;
+      countParams.push(`%${search}%`, `%${search}%`);
+    }
+    
+    const [countResult] = await pool.query<any[]>(countQuery, countParams);
     const total = countResult[0].total;
-    
-    const result = {
+
+    return {
       data: rows,
       pagination: {
         page,
@@ -73,16 +85,13 @@ export class EquipamientosService {
         totalPages: Math.ceil(total / limit)
       }
     };
-    
-    cacheService.set(cacheKey, result, 1800); // 30 min
-    return result;
   }
 
   async obtenerActivos() {
     const cacheKey = 'catalogos:equipamientos:activos';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
-    
+
     const [rows] = await pool.query(
       `SELECT e.*, te.nombre as tipo 
        FROM equipamientos e
@@ -90,37 +99,57 @@ export class EquipamientosService {
        WHERE e.activo = 1 
        ORDER BY te.nombre, e.nombre`
     );
-    
+
     cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }
 
-  async obtenerPorFinanciador(financiadorId: string, fecha: string, sucursalId: number | null) {
+  async obtenerPorFinanciador(financiadorId: string, fecha: string, sucursalId: number | null, page: number = 1, limit: number = 50, search: string = '') {
     const validFinanciadorId = this.validateFinanciadorId(financiadorId);
     this.validateDateFormat(fecha);
-    
-    const equipamientos = await this.fetchEquipamientos();
-    const valores = await this.fetchValoresByFinanciador(validFinanciadorId, sucursalId, fecha);
+
+    // Calcular offset
+    const offset = (page - 1) * limit;
+
+    const equipamientos = await this.fetchEquipamientos(limit, offset, search);
+
+    // Solo si hay equipamientos, buscamos sus valores
+    if (equipamientos.length === 0) {
+      return [];
+    }
+
+    // Buscamos valores SOLO para los equipamientos obtenidos (optimización)
+    const equipamientoIds = equipamientos.map(e => e.id);
+    const valores = await this.fetchValoresByFinanciador(validFinanciadorId, sucursalId, fecha, equipamientoIds);
+
     return this.mergeEquipamientosWithValores(equipamientos, valores);
   }
 
-  private async fetchEquipamientos(): Promise<RowDataPacket[]> {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT 
+  private async fetchEquipamientos(limit: number, offset: number, search: string): Promise<RowDataPacket[]> {
+    let query = `SELECT 
         e.id, e.nombre, e.descripcion, te.nombre as tipo,
         e.tipo_equipamiento_id, te.cantidad_maxima, te.mensaje_alerta,
         te.color_alerta, te.activo_alerta, e.precio_referencia, e.unidad_tiempo
        FROM equipamientos e
        LEFT JOIN tipos_equipamiento te ON e.tipo_equipamiento_id = te.id
-       WHERE e.activo = 1
-       ORDER BY te.nombre, e.nombre`
-    );
+       WHERE e.activo = 1`;
+
+    const params: any[] = [];
+
+    if (search) {
+      query += ` AND e.nombre LIKE ?`;
+      params.push(`%${search}%`);
+    }
+
+    query += ` ORDER BY te.nombre, e.nombre LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
     return rows;
   }
 
-  private async fetchValoresByFinanciador(financiadorId: number, sucursalId: number | null, fecha: string): Promise<RowDataPacket[]> {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT 
+  private async fetchValoresByFinanciador(financiadorId: number, sucursalId: number | null, fecha: string, equipamientoIds?: number[]): Promise<RowDataPacket[]> {
+    let query = `SELECT 
         fe.id_equipamiento, v.valor_asignado, v.valor_facturar,
         v.fecha_inicio, v.sucursal_id,
         DATEDIFF(CURDATE(), v.fecha_inicio) as dias_sin_actualizar
@@ -128,16 +157,24 @@ export class EquipamientosService {
        JOIN financiador_equipamiento_valores v ON fe.id = v.id_financiador_equipamiento
        WHERE fe.financiador_id = ? 
          AND (v.sucursal_id = ? OR v.sucursal_id IS NULL)
-         AND ? BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')
-       ORDER BY fe.id_equipamiento, v.fecha_inicio DESC`,
-      [financiadorId, sucursalId, fecha]
-    );
+         AND ? BETWEEN v.fecha_inicio AND COALESCE(v.fecha_fin, '9999-12-31')`;
+
+    const params: any[] = [financiadorId, sucursalId, fecha];
+
+    if (equipamientoIds && equipamientoIds.length > 0) {
+      query += ` AND fe.id_equipamiento IN (?)`;
+      params.push(equipamientoIds);
+    }
+
+    query += ` ORDER BY fe.id_equipamiento, v.fecha_inicio DESC`;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
     return rows;
   }
 
   private mergeEquipamientosWithValores(equipamientos: RowDataPacket[], valores: RowDataPacket[]) {
     const valoresMap = new Map();
-    
+
     // Agrupar valores por equipamiento
     const valoresPorEquipamiento = new Map<number, RowDataPacket[]>();
     valores.forEach(v => {
@@ -151,14 +188,14 @@ export class EquipamientosService {
     valoresPorEquipamiento.forEach((vals, equipId) => {
       const valorEspecifico = vals.find(v => v.sucursal_id !== null);
       const valorGeneral = vals.find(v => v.sucursal_id === null);
-      
+
       // Si hay específico y general, verificar obsolescencia (30 días)
       if (valorEspecifico && valorGeneral) {
         const diasDiferencia = Math.abs(
-          new Date(valorEspecifico.fecha_inicio).getTime() - 
+          new Date(valorEspecifico.fecha_inicio).getTime() -
           new Date(valorGeneral.fecha_inicio).getTime()
         ) / (1000 * 60 * 60 * 24);
-        
+
         // Si específico está obsoleto (>30 días diferencia), usar general
         if (diasDiferencia > 30) {
           valoresMap.set(equipId, valorGeneral);
@@ -190,12 +227,12 @@ export class EquipamientosService {
     if (isNaN(numId) || numId < 0) {
       throw new AppError(400, "ID de acuerdo inválido");
     }
-    
+
     // Si es 0, retornar array vacío (nuevo acuerdo)
     if (numId === 0) {
       return [];
     }
-    
+
     const [rows] = await pool.query(
       `SELECT id, valor_asignado, valor_facturar, fecha_inicio, fecha_fin, sucursal_id, created_at
        FROM financiador_equipamiento_valores 
@@ -220,7 +257,7 @@ export class EquipamientosService {
     }
 
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
 
@@ -279,8 +316,8 @@ export class EquipamientosService {
       );
 
       await connection.commit();
-      return { 
-        ok: true, 
+      return {
+        ok: true,
         message: 'Valor guardado correctamente',
         id_financiador_equipamiento: financiadorEquipamientoId
       };
@@ -326,9 +363,9 @@ export class EquipamientosService {
     const cacheKey = 'catalogos:tipos_equipamiento';
     const cached = cacheService.get(cacheKey);
     if (cached) return cached;
-    
+
     const [rows] = await pool.query('SELECT * FROM tipos_equipamiento ORDER BY nombre');
-    
+
     cacheService.set(cacheKey, rows, 1800); // 30 min
     return rows;
   }

@@ -169,6 +169,8 @@ export const ModalAuditoria: React.FC<ModalAuditoriaProps> = ({
       overlayProps={{
           backgroundOpacity: 0.55,
           blur: 3,}}
+      closeOnClickOutside={true}
+      closeOnEscape={true}
     >
       {tipo === 'solicitar' ? renderSolicitar() : renderAuditar()}
     </Modal>

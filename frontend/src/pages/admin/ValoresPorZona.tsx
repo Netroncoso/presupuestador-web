@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Group, Switch, Modal, Select, Text, NumberInput, Stack, Divider, ActionIcon, TextInput, Paper } from '@mantine/core';
+import { Table, Button, Group, Switch, Modal, Select, Text, NumberInput, Stack, Divider, ActionIcon, TextInput, Paper, MultiSelect } from '@mantine/core';
 import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { api } from '../../api/api';
 import { notifications } from '@mantine/notifications';
@@ -47,6 +47,8 @@ export default function ValoresPorZona() {
   const [costo4, setCosto4] = useState<number>(0);
   const [costo5, setCosto5] = useState<number>(0);
   const [fechaInicio, setFechaInicio] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [zonasSeleccionadas, setZonasSeleccionadas] = useState<string[]>([]);
+  const [incluirSinValores, setIncluirSinValores] = useState(false);
 
   useEffect(() => {
     cargarZonas();
@@ -55,8 +57,10 @@ export default function ValoresPorZona() {
   useEffect(() => {
     if (zonaId) {
       cargarServicios();
+    } else {
+      setServicios([]);
     }
-  }, [zonaId]);
+  }, [zonaId, incluirSinValores]);
 
   const cargarZonas = async () => {
     try {
@@ -73,7 +77,8 @@ export default function ValoresPorZona() {
 
   const cargarServicios = async () => {
     try {
-      const response = await api.get(`/tarifario/valores/zona/${zonaId}`);
+      const params = incluirSinValores ? '?incluir_sin_valores=true' : '';
+      const response = await api.get(`/tarifario/valores/zona/${zonaId}${params}`);
       setServicios(response.data);
     } catch (error) {
       notifications.show({
@@ -112,26 +117,36 @@ export default function ValoresPorZona() {
     setCosto4(0);
     setCosto5(0);
     setFechaInicio(new Date().toISOString().slice(0, 10));
+    setZonasSeleccionadas([]);
   };
 
   const guardarValores = async () => {
-    if (!servicioSeleccionado) return;
+    if (!servicioSeleccionado || zonasSeleccionadas.length === 0) {
+      notifications.show({
+        title: 'Error',
+        message: 'Seleccione al menos una zona',
+        color: 'red'
+      });
+      return;
+    }
 
     try {
-      await api.post('/tarifario/valores', {
-        tarifario_servicio_id: servicioSeleccionado.id,
-        zona_id: zonaId,
-        costo_1: costo1,
-        costo_2: costo2,
-        costo_3: costo3,
-        costo_4: costo4,
-        costo_5: costo5,
-        fecha_inicio: fechaInicio
-      });
+      for (const zona of zonasSeleccionadas) {
+        await api.post('/tarifario/valores', {
+          tarifario_servicio_id: servicioSeleccionado.id,
+          zona_tarifario_id: zona,
+          costo_1: costo1,
+          costo_2: costo2,
+          costo_3: costo3,
+          costo_4: costo4,
+          costo_5: costo5,
+          fecha_inicio: fechaInicio
+        });
+      }
 
       notifications.show({
         title: 'Éxito',
-        message: 'Valores guardados correctamente',
+        message: `Valores guardados para ${zonasSeleccionadas.length} zona(s)`,
         color: 'green'
       });
 
@@ -179,12 +194,25 @@ export default function ValoresPorZona() {
         label="Seleccionar Zona"
         placeholder="Seleccione una zona"
         value={zonaId}
-        onChange={(value) => setZonaId(value || '')}
+        onChange={(value) => {
+          setServicios([]);
+          setZonaId(value || '');
+        }}
         data={zonas.map(z => ({ value: String(z.id), label: z.nombre }))}
         searchable
         clearable
-        mb="md"
+        mb="xs"
       />
+
+      <Group justify="flex-end" mb="md">
+        <Switch
+          label={<Text size="xs">Incluir sin valores</Text>}
+          checked={incluirSinValores}
+          labelPosition="left"
+          onChange={(e) => setIncluirSinValores(e.currentTarget.checked)}
+          size="xs"
+        />
+      </Group>
 
       {zonaId && (
         <Table striped highlightOnHover>
@@ -241,6 +269,16 @@ export default function ValoresPorZona() {
         <Stack gap="md">
           <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
             <Text fw={500} size="sm" mb="sm">Agregar Nuevos Valores</Text>
+            <MultiSelect
+              label="Zonas"
+              placeholder="Seleccione una o más zonas"
+              value={zonasSeleccionadas}
+              onChange={setZonasSeleccionadas}
+              data={zonas.map(z => ({ value: String(z.id), label: z.nombre }))}
+              searchable
+              clearable
+              mb="sm"
+            />
             <Group grow mb="sm">
               <CurrencyInput
                 label="Costo 1"
@@ -288,7 +326,7 @@ export default function ValoresPorZona() {
             <>
               <Divider />
               <Text fw={500} size="sm">Histórico de Valores</Text>
-              <Table striped size="sm">
+              <Table striped>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Costo 1</Table.Th>

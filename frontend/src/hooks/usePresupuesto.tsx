@@ -60,12 +60,10 @@ export const usePresupuesto = () => {
       setPresupuestoId(id);
       setClienteNombre(nombre);
 
-      const [presupuestoData, insumos, prestaciones, equipamientos] = await Promise.all([
-        presupuestoService.obtener(id),
-        presupuestoService.obtenerInsumos(id, soloLectura),
-        presupuestoService.obtenerPrestaciones(id, soloLectura),
-        presupuestoService.obtenerEquipamientos(id, soloLectura)
-      ]);
+      const presupuestoData = await presupuestoService.obtener(id);
+      const insumos = await presupuestoService.obtenerInsumos(id, soloLectura);
+      const prestaciones = await presupuestoService.obtenerPrestaciones(id, soloLectura);
+      const equipamientos = await presupuestoService.obtenerEquipamientos(id, soloLectura);
 
       // Cargar financiador desde el presupuesto (prioridad) o parámetro
       const financiadorFinal = presupuestoData.financiador_id || financiadorIdParam;
@@ -99,15 +97,14 @@ export const usePresupuesto = () => {
       if (!soloLectura) {
         try {
           const { api } = await import('../api/api');
-          await api.post(`/presupuestos/${id}/recalcular`);
+          await api.post(`/presupuestos/${id}/recalcular`, {});
         } catch (error) {
           console.error('Error recalculando totales:', error);
         }
       }
       
-      // Cargar totales desde BD SOLO en modo solo lectura
-      // En modo edición, dejar que se recalculen automáticamente desde los items
-      if (soloLectura && setTotalesDesdeDB && presupuestoData.costo_total && presupuestoData.costo_total > 0) {
+      // Cargar totales desde BD si existen
+      if (setTotalesDesdeDB && presupuestoData.costo_total) {
         setTotalesDesdeDB({
           totalInsumos: presupuestoData.total_insumos || 0,
           totalPrestaciones: presupuestoData.total_prestaciones || 0,

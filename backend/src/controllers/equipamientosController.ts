@@ -6,9 +6,10 @@ import { equipamientosService } from '../services/equipamientosService';
 // GET /api/equipamientos - Obtener todos los equipamientos (admin)
 export const getAllEquipamientos = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 100;
-  
-  const equipamientos = await equipamientosService.obtenerTodos(page, limit);
+  const limit = parseInt(req.query.limit as string) || 50;
+  const search = (req.query.search as string) || '';
+
+  const equipamientos = await equipamientosService.obtenerTodos(page, limit, search);
   res.json(equipamientos);
 });
 
@@ -23,8 +24,11 @@ export const getEquipamientosPorFinanciador = asyncHandler(async (req: Request, 
   const { id } = req.params;
   const fecha = (req.query.fecha as string) || new Date().toISOString().slice(0, 10);
   const sucursalId = req.query.sucursal_id ? Number(req.query.sucursal_id) : null;
-  
-  const resultado = await equipamientosService.obtenerPorFinanciador(id, fecha, sucursalId);
+  const page = req.query.page ? Number(req.query.page) : 1;
+  const limit = req.query.limit ? Number(req.query.limit) : 100;
+  const search = (req.query.search as string) || '';
+
+  const resultado = await equipamientosService.obtenerPorFinanciador(id, fecha, sucursalId, page, limit, search);
   res.json(resultado);
 });
 
@@ -107,10 +111,10 @@ export const actualizarAcuerdoEquipamiento = asyncHandler(async (req: Request, r
 export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const resultado = await equipamientosService.agregarAPresupuesto(id, req.body);
-  
+
   // Recalcular totales del presupuesto
   await presupuestoCalculosService.recalcularTotales(parseInt(id));
-  
+
   res.json(resultado);
 });
 
@@ -118,10 +122,10 @@ export const agregarEquipamientoPresupuesto = asyncHandler(async (req: Request, 
 export const eliminarEquipamientoPresupuesto = asyncHandler(async (req: Request, res: Response) => {
   const { id, equipamientoId } = req.params;
   const resultado = await equipamientosService.eliminarDePresupuesto(id, equipamientoId);
-  
+
   // Recalcular totales del presupuesto
   await presupuestoCalculosService.recalcularTotales(parseInt(id));
-  
+
   res.json(resultado);
 });
 

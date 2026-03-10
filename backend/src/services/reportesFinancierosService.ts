@@ -136,17 +136,17 @@ export class ReportesFinancierosService {
     
     let filtroServicio = '';
     if (servicioId) {
-      filtroServicio = 'AND s.id_servicio = ?';
+      filtroServicio = 'AND s.id = ?';
       params.push(servicioId);
     }
     
     const offset = (page - 1) * limit;
     
     const [countRows] = await pool.query<RowDataPacket[]>(`
-      SELECT COUNT(DISTINCT CONCAT(f.id, '-', s.id_servicio)) as total
+      SELECT COUNT(DISTINCT CONCAT(f.id, '-', s.id)) as total
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN servicios s ON pp.servicio_id = s.id
       INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
@@ -167,14 +167,14 @@ export class ReportesFinancierosService {
         MAX(p.created_at) as ultima_vez_usado
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN servicios s ON pp.servicio_id = s.id
       INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
         ${whereClause}
         ${filtroFinanciador}
         ${filtroServicio}
-      GROUP BY f.id, s.id_servicio
+      GROUP BY f.id, s.id
       ORDER BY veces_usado DESC
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]);
@@ -194,17 +194,17 @@ export class ReportesFinancierosService {
     
     let filtroServicio = '';
     if (servicioId) {
-      filtroServicio = 'AND s.id_servicio = ?';
+      filtroServicio = 'AND s.id = ?';
       params.push(servicioId);
     }
     
     const offset = (page - 1) * limit;
     
     const [countRows] = await pool.query<RowDataPacket[]>(`
-      SELECT COUNT(DISTINCT s.id_servicio) as total
+      SELECT COUNT(DISTINCT s.id) as total
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN servicios s ON pp.servicio_id = s.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
         ${whereClause}
@@ -221,12 +221,12 @@ export class ReportesFinancierosService {
         AVG((pp.valor_facturar - pp.valor_asignado) / pp.valor_asignado * 100) as margen_promedio
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN servicios s ON pp.servicio_id = s.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1
         ${whereClause}
         ${filtroServicio}
-      GROUP BY s.id_servicio
+      GROUP BY s.id
       ORDER BY veces_usado DESC
       LIMIT ? OFFSET ?
     `, [...params, limit, offset]);
@@ -246,11 +246,11 @@ export class ReportesFinancierosService {
     
     const [rows] = await pool.query<RowDataPacket[]>(`
       SELECT DISTINCT
-        s.id_servicio,
+        s.id,
         s.nombre
       FROM presupuesto_prestaciones pp
       INNER JOIN presupuestos p ON pp.idPresupuestos = p.idPresupuestos
-      INNER JOIN servicios s ON pp.id_servicio = s.id_servicio
+      INNER JOIN servicios s ON pp.servicio_id = s.id
       INNER JOIN financiador f ON p.financiador_id = f.id
       WHERE p.estado IN ('aprobado', 'aprobado_condicional')
         AND p.es_ultima_version = 1

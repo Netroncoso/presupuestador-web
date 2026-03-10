@@ -19,6 +19,7 @@ import prestacionesRoutes from './routes/prestaciones';
 import authRoutes from './routes/auth';
 import adminInsumosRoutes from './routes/admin/adminInsumos';
 import adminFinanciadoresRoutes from './routes/admin/adminFinanciadores';
+import adminFinanciadorZonasRoutes from './routes/admin/adminFinanciadorZonas';
 import adminServiciosRoutes from './routes/admin/adminServicios';
 import adminServiciosCrudRoutes from './routes/admin/adminServiciosCrud';
 import adminSucursalesRoutes from './routes/admin/adminSucursales';
@@ -35,6 +36,9 @@ import cargaRoutes from './routes/carga';
 import equipamientosRoutes from './routes/equipamientos';
 import tarifarioRoutes from './routes/tarifario';
 import zonasRoutes from './routes/zonas';
+import financiadorZonasRoutes from './routes/financiadorZonas';
+import tarifarioZonasRoutes from './routes/tarifarioZonas';
+import tarifarioValoresRoutes from './routes/tarifarioValores';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { iniciarCronJobs } from './services/cronJobs';
@@ -100,6 +104,7 @@ app.use('/api/prestaciones', prestacionesRoutes);
 // Admin routes
 app.use('/api/admin/insumos', adminInsumosRoutes);
 app.use('/api/admin/financiadores', adminFinanciadoresRoutes);
+app.use('/api/admin', adminFinanciadorZonasRoutes);
 app.use('/api/admin/servicios', adminServiciosRoutes);
 app.use('/api/admin/servicios-crud', adminServiciosCrudRoutes);
 app.use('/api/admin/sucursales', adminSucursalesRoutes);
@@ -114,6 +119,9 @@ app.use('/api/equipamientos', equipamientosRoutes);
 app.use('/api/carga', cargaRoutes);
 app.use('/api', tarifarioRoutes); // Tarifario routes
 app.use('/api', zonasRoutes); // Zonas routes
+app.use('/api/financiador', financiadorZonasRoutes); // Financiador zonas routes
+app.use('/api/tarifario', tarifarioZonasRoutes); // Tarifario zonas routes
+app.use('/api/admin/tarifario', tarifarioValoresRoutes); // Tarifario valores routes
 
 // Global error handler
 app.use(errorHandler);

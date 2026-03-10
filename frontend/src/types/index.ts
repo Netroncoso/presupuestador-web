@@ -6,6 +6,8 @@ export interface FinanciadorInfo {
   Financiador?: string;
   id?: string;
   porcentaje_insumos?: number;
+  porcentaje_horas_nocturnas?: number;
+  porcentaje_dificil_acceso?: number;
 }
 
 export interface Insumo {
@@ -23,6 +25,61 @@ export interface Prestacion {
   valor_facturar: number;
   tipo_unidad?: string;
   cant_total?: number;
+  // Nuevos campos para sistema dual
+  id_servicio_tarifario?: number;
+  valor_seleccionado?: 1 | 2 | 3 | 4 | 5;
+  precio_costo?: number;
+  utilidad?: number;
+}
+
+// Nuevos tipos para sistema dual de zonas
+export interface ServicioFinanciador {
+  id_prestador_servicio?: number;
+  id_financiador_servicio: number;
+  servicio_id: number;
+  nombre: string;
+  precio_facturar: number;
+  unidades_base?: number;
+  admite_horas_nocturnas?: boolean;
+  activo?: number;
+}
+
+export interface ServicioTarifario {
+  id: number;
+  nombre: string;
+  tipo_unidad?: string;
+  valores: number[];
+}
+
+export interface ZonaFinanciador {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  activo?: number;
+}
+
+export interface FinanciadorZona {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  activo?: number;
+}
+
+export interface ServicioConvenio {
+  id_servicio_financiador: number;
+  servicio_id?: number;
+  nombre: string;
+  precio_facturar: number;
+  id_servicio_tarifario?: number;
+  valores_disponibles?: number[];
+  valor_seleccionado?: 1 | 2 | 3 | 4 | 5;
+  precio_costo?: number;
+  utilidad?: number;
+  cantidad?: number;
+  aplicar_horas_nocturnas?: boolean;
+  porcentaje_horas_nocturnas?: number;
+  precio_base?: number;
+  clave_unica?: string;
 }
 
 export type EstadoPresupuesto = 
@@ -81,6 +138,5 @@ export interface Usuario {
 export interface Sucursal {
   ID: number;
   Sucursales_mh: string;
-  suc_porcentaje_dificil_acceso?: number;
   suc_porcentaje_insumos?: number;
 }

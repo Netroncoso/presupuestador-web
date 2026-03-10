@@ -410,6 +410,46 @@ router.post('/:id/finalizar', auth, validatePresupuestoId, asyncHandler(async (r
   return resultado;
 }));
 
+/**
+ * @swagger
+ * /api/presupuestos/{id}/auditoria-manual:
+ *   post:
+ *     summary: Solicitar auditoría manual
+ *     description: Envía presupuesto a auditoría por solicitud del usuario
+ *     tags: [Presupuestos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Auditoría manual solicitada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 estadoFinal:
+ *                   type: string
+ *                 razones:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 totalViolaciones:
+ *                   type: integer
+ */
+router.post('/:id/auditoria-manual', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  logger.info('Solicitando auditoría manual', { presupuestoId: id, usuario: req.user.id });
+  const resultado = await presupuestosController.solicitarAuditoriaManual(req, res, () => {});
+  logger.info('Auditoría manual solicitada exitosamente', { presupuestoId: id, usuario: req.user.id });
+  return resultado;
+}));
+
 router.post('/:id/revertir-borrador', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   return presupuestosController.revertirABorrador(req, res, () => {});
 }));
@@ -501,6 +541,14 @@ router.put('/:id/financiador', auth, validatePresupuestoId, asyncHandler(async (
   logger.info('Actualizando financiador', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
   const resultado = presupuestosController.actualizarFinanciador(req, res, () => {});
   logger.info('Financiador actualizado exitosamente', { presupuestoId: id, financiadorId: financiador_id, usuario: req.user.id });
+  return resultado;
+}));
+
+router.put('/:id/datos-paciente', auth, validatePresupuestoId, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+  logger.info('Actualizando datos del paciente', { presupuestoId: id, usuario: req.user.id });
+  const resultado = presupuestosController.actualizarDatosPaciente(req, res, () => {});
+  logger.info('Datos del paciente actualizados exitosamente', { presupuestoId: id, usuario: req.user.id });
   return resultado;
 }));
 

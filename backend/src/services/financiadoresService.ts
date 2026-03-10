@@ -3,8 +3,23 @@ import { pool } from '../db';
 import { AppError } from '../middleware/errorHandler';
 
 export class FinanciadoresService {
-  
-  async obtenerTodos() {
+
+  async obtenerTodos(page: number = 1, limit: number = 50, search: string = '') {
+    const offset = (page - 1) * limit;
+    const params: any[] = [];
+
+    let whereClause = '';
+    if (search) {
+      whereClause = 'WHERE f.Financiador LIKE ?';
+      params.push(`%${search}%`);
+    }
+
+    const [countResult] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as total FROM financiador f ${whereClause}`,
+      params
+    );
+    const total = countResult[0]?.total || 0;
+
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT f.id, f.Financiador, f.activo, f.tasa_mensual, 
               f.dias_cobranza_teorico, f.dias_cobranza_real, f.id_acuerdo, 
@@ -12,9 +27,21 @@ export class FinanciadoresService {
               COALESCE(a.nombre, NULL) as acuerdo_nombre
        FROM financiador f
        LEFT JOIN financiador_acuerdo a ON f.id_acuerdo = a.id_acuerdo
-       ORDER BY f.Financiador`
+       ${whereClause}
+       ORDER BY f.Financiador
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
-    return rows;
+
+    return {
+      data: rows,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
   async actualizar(id: string, datos: {

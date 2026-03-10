@@ -10,11 +10,28 @@ import { RowDataPacket } from 'mysql2';
 // Listar servicios activos
 export const listarServiciosActivos = async (req: Request, res: Response) => {
   try {
-    const { zona_id } = req.query;
+    const zona_id = req.query.zona_id || req.query.zona_tarifario_id;
+    const incluirSinValores = req.query.incluir_sin_valores === 'true';
     
-    const [servicios] = await pool.query<TarifarioServicio[]>(
-      'SELECT * FROM tarifario_servicio WHERE activo = 1 ORDER BY nombre'
-    );
+    let query: string;
+    let params: any[];
+    
+    if (incluirSinValores) {
+      // Mostrar TODOS los servicios activos (con o sin valores)
+      query = 'SELECT * FROM servicios WHERE activo = 1 ORDER BY nombre';
+      params = [];
+    } else {
+      // Solo servicios que tienen valores en el tarifario
+      query = `SELECT DISTINCT s.id, s.nombre, s.tipo_unidad, s.activo, s.created_at, s.updated_at
+               FROM servicios s
+               INNER JOIN tarifario_servicio_valores tsv ON s.id = tsv.servicio_id
+               WHERE s.activo = 1
+               ${zona_id ? 'AND tsv.zona_tarifario_id = ?' : ''}
+               ORDER BY s.nombre`;
+      params = zona_id ? [zona_id] : [];
+    }
+    
+    const [servicios] = await pool.query<TarifarioServicio[]>(query, params);
     
     // Si se proporciona zona_id, incluir valores vigentes
     if (zona_id) {
@@ -22,8 +39,8 @@ export const listarServiciosActivos = async (req: Request, res: Response) => {
         servicios.map(async (servicio) => {
           const [valores] = await pool.query<TarifarioServicioValor[]>(
             `SELECT * FROM tarifario_servicio_valores 
-             WHERE tarifario_servicio_id = ? 
-               AND zona_id = ?
+             WHERE servicio_id = ? 
+               AND zona_tarifario_id = ?
                AND CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
              ORDER BY fecha_inicio DESC
              LIMIT 1`,
@@ -64,7 +81,7 @@ export const listarServiciosActivos = async (req: Request, res: Response) => {
 export const obtenerValoresVigentes = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { zona_id } = req.query;
+    const zona_id = req.query.zona_id || req.query.zona_tarifario_id;
     
     if (!zona_id) {
       return res.status(400).json({ error: 'zona_id es requerido' });
@@ -72,8 +89,8 @@ export const obtenerValoresVigentes = async (req: Request, res: Response) => {
     
     const [valores] = await pool.query<TarifarioServicioValor[]>(
       `SELECT * FROM tarifario_servicio_valores 
-       WHERE tarifario_servicio_id = ? 
-         AND zona_id = ?
+       WHERE servicio_id = ? 
+         AND zona_tarifario_id = ?
          AND CURDATE() BETWEEN fecha_inicio AND COALESCE(fecha_fin, '9999-12-31')
        ORDER BY fecha_inicio DESC
        LIMIT 1`,

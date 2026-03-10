@@ -10,7 +10,7 @@ export const getAllServicios = async (req: Request, res: Response) => {
     if (cached) return res.json(cached);
     
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id_servicio, nombre, tipo_unidad, max_unidades_sugerido FROM servicios ORDER BY nombre'
+      'SELECT id, nombre, descripcion, tipo_unidad, activo FROM servicios WHERE activo = 1 ORDER BY nombre'
     );
     cacheService.set(cacheKey, rows, 1800); // 30 min
     res.json(rows);
@@ -22,22 +22,22 @@ export const getAllServicios = async (req: Request, res: Response) => {
 
 export const createServicio = async (req: Request, res: Response) => {
   try {
-    const { nombre, tipo_unidad, max_unidades_sugerido } = req.body;
+    const { nombre, descripcion, tipo_unidad } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'Nombre es requerido' });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO servicios (nombre, tipo_unidad, max_unidades_sugerido) VALUES (?, ?, ?)',
-      [nombre, tipo_unidad, max_unidades_sugerido || null]
+      'INSERT INTO servicios (nombre, descripcion, tipo_unidad, activo) VALUES (?, ?, ?, 1)',
+      [nombre, descripcion || null, tipo_unidad || null]
     );
 
     res.status(201).json({
       id: result.insertId,
       nombre,
+      descripcion,
       tipo_unidad,
-      max_unidades_sugerido,
       message: 'Servicio creado correctamente'
     });
     
@@ -57,15 +57,15 @@ export const createServicio = async (req: Request, res: Response) => {
 export const updateServicio = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, tipo_unidad, max_unidades_sugerido } = req.body;
+    const { nombre, descripcion, tipo_unidad, activo } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'Nombre es requerido' });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE servicios SET nombre = ?, tipo_unidad = ?, max_unidades_sugerido = ? WHERE id_servicio = ?',
-      [nombre, tipo_unidad, max_unidades_sugerido || null, id]
+      'UPDATE servicios SET nombre = ?, descripcion = ?, tipo_unidad = ?, activo = ? WHERE id = ?',
+      [nombre, descripcion || null, tipo_unidad || null, activo !== undefined ? activo : 1, id]
     );
 
     if (result.affectedRows === 0) {
@@ -90,8 +90,9 @@ export const deleteServicio = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Soft delete
     const [result] = await pool.query<ResultSetHeader>(
-      'DELETE FROM servicios WHERE id_servicio = ?',
+      'UPDATE servicios SET activo = 0 WHERE id = ?',
       [id]
     );
 
@@ -99,10 +100,10 @@ export const deleteServicio = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Servicio no encontrado' });
     }
 
-    res.json({ message: 'Servicio eliminado correctamente' });
+    res.json({ message: 'Servicio desactivado correctamente' });
     cacheService.invalidateCatalogos();
   } catch (err) {
     console.error('Error deleting servicio:', err);
-    res.status(500).json({ error: 'Error al eliminar servicio' });
+    res.status(500).json({ error: 'Error al desactivar servicio' });
   }
 };

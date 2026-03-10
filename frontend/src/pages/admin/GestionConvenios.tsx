@@ -4,6 +4,7 @@ import { api } from '../../api/api';
 import { notifications } from '@mantine/notifications';
 import ServiciosPorFinanciador from './ServiciosPorFinanciador';
 import GestionEquipamientos from './GestionEquipamientos';
+import GestionZonasFinanciador from './GestionZonasFinanciador';
 
 interface Financiador {
   id: string;
@@ -25,8 +26,9 @@ export default function GestionConvenios() {
 
   const cargarFinanciadores = async () => {
     try {
-      const response = await api.get('/admin/financiadores');
-      setFinanciadores(response.data);
+      const response = await api.get('/admin/financiadores', { params: { limit: 1000 } });
+      const data = response.data.data || response.data; // Handle both paginated and legacy/array just in case
+      setFinanciadores(Array.isArray(data) ? data : []);
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -55,6 +57,7 @@ export default function GestionConvenios() {
         <Tabs.List grow>
           <Tabs.Tab value="servicios">Servicios</Tabs.Tab>
           <Tabs.Tab value="equipamientos">Equipamientos</Tabs.Tab>
+          <Tabs.Tab value="zonas">Zonas</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="servicios" pt="md">
@@ -63,6 +66,10 @@ export default function GestionConvenios() {
 
         <Tabs.Panel value="equipamientos" pt="md">
           <GestionEquipamientos financiadorId={financiadorId} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="zonas" pt="md">
+          <GestionZonasFinanciador financiadorId={financiadorId} />
         </Tabs.Panel>
       </Tabs>
     </Stack>

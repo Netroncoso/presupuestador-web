@@ -3,8 +3,12 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { financiadoresService } from '../../services/financiadoresService';
 
 export const getAllFinanciadores = asyncHandler(async (req: Request, res: Response) => {
-  const financiadores = await financiadoresService.obtenerTodos();
-  res.json(financiadores);
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const search = req.query.search as string || '';
+
+  const resultado = await financiadoresService.obtenerTodos(page, limit, search);
+  res.json(resultado);
 });
 
 export const updateFinanciador = asyncHandler(async (req: Request, res: Response) => {

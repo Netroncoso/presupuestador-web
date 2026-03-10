@@ -370,7 +370,8 @@ export class AuditoriaMultiService {
 
   async autoLiberarCasosInactivos() {
     try {
-      const [result] = await pool.query<any>(
+      // 1. Liberar casos en revisión inactivos > 30 min
+      const [result1] = await pool.query<any>(
         `UPDATE presupuestos 
          SET revisor_id = NULL,
              revisor_asignado_at = NULL,
@@ -380,8 +381,18 @@ export class AuditoriaMultiService {
            AND estado LIKE '%en_revision%'`
       );
 
-      if (result.affectedRows > 0) {
-        console.log(`[Auto-liberación] ${result.affectedRows} casos liberados`);
+      // 2. Limpiar inconsistencias: presupuestos pendientes con revisor asignado
+      const [result2] = await pool.query<any>(
+        `UPDATE presupuestos 
+         SET revisor_id = NULL,
+             revisor_asignado_at = NULL
+         WHERE revisor_id IS NOT NULL
+           AND estado IN ('pendiente_prestacional', 'pendiente_comercial', 'pendiente_general')`
+      );
+
+      const total = (result1.affectedRows || 0) + (result2.affectedRows || 0);
+      if (total > 0) {
+        console.log(`[Auto-liberación] ${result1.affectedRows || 0} casos liberados, ${result2.affectedRows || 0} inconsistencias corregidas`);
       }
     } catch (error) {
       console.error('[Auto-liberación] Error:', error);
